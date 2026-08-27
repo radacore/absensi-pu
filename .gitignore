@@ -1,0 +1,9 @@
+.DS_Store
+app/vendor/
+app/node_modules/
+app/public/build/
+app/storage/logs/*
+app/storage/framework/cache/*
+app/storage/framework/sessions/*
+app/storage/framework/views/*
+app/.env

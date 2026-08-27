@@ -1,0 +1,32 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../js/**/*.jsx';
+
+@theme {
+    --font-sans: 'Inter', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    /* BBWS Pompengan Jeneberang — Corporate Palette + Gold Accent */
+    --color-primary: #1E3A8A;
+    --color-primary-dark: #0F172A;
+    --color-accent: #0D9488;
+    --color-gold: #FCB833;
+    --color-gold-light: #FFF7E6;
+    --color-gold-dark: #B45309;
+    --color-secondary-light: #E0F2FE;
+    --color-neutral-light: #F3F4F6;
+    --color-success: #10B981;
+    --color-error: #EF4444;
+    --color-warning: #FCB833;
+    --color-text-primary: #1F2937;
+    --color-text-secondary: #6B7280;
+    --color-text-tertiary: #D1D5DB;
+    --color-border: #E5E7EB;
+}
+
+/* Ensure PWA safe-area */
+:root {
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+}
