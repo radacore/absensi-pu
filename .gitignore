@@ -7,3 +7,4 @@ app/storage/framework/cache/*
 app/storage/framework/sessions/*
 app/storage/framework/views/*
 app/.env
+.playwright-mcp/
