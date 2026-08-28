@@ -2,62 +2,6 @@
 
 ## 1. Functional Requirements
 
-### 1.1. Public-Facing Application
-
-**FR-01: Homepage Display**
-The system SHALL display a dynamic homepage that includes a hero banner, featured services, latest blog posts, and client testimonials.
-*   The homepage MUST load with all specified sections visible.
-*   Content within each section (e.g., featured services, blog posts) SHALL dynamically update based on data managed in the Admin Dashboard.
-*   Clicking on featured items (e.g., a service, a blog post) SHOULD navigate to its respective detail page.
-
-**FR-02: About Us Page Content Management**
-The system SHALL provide an "About Us" page displaying company history, mission, vision, and core values. All content on this page MUST be fully editable via the Admin Dashboard.
-*   The "About Us" page MUST display the content exactly as entered and saved by the administrator.
-*   Changes made to the "About Us" content in the Admin Dashboard SHALL be immediately reflected on the public page upon saving.
-*   The page SHOULD include sections for history, mission, vision, and values, each populated with editable text.
-
-**FR-03: Services Listing and Detail Pages**
-The system SHALL display a list of all company services. Each service MUST have its own dedicated detail page, including descriptions, images, and related case studies.
-*   The services listing page MUST show all active services with a title and a brief description.
-*   Clicking on a service from the listing page SHALL navigate to its unique detail page.
-*   Each service detail page MUST display its full description, associated images, and links to related case studies (if any).
-
-**FR-04: Portfolio/Projects Gallery**
-The system SHALL feature a filterable gallery of completed projects. Each project entry MUST include a title, description, image/video gallery, and associated service category.
-*   The portfolio page MUST display projects in a gallery format, allowing filtering by category.
-*   Each project entry SHALL link to a detail page showcasing its title, full description, and a gallery of associated media (images/videos).
-*   The filtering mechanism MUST accurately display projects belonging to the selected category.
-
-**FR-05: Team Member Profiles**
-The system SHALL display profiles of key team members, including their name, title, photo, and a brief biography.
-*   The team page MUST list all active team members with their photo, name, and title.
-*   Clicking on a team member's profile SHOULD reveal their brief biography.
-*   Team member information SHALL be dynamically sourced from the Admin Dashboard.
-
-**FR-06: Blog/News Section**
-The system SHALL include a blog/news section displaying articles in reverse-chronological order, with pagination for the list view and a dedicated detail view for individual articles. It MUST support categories and tags.
-*   The blog listing page MUST display articles with pagination, showing the most recent first.
-*   Each article detail page MUST display the full content, author, publication date, and associated categories/tags.
-*   Users SHOULD be able to filter blog posts by category or tag.
-
-**FR-07: Testimonials Display**
-The system SHALL display a rotating or static list of client testimonials, including the client's name and company.
-*   The testimonials section MUST display only testimonials marked as "approved" in the Admin Dashboard.
-*   Each testimonial displayed MUST include the client's name and company.
-*   The display SHOULD support either a rotating carousel or a static list format.
-
-**FR-08: Contact Us Page and Form**
-The system SHALL provide a "Contact Us" page with company contact details (address, phone, email), an interactive map, and a contact form. Submitting the form MUST send an email notification to a predefined admin address and store the submission in the database.
-*   The "Contact Us" page MUST display the company's address, phone number, and email address.
-*   The contact form MUST include fields for Name, Email, Subject, and Message.
-*   Upon successful submission, the system SHALL send an email notification to the configured admin email address and store the submission details in the database.
-
-**FR-09: SEO & Social Sharing Optimization**
-All public pages MUST have unique, human-readable URLs. Meta titles, descriptions, and Open Graph tags MUST be dynamically generated based on content and be manageable from the Admin Dashboard.
-*   Each public page SHALL have a clean, SEO-friendly URL (e.g., `/services/service-name`).
-*   The `meta title`, `meta description`, and Open Graph tags (e.g., `og:title`, `og:description`, `og:image`) for each page MUST be present in the HTML header.
-*   Changes to SEO metadata in the Admin Dashboard SHALL be reflected in the public page's HTML source.
-
 ### 1.2. Admin Dashboard
 
 **FR-10: Secure Authentication (Super Admin & Admin Wilayah)**

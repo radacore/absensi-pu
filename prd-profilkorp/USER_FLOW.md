@@ -2,69 +2,9 @@
 
 ## Overview
 
-This document details the primary user flows for BBWS Pompengan Jeneberang, a corporate profile application with a public-facing website, a regional admin dashboard (Super Admin + Admin Wilayah per Kabupaten/Kota), and a mobile PWA for employees. The flows are organized by actor (Public User, Admin Wilayah, Super Admin, Karyawan) and focus on the most critical journeys: public content consumption, regional employee data management, and karyawan HR self-service (absensi GPS+selfie — di luar radius ditolak, Love 4/bulan pakai dokumen dalam radius, cuti berjenjang, pengumuman).
+This document details the primary user flows for BBWS Pompengan Jeneberang, a corporate profile application with a public-facing website, a regional admin dashboard (Super Admin + Admin Wilayah per Kabupaten/Kota), and a mobile PWA for employees. The flows are organized by actor (Public User, Admin Wilayah, Super Admin, Karyawan) and focus on the most critical journeys: public content consumption, regional employee data management, and karyawan HR self-service (absensi GPS+selfie — di luar radius ditolak, Love 4/bulan pakai dokumen dalam radius, cuti berjenjang, pengumuman).  # Public site removed — fokus HR PWA
 
 All flows are built on Laravel 13 (PHP 8.4+) with React 19 and Inertia.js v2 (Vite 7, Tailwind v4, MySQL 8.4 LTS, PWA), ensuring a seamless, modern user experience across public, admin, and karyawan PWA interfaces. Region isolation: Admin Wilayah write own region only (read all), Karyawan own-data-only.
-
----
-
-## Flow 1: Public User – Browse Company Profile & Services
-
-### Trigger
-A potential customer, business partner, or job applicant visits the public website URL.
-
-### Pre-conditions
-- The public website is deployed and accessible.
-- At least one service and one portfolio project exist in the database.
-- The homepage, About Us, and Services pages have been configured in the admin panel.
-
-### Post-conditions
-- The user has viewed multiple pages and gathered information about the company.
-- No data is persisted about the user (anonymous browsing).
-
-### Flow Table
-
-| No | Actor | Action/Step | System Response | Alternative/Error Path |
-|:---|:---|:---|:---|:---|
-| 1 | Public User | Visits the homepage URL (e.g., `profilkorp.com`) | Laravel renders the homepage via Inertia.js. React component displays hero banner, featured services, latest blog posts, and testimonials. Page is cached for performance. | If the homepage is not configured in the admin panel, a placeholder message is shown. |
-| 2 | Public User | Clicks "About Us" link in the navigation menu | Inertia.js performs a client-side navigation (no full page reload). React component fetches and displays the About Us page content (company history, mission, vision, values). | If the About Us page has no content, a default message is displayed. |
-| 3 | Public User | Clicks "Services" link in the navigation menu | React component displays a list of all published services with descriptions and images. Each service is clickable. | If no services exist, a message states "No services available." |
-| 4 | Public User | Clicks on a specific service | Inertia.js navigates to the service detail page. React component displays the full service description, associated portfolio projects, and a call-to-action button. | If the service has been deleted, a 404 page is shown. |
-| 5 | Public User | Clicks "Portfolio" link in the navigation menu | React component displays a filterable gallery of completed projects. Projects are grouped by service category. | If no projects exist, a message states "No projects available." |
-| 6 | Public User | Filters portfolio by service category | React component re-renders the gallery, showing only projects matching the selected category. No server request is required (filtering is client-side). | If the selected category has no projects, the gallery displays an empty state. |
-| 7 | Public User | Clicks on a portfolio project | Inertia.js navigates to the project detail page. React component displays the project title, description, full image/video gallery, client name, and associated services. | If the project has been deleted, a 404 page is shown. |
-| 8 | Public User | Clicks "Team" link in the navigation menu | React component displays a grid of team member profiles, including name, title, photo, and bio. | If no team members exist, a message states "No team members available." |
-| 9 | Public User | Clicks "Blog" link in the navigation menu | React component displays a reverse-chronological list of published blog posts with pagination (e.g., 10 posts per page). Each post shows title, excerpt, publication date, and author. | If no blog posts exist, a message states "No articles available." |
-| 10 | Public User | Clicks on a blog post title | Inertia.js navigates to the blog post detail page. React component displays the full post content (via WYSIWYG editor output), publication date, author, categories/tags, and related posts. | If the post has been deleted or is in Draft status, a 404 page is shown. |
-| 11 | Public User | Clicks "Contact Us" link in the navigation menu | React component displays the contact form (Name, Email, Subject, Message fields), company contact details (address, phone, email), and an embedded map. | If contact details are not configured in the admin panel, the form is still displayed but contact info is empty. |
-
----
-
-## Flow 2: Public User – Submit Contact Form
-
-### Trigger
-A public user fills out and submits the contact form on the "Contact Us" page.
-
-### Pre-conditions
-- The public website is accessible.
-- The contact form is rendered on the Contact Us page.
-- An admin email address is configured in the global settings.
-
-### Post-conditions
-- The contact form submission is stored in the database.
-- An email notification is sent to the configured admin email address.
-- The user receives a success message and the form is cleared.
-
-### Flow Table
-
-| No | Actor | Action/Step | System Response | Alternative/Error Path |
-|:---|:---|:---|:---|:---|
-| 1 | Public User | Enters name, email, subject, and message in the contact form | React component validates the input on the client side (required fields, email format). If validation passes, the submit button is enabled. | If validation fails (e.g., invalid email format), an error message is displayed below the field. The submit button remains disabled. |
-| 2 | Public User | Clicks the "Send Message" button | React component sends a POST request to the `/api/contact-form` endpoint via Inertia.js. The request includes the form data and a CSRF token. | If the CSRF token is invalid or missing, a 419 error is returned. |
-| 3 | System | Validates the form data on the server side (Laravel backend) | Laravel validates all fields (required, email format, max length). If validation passes, the submission is stored in the `contact_submissions` table with a timestamp and status "New". | If validation fails, a 422 response is returned with error messages. React component displays the errors to the user. |
-| 4 | System | Sends an email notification to the admin | Laravel uses the configured mail driver (e.g., SMTP) to send an email to the admin address with the submission details (name, email, subject, message). | If the email fails to send (e.g., SMTP error), the submission is still stored in the database, but the admin is not notified. A log entry is recorded. The user sees a success message (to avoid exposing backend errors). |
-| 5 | System | Returns a success response to the client | Laravel returns a 200 response with a success message. | N/A |
-| 6 | Public User | Sees a success message and the form is cleared | React component displays a toast notification ("Your message has been sent successfully") and resets the form fields to empty. | If the user's browser does not support toast notifications, a simple alert is shown. |
 
 ---
 
@@ -437,10 +377,6 @@ The administrator navigates to the Page Content Management section and edits a s
 ## Summary of Key User Flows
 
 BBWS Pompengan Jeneberang supports four primary actor types:
-
-### Public User Flows
-- **Browse & Explore:** View company info, services, portfolio, team, blog.
-- **Submit Contact Form:** Submit contact, email notification.
 
 ### Super Admin Pusat Flows
 - **Manage Regions & Admin Wilayah:** CRUD Kabupaten/Kota + geofence, CRUD admin wilayah accounts, assign region.

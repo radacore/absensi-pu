@@ -303,6 +303,9 @@ erDiagram
     }
 ```
 
+## Note
+Public site tables (`pages`, `services`, `projects`, `team_members`, `blog_posts`, etc.) dipertahankan untuk kompatibilitas tetapi tidak dipakai di PWA HR fokus — bisa diabaikan.
+
 ## Table Definitions
 
 ### ADMIN

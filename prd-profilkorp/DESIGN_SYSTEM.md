@@ -208,18 +208,6 @@ All spacing, padding, margins, and sizing should be multiples of 8px to maintain
 
 ## Screen Priorities
 
-### Public-Facing Screens (Visitor Priority Order)
-
-1. **Homepage** — Hero banner, featured services, testimonials, CTA. Highest traffic, first impression.
-2. **Services Page** — Service listing with descriptions and CTAs. High conversion potential.
-3. **Portfolio/Projects Page** — Filterable gallery of completed work. Demonstrates capability.
-4. **Contact Us Page** — Contact form, map, company details. Lead generation critical.
-5. **About Us Page** — Company history, mission, values. Trust-building content.
-6. **Team Page** — Team member profiles with photos and bios. Humanizes the company.
-7. **Blog/News Listing** — Article list with pagination and search. SEO and engagement.
-8. **Blog/Article Detail** — Individual article view with related posts. Content depth.
-9. **Service Detail Page** — In-depth service information with case studies. Conversion support.
-
 ### Admin Dashboard Screens (Administrator Priority Order — Super Admin & Admin Wilayah)
 
 1. **Admin Login** — Email+password, role-scoped, obfuscated path. Fast + rate-limited.

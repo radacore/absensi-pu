@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides comprehensive deployment strategies, infrastructure configuration, CI/CD pipeline setup, monitoring, and rollback procedures for **BBWS Pompengan Jeneberang**—a Laravel 13 (PHP 8.4+) + React 19 + Inertia.js v2 + Tailwind v4 + Vite 7 corporate profile application with a regional admin dashboard (per Kabupaten/Kota) and a mobile PWA for employees (NIK login, GPS+selfie absensi, cuti berjenjang, pengumuman).
+This document provides comprehensive deployment strategies, infrastructure configuration, CI/CD pipeline setup, monitoring, and rollback procedures for **BBWS Pompengan Jeneberang**—a Laravel 13 (PHP 8.4+) + React 19 + Inertia.js v2 + Tailwind v4 + Vite 7 corporate profile application with a regional admin dashboard (per Kabupaten/Kota) and a mobile PWA for employees (NIK login, GPS+selfie absensi, cuti berjenjang, pengumuman) — tanpa public site.
 
 The deployment architecture is designed for high availability, security (region isolation + PWA secure context, Love cron reset), and ease of maintenance on a VPS environment (Linode, DigitalOcean, or AWS EC2) running Ubuntu 24.04 LTS. Multi-tenant per region via `region_id`, RBAC 3 roles, S3 paths for attendance selfies & love dokumen.
 

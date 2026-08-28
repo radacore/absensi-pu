@@ -4,10 +4,10 @@
 
 | Phase | Duration | Goals | Key Deliverables |
 |:---|:---|:---|:---|
-| **Phase 1: Foundation & Core Public Site** | 4 weeks | Establish project infrastructure, database schema (including regions), and core public pages. | Laravel 13 + React 19 + Inertia v2 setup, Regions scaffolding, Homepage, About Us, Services pages, Tailwind v4 styling. |
+| **Phase 1: Foundation & HR Core** | 4 weeks | Establish project infrastructure, database schema (including regions), and core public pages. | Laravel 13 + React 19 + Inertia v2 setup, Regions scaffolding, Homepage, About Us, Services pages, Tailwind v4 styling. |
 | **Phase 2: Admin Dashboard & Content Management** | 4 weeks | Build RBAC auth (Super Admin vs Admin Wilayah) and core CRUD. | Multi-guard Sanctum, role+region middleware, Admin login, Dashboard role-scoped, Page/Blog/Portfolio/Team CRUD, Regions CRUD (Super Admin), WYSIWYG. |
 | **Phase 3: Advanced Features & Media Handling** | 3 weeks | Implement AWS S3 integration, SEO management, content versioning. | Media Library S3, Advanced SEO, Content versioning, Global Settings (Super Admin only). |
-| **Phase 4: Public Features & Polish** | 3 weeks | Complete remaining public pages, contact form, testimonials. | Portfolio/Projects, Team, Blog listing, Contact form with notifications, Testimonials. |
+| **Phase 4: HR Features & Polish** | 3 weeks | Complete remaining public pages, contact form, testimonials. | Portfolio/Projects, Team, Blog listing, Contact form with notifications, Testimonials. |
 | **Phase 5: Karyawan Mobile PWA (HR Self-Service)** | 4 weeks | Build employee PWA: auth NIK, profile, absensi, cuti, pengumuman. | Karyawan login (NIK+password), Profile own-data, Absensi GPS+selfie (geofence), Cuti berjenjang (3 levels), Pengumuman inbox, PWA manifest+SW + offline queue, S3 paths. |
 | **Phase 6: Testing, Security Hardening & Deployment** | 2 weeks | Comprehensive testing, security audit (RBAC+region isolation), performance, deploy. | Unit & integration tests (>80% inc. region scoping & own-data 403 tests), OWASP Top 10, Rate limit & geofence tests, Load test 1000 public + 500 PWA, Live deployment. |
 
@@ -23,13 +23,6 @@ These features are **critical** for the initial release. Without them, the appli
 
 | Feature | Reference | Status | Notes |
 |:---|:---|:---|:---|
-| Public Homepage | FR-01 | Core | Hero banner, featured services, latest posts, testimonials. |
-| About Us Page | FR-02 | Core | Editable content via admin panel. |
-| Services Page & Detail Pages | FR-03 | Core | Service listing and individual service pages. |
-| Portfolio/Projects Page | FR-04 | Core | Filterable gallery with project details. |
-| Team Page | FR-05 | Core | Team member profiles with photos and bios. |
-| Blog/News Section | FR-06 | Core | Article listing with pagination and detail pages. |
-| Contact Us Page & Form | FR-08 | Core | Contact form with email notifications and database storage. |
 | RBAC Authentication (Admin+Karyawan) | FR-10/FR-22 | Core | Super Admin/Admin Wilayah (email) + Karyawan (NIK) login, Sanctum multi-guard, rate limiting. |
 | Admin Dashboard (Role-Scoped) | FR-11 | Core | Overview scoped by region; Super Admin all regions, Admin Wilayah own region. |
 | Region Management | FR-29 | Core | Super Admin CRUD Kabupaten/Kota + geofence config. |
@@ -41,7 +34,6 @@ These features are **critical** for the initial release. Without them, the appli
 | Contact Submission Viewer | FR-17 | Core | View and archive contact form submissions. |
 | Media Library (AWS S3) | FR-18 | Core | Upload, delete, and browse media on S3. |
 | Global Settings | FR-21 | Core | Manage company name, logo, contact info, social links (Super Admin only). |
-| SEO Basics | FR-09 | Core | Unique URLs, meta tags, Open Graph support. |
 | HTTPS & Security Basics | NFR-Security | Core | HTTPS, CSRF, rate limiting on all logins, region isolation middleware. |
 | Karyawan PWA - Auth & Profile | FR-22/FR-23 | Core | NIK login, view own profile, edit limited fields, PWA installable. |
 | Karyawan PWA - Absensi | FR-25 | Core | GPS+selfie check-in/out with geofence validation, S3 selfie. |
@@ -83,12 +75,12 @@ These features are valuable but can be deferred to post-launch iterations.
 | Milestone | Phase | Target Date | Deliverables |
 |:---|:---|:---|:---|
 | **Project Setup & Architecture** | 1 | Week 1 | Laravel 13 + React 19 + Inertia v2 + Vite 7 + Tailwind v4, database schema (MySQL 8.4) with regions/employees, Git repo, workflow documented. |
-| **Public Site Foundation** | 1 | Week 2–3 | Homepage, About Us, Services pages with responsive design. Tailwind styling complete. |
+| **HR Core Foundation** | 1 | Week 2–3 | Karyawan PWA core (Login, Dashboard) with responsive design. Tailwind styling complete. |
 | **Admin RBAC & Dashboard** | 2 | Week 5 | Multi-guard Sanctum, Super Admin vs Admin Wilayah, region middleware, role-scoped dashboard. |
 | **Core Content Management** | 2 | Week 6–7 | WYSIWYG, Page/Blog/Portfolio/Team CRUD, Regions CRUD (Super Admin). |
 | **AWS S3 Integration & Media Library** | 3 | Week 8 | Media Library S3, transactional uploads, browsing. |
 | **SEO & Content Versioning** | 3 | Week 9 | Advanced SEO editor, version history with rollback. |
-| **Public Features Complete** | 4 | Week 10–11 | Portfolio, Team, Blog listing, Contact form with notifications, Testimonials. |
+| **HR Features Complete** | 4 | Week 10–11 | Absensi, Cuti, Rekap, Lembur, Pengumuman, Profil, Love. |
 | **Karyawan PWA Core** | 5 | Week 12–13 | NIK login, profile own-data, absensi GPS+selfie + geofence, cuti form. |
 | **Karyawan PWA Extended** | 5 | Week 14–15 | pengumuman inbox, PWA manifest/SW/offline queue. |
 | **Testing & Security Audit** | 6 | Week 16 | Unit tests (>80% inc. region/own-data tests), integration, OWASP, geofence & rate limit tests, load test 1000+500. |
@@ -151,7 +143,7 @@ These are deliverables and artifacts that must be completed before or in paralle
 
 ## Technical Milestones & Deliverables by Phase
 
-### Phase 1: Foundation & Core Public Site (Weeks 1–4)
+### Phase 1: Foundation & HR Core (Weeks 1–4)
 
 **Week 1:**
 - Laravel 13 + React 19 + Inertia v2 + Vite 7 environment fully configured (PHP 8.4, Node 22)
@@ -217,7 +209,7 @@ These are deliverables and artifacts that must be completed before or in paralle
 
 ---
 
-### Phase 4: Public Features & Polish (Weeks 12–14)
+### Phase 4: HR Features & Polish (Weeks 12–14)
 
 **Week 12:**
 - Portfolio/Projects page with filtering and detail views
@@ -276,7 +268,7 @@ These are deliverables and artifacts that must be completed before or in paralle
 
 ### Functional Completeness
 - [ ] All P0 features inc. Karyawan PWA (absensi, cuti, pengumuman, profile) implemented and tested
-- [ ] Public site + karyawan PWA fully responsive mobile-first (320px+) + PWA installable
+- [ ] Karyawan PWA fully responsive mobile-first (320px+) + PWA installable
 - [ ] Admin dashboard role-scoped (Super Admin vs Admin Wilayah) with region isolation verified
 - [ ] Employee Lengkap HR management (read all, write own region) operational
 - [ ] Contact form working with email notifications

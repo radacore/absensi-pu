@@ -17,9 +17,6 @@ Aplikasi profil **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pusat di
 
 ## Fitur
 
-### Publik
-Homepage, About, Services, Portfolio/Projects, Team, Blog, Testimoni, Contact (SEO + Open Graph).
-
 ### Admin (RBAC + Region)
 - **Super Admin Pusat Makassar**: CRUD 24 Kantor (lokasi lat/lng via map picker + radius 50–1000m), kelola Admin Cabang, jam kerja global (07:30–16:00 WITA, toleransi 15m, Senin–Jumat) + love_max, broadcast pengumuman, semua data.
 - **Admin Cabang (per Kabupaten/Kota)**: CRUD karyawan Lengkap HR own region (NIK 16, NIP, golongan, jabatan, unit, status PNS/PPPK/Kontrak/Honorer, foto S3) — read all, write own; edit lokasi & radius kantornya sendiri; approve cuti level 2 + **approve Love 1 level**; kirim pengumuman wilayah.

@@ -24,7 +24,7 @@ graph TD
     J["Laravel Sanctum 4.x<br/>Multi-Guard<br/>(admin / karyawan)"]
     K["Route Middleware<br/>(Auth + Role + RegionScope)"]
     
-    L["Public Routes<br/>(Pages, Blog, Portfolio)"]
+    L["Public Routes<br/>(Deprecated)"]
     M["Admin Routes<br/>(Dashboard, CRUD, Regions)"]
     M2["Karyawan PWA Routes<br/>(Absensi, Cuti, Love, Pengumuman, Rekap, Lembur)"]
     N["API Routes<br/>(Contact, Media, Employee APIs)"]
@@ -64,7 +64,7 @@ graph TD
 
 ### Laravel 13 Application Server (PHP 8.4+)
 
-The core backend application handles all business logic, routing, and data persistence. It serves as the single source of truth for public website, regional admin, and karyawan PWA. Requires PHP 8.4+, leverages Laravel 13's slimmer skeleton, improved Eloquent and native Vite 7 integration. Multi-tenant per region via `region_id`. Key responsibilities include:
+The core backend application handles all business logic, routing, and data persistence. It serves as the single source of truth for regional admin, and karyawan PWA. Requires PHP 8.4+, leverages Laravel 13's slimmer skeleton, improved Eloquent and native Vite 7 integration. Multi-tenant per region via `region_id`. Key responsibilities include:
 
 - **Request Routing:** Directs requests to public / admin / karyawan PWA controllers with role & region middleware. Includes scheduled job `love:reset-monthly` (1st 00:00 WITA).
 - **Authentication & Authorization:** Multi-guard Sanctum 4.x (`admin` guard via email, `karyawan` guard via NIK) + RBAC (Super Admin, Admin Wilayah, Karyawan) + region scope policies.
@@ -86,7 +86,6 @@ Inertia.js v2 bridges Laravel 13 and React 19, enabling server-side routing with
 
 React 19 components are organized into three sections, all using Tailwind CSS v4 and React 19 features (Actions, useOptimistic).
 
-- **Public Components:** Homepage, About, Services, Portfolio, Team, Blog, Testimonials, Contact Form, detail pages.
 - **Admin Components:** Dashboard (role-scoped + love stats), Regions CRUD (Super Admin), Employee management (region-scoped), Attendance/Leave/Love Claims (1 level Admin Cabang approve)/Announcement management, media library, SEO editor, Global Settings (jam kerja + love_max).
 - **Karyawan PWA Components (Mobile-first, 320px+):** Login (NIK+password), Bottom nav, Profile view/edit, Absensi (GPS+camera capture + geofence distance UI — di luar radius ditolak 422, tombol terkunci), Love (4 dot gold #FCB833, sisa 3/4, ajukan dokumen pakai Love untuk late dalam radius, history), Cuti form & status timeline (berjenjang), Pengumuman inbox (read/unread), Rekap Kalender, Lembur/Dinas Luar, Offline banner + queue indicator. PWA install prompt + service worker cache.
 - **Shared Components:** Navigation, footer, modals, form inputs, pagination, loading skeletons, permission gates.

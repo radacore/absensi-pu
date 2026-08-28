@@ -13,34 +13,21 @@ The vision is to provide a dynamic, high-performance, and secure public-facing c
 **Problem:** Traditional static company websites are difficult and time-consuming for non-technical staff to update. This leads to outdated information, poor user engagement, and missed business opportunities. Existing CMS solutions can be overly complex or lack specific features needed for a corporate profile. Additionally, regional organizations need to manage employee data per Kabupaten/Kota with distinct admin scopes and provide mobile HR self-service for employees.
 
 **Target Users:**
-*   **Public Visitors:** Masyarakat, mitra, dan stakeholder yang mencari info BBWS Pompengan Jeneberang.
 *   **Super Admin Pusat (Makassar):** Admin pusat di Makassar — mengelola semua cabang Kabupaten/Kota, akun Admin Wilayah, lokasi kantor & radius absen tiap cabang, konten global, broadcast pengumuman.
 *   **Admin Wilayah / Cabang (Kabupaten/Kota):** Admin per Kantor Cabang BBWS PJ di Kabupaten/Kota se-Sulsel — input dan kelola data karyawan Lengkap HR untuk cabangnya sendiri, **input/edit lokasi kantor cabang (lat/lng) dan radius absen (meter)** untuk validasi absensi karyawannya, view data cabang lain read-only.
 *   **Karyawan BBWS PJ:** ASN/non-ASN di pusat maupun cabang, login via NIK + password di mobile PWA untuk absensi GPS+selfie (cek jarak ke kantor cabangnya), cuti berjenjang, pengumuman, profil, **4 Love/bulan (reset 1st 00:00 WITA, fleksibel total love diatur Super Admin, pakai Love untuk excuse terlambat dalam radius dengan dokumen).**
 
 ## System Scope & User Roles
 
-The system is composed of three primary components: a public-facing website BBWS Pompengan Jeneberang, a regional admin dashboard multi-tenant per Kantor Cabang (Makassar Pusat + 23/24 Cabang Kabupaten/Kota se-Sulsel), and a mobile PWA for employees. Content & HR management scoped per cabang dengan oversight pusat Makassar.
+The system is composed of two primary components: a regional admin dashboard multi-tenant per Kantor Cabang (Makassar Pusat + 23/24 Cabang Kabupaten/Kota se-Sulsel), and a mobile PWA for employees. Content & HR management scoped per cabang dengan oversight pusat Makassar.
 
 | Role | Description | Permissions |
 |:---|:---|:---|
-| **Public User** (Anonymous) | Masyarakat / stakeholder BBWS PJ. | - View public pages (Home, About, Services, etc.). - Submit contact form. |
 | **Super Admin Pusat (Makassar)** | Admin pusat di Makassar. | - Full CRUD on all cabang (Kabupaten/Kota se-Sulsel) + semua data karyawan. - Input/edit **lokasi kantor & radius absen tiap cabang** (lat/lng/radius_m). - Manage akun Admin Wilayah. - Broadcast pengumuman pusat. - Full content, settings, analytics. |
 | **Admin Wilayah / Cabang (Kab/Kota)** | Admin per Kantor Cabang BBWS PJ di Kabupaten/Kota se-Sulsel. Scope = region_id. | - CRUD data karyawan Lengkap HR **only for own cabang** (read cabang lain, write own). - **Input/edit lokasi kantor cabang sendiri (lat, lng, radius_m)** untuk geofence absensi karyawannya. - Approve cuti level wilayah. - Kirim pengumuman wilayah. - View attendance own cabang. |
 | **Karyawan** (Employee) | ASN/non-ASN pusat/cabang, login NIK+password, mobile PWA. Strict own-data only. | - View/edit own profile (limited). - Absensi GPS+selfie — divalidasi jarak ke **lokasi kantor cabangnya** (radius config, di luar radius ditolak, tidak tercatat). - Ajukan cuti berjenjang. - **4 Love/bulan (reset bulanan, total fleksibel Super Admin): jika terlambat & masih dalam radius, bisa ajukan dokumen/alasan pakai 1 Love untuk excuse late → approval 1 level Admin Cabang.** - View pengumuman (pusat + cabangnya). |
 
 ## Functional Requirements
-
-### Public-Facing Application
-*   **FR-01: Homepage:** Display a summary of key sections: hero banner, featured services, latest blog posts, and client testimonials.
-*   **FR-02: About Us Page:** Present company history, mission, vision, and core values. Content is fully editable from the admin panel.
-*   **FR-03: Services Page:** List all company services. Each service must have its own detail page with descriptions, images, and related case studies.
-*   **FR-04: Portfolio/Projects Page:** A filterable gallery of completed projects. Each project includes a title, description, image/video gallery, and associated service category.
-*   **FR-05: Team Page:** Display profiles of key team members, including name, title, photo, and a brief bio.
-*   **FR-06: Blog/News Section:** A reverse-chronological listing of articles. Includes a list view with pagination and a detail view for individual articles. Supports categories/tags.
-*   **FR-07: Testimonials Section:** Display a rotating or static list of client testimonials with client name and company.
-*   **FR-08: Contact Us Page:** Provide company contact details (address, phone, email) and an interactive map. Includes a contact form (Name, Email, Subject, Message) that sends an email notification to a predefined admin address and stores the submission in the database.
-*   **FR-09: SEO & Social Sharing:** All public pages must have unique, human-readable URLs. Meta titles, descriptions, and Open Graph tags must be dynamically generated based on content and be manageable from the admin panel.
 
 ### Admin Dashboard (Super Admin & Admin Wilayah)
 *   **FR-10: Secure Authentication (Admin):** Dedicated login for Super Admin & Admin Wilayah. Implements session-based auth via Laravel Sanctum 4.x with role & region scoping. Admin URL obfuscated.
