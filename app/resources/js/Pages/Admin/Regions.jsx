@@ -2,6 +2,9 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadRegions, loadEmployees, saveRegions, saveEmployees, getBase, OWN_REGION, MAX_SITES } from './_shared';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 const emptyWilayah = { name: '', kantor: '', tipe: 'cabang', address: '' };
 const emptySite = { nama_lokasi: '', lat: '', lng: '', radius: 200, address: '' };
@@ -59,15 +62,21 @@ export default function Regions() {
     const closeWilayah = () => setWilayahOpen(false);
 
     const handleSaveWilayah = () => {
-        if (!wilayahForm.name.trim() || !wilayahForm.kantor.trim()) { showToast('Nama wilayah & kantor wajib'); return; }
+        const nameTrim = wilayahForm.name.trim();
+        const kantorTrim = wilayahForm.kantor.trim();
+        if (!nameTrim || !kantorTrim) { showToast('Nama wilayah & kantor wajib'); return; }
+        const nameLower = nameTrim.toLowerCase();
+        const dup = regions.some((r) => r.name.trim().toLowerCase() === nameLower && r.id !== editingWilayah?.id);
+        if (dup) { showToast('Nama wilayah sudah ada'); return; }
+        if (wilayahForm.tipe === 'pusat' && regions.some((r) => r.tipe === 'pusat' && r.id !== editingWilayah?.id)) { showToast('Hanya 1 Kantor Pusat — Makassar sudah Pusat'); return; }
         if (editingWilayah) {
             setRegions((prev) => {
-                const next = prev.map((r) => r.id === editingWilayah.id ? { ...r, name: wilayahForm.name.trim(), kantor: wilayahForm.kantor.trim(), tipe: wilayahForm.tipe, address: wilayahForm.address.trim() } : r);
+                const next = prev.map((r) => r.id === editingWilayah.id ? { ...r, name: nameTrim, kantor: kantorTrim, tipe: wilayahForm.tipe, address: wilayahForm.address.trim() } : r);
                 saveRegions(next); return next;
             });
             showToast('Wilayah diperbarui');
         } else {
-            const nextRegion = { id: Date.now(), name: wilayahForm.name.trim(), kantor: wilayahForm.kantor.trim(), tipe: wilayahForm.tipe, address: wilayahForm.address.trim(), locations: [] };
+            const nextRegion = { id: Date.now(), name: nameTrim, kantor: kantorTrim, tipe: wilayahForm.tipe, address: wilayahForm.address.trim(), locations: [] };
             setRegions((prev) => { const next = [...prev, nextRegion]; saveRegions(next); return next; });
             showToast('Wilayah ditambah — tambah 1 titik untuk aktifkan absen');
         }
@@ -115,9 +124,9 @@ export default function Regions() {
             if (!mounted || !siteMapRef.current) return;
             delete L.Icon.Default.prototype._getIconUrl;
             L.Icon.Default.mergeOptions({
-                iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconRetinaUrl: markerIcon2x,
+                iconUrl: markerIcon,
+                shadowUrl: markerShadow,
             });
             // default view: region first site or Sulsel center
             const fallback = addSiteFor.locations[0];
@@ -167,9 +176,13 @@ export default function Regions() {
 
     const handleSaveSite = () => {
         if (!addSiteFor) return;
-        if (!siteForm.nama_lokasi.trim()) { showToast('Nama titik wajib'); return; }
+        const namaTrim = siteForm.nama_lokasi.trim();
+        if (!namaTrim) { showToast('Nama titik wajib'); return; }
+        const dupSite = addSiteFor.locations.some((s) => s.nama_lokasi.trim().toLowerCase() === namaTrim.toLowerCase());
+        if (dupSite) { showToast('Nama titik sudah ada di wilayah ini'); return; }
         const lat = Number(siteForm.lat), lng = Number(siteForm.lng), radius = Number(siteForm.radius);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) { showToast('Pilih titik di peta / isi lat lng'); return; }
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { showToast('Lat -90..90, Lng -180..180'); return; }
         if (radius < 50 || radius > 1000) { showToast('Radius 50–1000m'); return; }
         const newId = Date.now();
         const regionId = addSiteFor.id;

@@ -4,6 +4,15 @@ import { loadRegions, loadEmployees, loadAttendances, saveAttendances, loadSetti
 
 const MOCK_KARYAWAN_ID = 1;
 
+function haversineM(lat1, lng1, lat2, lng2) {
+    const R = 6371000;
+    const toRad = (x) => (x * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 export default function Absensi() {
     const [captured, setCaptured] = useState(false);
     const [regionsData, setRegionsData] = useState(() => loadRegions());
@@ -12,6 +21,9 @@ export default function Absensi() {
     const [settings, setSettings] = useState(() => loadSettings());
     const [photoPreview, setPhotoPreview] = useState(null);
     const [toast, setToast] = useState(null);
+    const [myPos, setMyPos] = useState(null);
+    const [geoError, setGeoError] = useState(null);
+    const [geoLoading, setGeoLoading] = useState(false);
     useEffect(() => {
         const sync = () => {
             setRegionsData(loadRegions()); setEmployees(loadEmployees()); setAttendances(loadAttendances()); setSettings(loadSettings());
@@ -35,8 +47,11 @@ export default function Absensi() {
         return null;
     }, [me, regionsData]);
 
-    const demoJarak = 42;
-    const inRadius = assigned ? demoJarak <= assigned.site.radius : false;
+    const jarak = useMemo(() => {
+        if (!assigned || !myPos) return null;
+        return Math.round(haversineM(myPos.lat, myPos.lng, assigned.site.lat, assigned.site.lng));
+    }, [assigned, myPos]);
+    const inRadius = assigned && jarak != null ? jarak <= assigned.site.radius : false;
     const tanpaTitik = !assigned;
 
     const myHistory = useMemo(() => attendances.filter((a) => a.employee_id === MOCK_KARYAWAN_ID).slice().sort((a,b)=> (b.tgl+b.datang).localeCompare(a.tgl+a.datang)), [attendances]);
@@ -45,9 +60,22 @@ export default function Absensi() {
     const todayISO = new Date().toISOString().slice(0,10);
     const alreadyToday = myHistory.some((h) => h.tgl === todayISO && h.datang);
 
+    const requestPos = () => {
+        if (!assigned) return;
+        if (!navigator.geolocation) { setGeoError('Geolocation tidak didukung — pakai demo 39m'); setMyPos({ lat: assigned.site.lat + 0.00035, lng: assigned.site.lng }); return; }
+        setGeoLoading(true); setGeoError(null);
+        navigator.geolocation.getCurrentPosition(
+            (p) => { setMyPos({ lat: p.coords.latitude, lng: p.coords.longitude }); setGeoLoading(false); },
+            (err) => { setGeoError(err.message || 'Gagal GPS — pakai demo 39m'); setMyPos({ lat: assigned.site.lat + 0.00035, lng: assigned.site.lng }); setGeoLoading(false); },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
+        );
+    };
+    const handleOpenCapture = () => { setCaptured(true); requestPos(); };
+
     const handleKirim = () => {
         if (tanpaTitik) { setToast('Tanpa titik — tidak bisa absen (422)'); setTimeout(()=>setToast(null),2200); return; }
-        if (!inRadius) { setToast(`${demoJarak} m / ${assigned.site.radius} m — di luar radius`); setTimeout(()=>setToast(null),2200); return; }
+        if (jarak == null) { setToast(geoLoading ? 'Menunggu GPS...' : 'Lokasi belum siap — aktifkan GPS'); setTimeout(()=>setToast(null),2200); return; }
+        if (!inRadius) { setToast(`${jarak} m / ${assigned.site.radius} m — di luar radius`); setTimeout(()=>setToast(null),2200); return; }
         if (alreadyToday) { setToast('Sudah absen hari ini'); setTimeout(()=>setToast(null),2200); return; }
         const jamMasuk = settings.jamMasuk || '07:30';
         const tol = settings.toleransi ?? 15;
@@ -62,7 +90,7 @@ export default function Absensi() {
         const next = {
             id: Date.now(), employee_id: MOCK_KARYAWAN_ID, nama: me.nama, email: me.email, wilayah: me.region, kantor: assigned.region.kantor,
             office_location_id: assigned.site.id, tgl: todayISO, datang, pulang: '', status: isLate ? 'late' : 'on_time', love: null,
-            jarak: demoJarak, lat: assigned.site.lat, lng: assigned.site.lng, foto, selfie,
+            jarak, lat: myPos.lat, lng: myPos.lng, foto, selfie,
         };
         const updated = [next, ...attendances];
         setAttendances(updated); saveAttendances(updated);
@@ -73,7 +101,7 @@ export default function Absensi() {
     const handlePulang = () => {
         const rec = myHistory.find((h)=> h.tgl===todayISO && !h.pulang);
         if (!rec) { setToast('Belum absen masuk hari ini'); setTimeout(()=>setToast(null),2200); return; }
-        if (tanpaTitik || !inRadius) { setToast('Di luar radius — tidak bisa pulang'); setTimeout(()=>setToast(null),2200); return; }
+        if (tanpaTitik || jarak == null || !inRadius) { setToast(jarak==null ? 'Lokasi belum siap' : 'Di luar radius — tidak bisa pulang'); setTimeout(()=>setToast(null),2200); return; }
         const pulang = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         const updated = attendances.map((a)=> a.id===rec.id ? { ...a, pulang } : a);
         setAttendances(updated); saveAttendances(updated);
@@ -119,8 +147,8 @@ export default function Absensi() {
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><path d="M14 4a2 2 0 012 2v1h2a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2V6a2 2 0 012-2h4z"/><circle cx="12" cy="13" r="3.5"/><path d="M16 6h1"/></svg>
                                 </span>
                                 <p className="text-sm font-medium text-[#0F172A] mt-3">Siap absen</p>
-                                <p className="text-xs text-[#64748B] text-center mt-1">Kamera + lokasi untuk pratinjau jarak ke <span className="font-medium text-[#0F172A]">{assigned.site.nama_lokasi}</span></p>
-                                <button type="button" onClick={() => setCaptured(true)} className="mt-4 bg-[#0F172A] text-white rounded-xl px-5 py-2.5 text-sm font-semibold">Buka kamera &amp; lokasi</button>
+                                <p className="text-xs text-[#64748B] text-center mt-1">Kamera + lokasi untuk pratinjau jarak ke <span className="font-medium text-[#0F172A]">{assigned.site.nama_lokasi}</span> — hitung haversine ke {assigned.site.radius} m</p>
+                                <button type="button" onClick={handleOpenCapture} className="mt-4 bg-[#0F172A] text-white rounded-xl px-5 py-2.5 text-sm font-semibold">Buka kamera &amp; lokasi</button>
                             </>
                         ) : (
                             <div className="w-full text-center">
@@ -128,20 +156,29 @@ export default function Absensi() {
                                     {photoPreview ? <img src={photoPreview} alt="selfie" className="w-full h-full object-cover" /> : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0116 0"/><circle cx="12" cy="8" r="4"/><path d="M8 12h8"/></svg>}
                                 </div>
                                 <p className="text-sm font-semibold text-[#0F172A] mt-3">Pratinjau selfie</p>
-                                <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{demoJarak} m / {assigned.site.radius} m • {inRadius ? 'Dalam radius titik assigned' : 'Di luar radius — ditolak 422'}</p>
+                                {geoLoading ? (
+                                    <p className="text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 bg-[#F1F5F9] text-[#64748B]">Mengambil lokasi GPS...</p>
+                                ) : jarak == null ? (
+                                    <p className="text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 bg-[#FEF2F2] text-[#991B1B]">Lokasi belum siap</p>
+                                ) : (
+                                    <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{jarak} m / {assigned.site.radius} m • {inRadius ? 'Dalam radius titik assigned' : 'Di luar radius — ditolak 422'}</p>
+                                )}
+                                {geoError && <p className="text-xs text-[#92400E] mt-1">{geoError}</p>}
+                                {myPos && <p className="text-xs font-mono text-[#94A3B8] mt-1">{myPos.lat.toFixed(6)}, {myPos.lng.toFixed(6)}</p>}
                                 <p className="text-xs text-[#94A3B8] mt-1">{nowStr} WITA • {assigned.region.name} • {assigned.site.nama_lokasi}</p>
                                 <div className="flex gap-2 justify-center mt-4">
-                                    <button type="button" onClick={() => setCaptured(false)} className="rounded-xl bg-white shadow-sm px-4 py-2 text-sm font-medium text-[#334155]">Ulangi</button>
-                                    <button type="button" onClick={handleKirim} disabled={!inRadius || alreadyToday} title={!inRadius ? `${demoJarak} m / ${assigned.site.radius} m — di luar radius` : alreadyToday ? 'Sudah absen hari ini' : ''} className={`rounded-xl px-5 py-2 text-sm font-semibold ${inRadius && !alreadyToday ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}>Kirim absen masuk</button>
+                                    <button type="button" onClick={() => { setCaptured(false); setMyPos(null); setGeoError(null); }} className="rounded-xl bg-white shadow-sm px-4 py-2 text-sm font-medium text-[#334155]">Ulangi</button>
+                                    <button type="button" onClick={requestPos} className="rounded-xl bg-white border border-[#E2E8F0] px-4 py-2 text-sm font-medium text-[#334155]">Refresh GPS</button>
+                                    <button type="button" onClick={handleKirim} disabled={jarak==null || !inRadius || alreadyToday} title={jarak==null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius` : alreadyToday ? 'Sudah absen hari ini' : ''} className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak!=null && inRadius && !alreadyToday ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}>Kirim absen masuk</button>
                                 </div>
                             </div>
                         )}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-2">
                         <button type="button" onClick={handlePulang} disabled={tanpaTitik} title={tanpaTitik ? 'Tanpa titik — hubungi Admin (422)' : ''} className={`rounded-xl py-3 text-sm font-medium ${tanpaTitik ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF]'}`}>Absen pulang</button>
-                        <button type="button" onClick={() => setCaptured(true)} disabled={tanpaTitik || (captured && !inRadius)} title={tanpaTitik ? 'Tanpa titik — tidak bisa absen (422)' : captured && !inRadius ? `${demoJarak} m / ${assigned.site.radius} m — di luar radius` : ''} className={`rounded-xl py-3 text-sm font-semibold ${tanpaTitik || (captured && !inRadius) ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
+                        <button type="button" onClick={handleOpenCapture} disabled={tanpaTitik || (captured && jarak!=null && !inRadius)} title={tanpaTitik ? 'Tanpa titik — tidak bisa absen (422)' : captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius` : ''} className={`rounded-xl py-3 text-sm font-semibold ${tanpaTitik || (captured && jarak!=null && !inRadius) ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{tanpaTitik ? 'Tanpa titik tidak dapat absen (422)' : captured && !inRadius ? `${demoJarak} m / ${assigned.site.radius} m — di luar radius ${assigned.site.nama_lokasi}` : `Di luar radius ${assigned.site.radius} m titik assigned tidak dapat absen — CRUD lokal sinkron Admin`}</p>
+                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{tanpaTitik ? 'Tanpa titik tidak dapat absen (422)' : captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius ${assigned.site.nama_lokasi} (haversine)` : `Di luar radius ${assigned?.site.radius ?? '?'} m titik assigned tidak dapat absen — CRUD lokal sinkron Admin • haversine GPS`}</p>
                     {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2 mt-3">{toast}</p>}
                     {alreadyToday && <p className="text-xs text-center text-[#92400E] mt-2">Sudah absen hari ini ({todayISO}) — lihat riwayat</p>}
                 </div>

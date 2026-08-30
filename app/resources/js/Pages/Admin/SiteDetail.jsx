@@ -2,6 +2,9 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { loadRegions, loadEmployees, saveRegions, saveEmployees, getBase, OWN_REGION } from './_shared';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 // Dedicated page per titik — 1 karyawan = 1 titik saja
 // Maps Leaflet per titik, anggota per titik, radius 50–1000m, pindah titik modal.
@@ -60,12 +63,12 @@ export default function SiteDetail({ regionId, siteId }) {
             const L = await import('leaflet');
             await import('leaflet/dist/leaflet.css');
             if (!mounted || !mapRef.current) return;
-            // fix default icon
+            // fix default icon — bundled asset, offline PWA safe
             delete L.Icon.Default.prototype._getIconUrl;
             L.Icon.Default.mergeOptions({
-                iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconRetinaUrl: markerIcon2x,
+                iconUrl: markerIcon,
+                shadowUrl: markerShadow,
             });
             const map = L.map(mapRef.current).setView([site.lat, site.lng], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
@@ -102,12 +105,16 @@ export default function SiteDetail({ regionId, siteId }) {
 
     const handleSaveSite = () => {
         if (!canEdit) { showToast('Hanya own region bisa edit titik', false); return; }
-        if (!form.nama_lokasi.trim()) { showToast('Nama titik wajib', false); return; }
+        const namaTrim = form.nama_lokasi.trim();
+        if (!namaTrim) { showToast('Nama titik wajib', false); return; }
+        const dup = region.locations.some((s) => s.id !== site.id && s.nama_lokasi.trim().toLowerCase() === namaTrim.toLowerCase());
+        if (dup) { showToast('Nama titik sudah ada di wilayah ini', false); return; }
         const lat = Number(form.lat), lng = Number(form.lng), radius = Number(form.radius);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) { showToast('Lat/Lng tidak valid', false); return; }
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { showToast('Lat -90..90, Lng -180..180', false); return; }
         if (radius < 50 || radius > 1000) { showToast('Radius 50–1000m', false); return; }
         setRegions((prev) => {
-            const next = prev.map((r) => r.id !== region.id ? r : { ...r, locations: r.locations.map((s) => s.id !== site.id ? s : { ...s, nama_lokasi: form.nama_lokasi.trim(), lat, lng, radius, address: form.address.trim() }) });
+            const next = prev.map((r) => r.id !== region.id ? r : { ...r, locations: r.locations.map((s) => s.id !== site.id ? s : { ...s, nama_lokasi: namaTrim, lat, lng, radius, address: form.address.trim() }) });
             saveRegions(next);
             return next;
         });
