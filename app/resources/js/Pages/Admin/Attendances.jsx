@@ -1,16 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { loadRegions, loadEmployees, getBase, OWN_REGION, WILAYAH_LIST as wilayahList, getSitesForWilayah, getValidSiteIds, siteById } from './_shared';
-
-const initial = [
-    { id: 1, employee_id: 1, nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 201, datang: '07:52', pulang: '16:12', status: 'late', love: 'pending', jarak: 42, lat: -5.3114, lng: 119.42, foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face&auto=format' },
-    { id: 2, nama: 'Siti Rahma', email: 'siti@bbws-pj.go.id', wilayah: 'Kota Makassar', kantor: 'Kantor Pusat', office_location_id: 101, datang: '07:38', pulang: '16:05', status: 'on_time', love: null, jarak: 38, lat: -5.1477, lng: 119.4327, foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&crop=face&auto=format' },
-    { id: 3, nama: 'Budi Santoso', email: 'budi@bbws-pj.go.id', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 202, datang: '07:40', pulang: '16:05', status: 'on_time', love: null, jarak: 21, lat: -5.32, lng: 119.45, foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face&auto=format' },
-    { id: 4, nama: 'Rina Wati', email: 'rina@bbws-pj.go.id', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: null, datang: '07:48', pulang: '', status: 'late', love: null, jarak: 18, lat: -5.3114, lng: 119.42, foto: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face&auto=format' },
-    { id: 5, nama: 'Rudi Hartono', email: 'rudi@bbws-pj.go.id', wilayah: 'Kab. Bone', kantor: 'Kantor Bone', office_location_id: 401, datang: '07:55', pulang: '15:40', status: 'excused_love', love: 'approved', jarak: 28, lat: -4.54, lng: 120.33, foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face&auto=format' },
-    { id: 6, nama: 'Dewi Lestari', email: 'dewi@bbws-pj.go.id', wilayah: 'Kab. Takalar', kantor: 'Kantor Takalar', office_location_id: 2001, datang: '08:05', pulang: '', status: 'late', love: null, jarak: 95, lat: -5.41, lng: 119.44, foto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=face&auto=format' },
-];
+import { loadRegions, loadEmployees, loadAttendances, saveAttendances, getBase, OWN_REGION, WILAYAH_LIST as wilayahList, getSitesForWilayah, getValidSiteIds, siteById } from './_shared';
 
 const statusLabel = { on_time: 'Tepat waktu', late: 'Terlambat', excused_love: 'Love', early_leave: 'Pulang awal' };
 const statusTone = { on_time: 'bg-[#ECFDF5] text-[#065F46]', late: 'bg-[#FFF7E6] text-[#92400E]', excused_love: 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30', early_leave: 'bg-[#FEF2F2] text-[#991B1B]' };
@@ -21,16 +12,17 @@ export default function Attendances() {
     const isWilayah = base === '/admin' || base === '/wilayah';
     const [regionsData, setRegionsData] = useState(() => loadRegions());
     const [employees] = useState(() => loadEmployees());
+    const [attendances, setAttendances] = useState(() => loadAttendances());
     const [q, setQ] = useState('');
     const [wilayah, setWilayah] = useState(isWilayah ? OWN_REGION : 'Semua');
     const [siteFilter, setSiteFilter] = useState('Semua');
     const [status, setStatus] = useState('Semua');
-    const [tgl, setTgl] = useState('2026-08-24');
+    const [tgl, setTgl] = useState(() => new Date().toISOString().slice(0,10));
     const [detail, setDetail] = useState(null);
     const [toast, setToast] = useState(null);
 
     useEffect(() => {
-        const sync = () => setRegionsData(loadRegions());
+        const sync = () => { setRegionsData(loadRegions()); setAttendances(loadAttendances()); };
         window.addEventListener('focus', sync);
         const onVis = () => { if (document.visibilityState === 'visible') sync(); };
         document.addEventListener('visibilitychange', onVis);
@@ -43,7 +35,11 @@ export default function Attendances() {
 
     const sitesForWilayah = useMemo(() => getSitesForWilayah(regionsData, wilayah, isWilayah), [regionsData, wilayah, isWilayah]);
 
-    const baseList = isWilayah ? initial.filter((r) => r.wilayah === OWN_REGION) : initial;
+    const baseList = useMemo(() => {
+        let list = attendances.filter((r) => r.tgl === tgl);
+        if (list.length === 0) list = attendances;
+        return isWilayah ? list.filter((r) => r.wilayah === OWN_REGION) : list;
+    }, [attendances, tgl, isWilayah]);
     const filtered = useMemo(() => baseList.filter((r) => {
         if (!isWilayah && wilayah !== 'Semua' && r.wilayah !== wilayah) return false;
         if (isWilayah && wilayah !== OWN_REGION) return false;
@@ -59,6 +55,10 @@ export default function Attendances() {
     const stats = { hadir: filtered.length, late: filtered.filter((r)=>r.status==='late').length, love: filtered.filter((r)=>r.love).length, tanpaTitik: filtered.filter((r)=>r.office_location_id==null).length };
 
     const handleExport = () => { setToast('Export CSV — frontend only (akan generate S3 /rekap/... )'); setTimeout(()=>setToast(null),2000); };
+    const handleDelete = (id) => {
+        if (!confirm('Hapus absensi ini? (CRUD lokal sinkron Karyawan)')) return;
+        const next = attendances.filter((x)=>x.id!==id); setAttendances(next); saveAttendances(next); setDetail(null);
+    };
 
     return (
         <AdminLayout>
@@ -67,7 +67,7 @@ export default function Attendances() {
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Absensi — ${OWN_REGION}` : 'Absensi'}</h1>
                         <p className="text-sm text-[#64748B]">{isWilayah ? `Hanya own region • tanpa titik = 422 ditolak • 1 karyawan = 1 titik` : 'Filter wilayah → titik proyek → status • 1 karyawan = 1 titik • di luar titik assigned ditolak 422'}</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">Radius per titik 50–1000m — absen valid hanya di titik assigned karyawan dalam radius titiknya.</p>
+                        <p className="text-xs text-[#94A3B8] mt-1">Radius per titik 50–1000m — absen valid hanya di titik assigned karyawan dalam radius titiknya. Mocking API sinkron Karyawan ↔ Admin</p>
                     </div>
                     <button type="button" onClick={handleExport} className="bg-white border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-sm font-medium text-[#334155] shrink-0">⬇ Export CSV{isWilayah ? ` ${OWN_REGION}` : ''}</button>
                 </div>
@@ -136,10 +136,10 @@ export default function Attendances() {
                             </tbody>
                         </table>
                     </div>
-                    {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada data untuk filter ini</p>}
+                    {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada data untuk filter ini • ganti tanggal atau buat absen di Karyawan/Absensi (CRUD lokal)</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
                         <span>{isWilayah ? `Admin Wilayah: hanya ${OWN_REGION} • tanpa titik ditolak 422` : 'Super Admin lihat semua • Admin Wilayah own region saja'}</span>
-                        <span>Selfie S3 /attendance/.../{'{'}region{'}/{'}employee{'}/{'}date{'}'} • 1 karyawan = 1 titik • Jam 07:30–16:00 WITA</span>
+                        <span>Selfie S3 /attendance/... • 1 karyawan = 1 titik • Jam 07:30–16:00 WITA • CRUD lokal sinkron</span>
                     </div>
                 </div>
 
@@ -154,7 +154,7 @@ export default function Attendances() {
                                 <div className="px-5 py-4 flex items-center justify-between border-b sticky top-0 bg-white rounded-t-2xl">
                                     <div>
                                         <h3 className="font-semibold text-[#0F172A]">{detail.nama}</h3>
-                                        <p className="text-xs text-[#64748B]">{detail.wilayah} • {detail.kantor} • {detail.jarak} m {hit ? `• ${hit.site.nama_lokasi} ${hit.site.radius}m • ${inRadius ? 'Dalam radius titik assigned' : 'Di luar radius titik assigned'}` : '• Tanpa titik (ditolak 422)'} • {statusLabel[detail.status]}</p>
+                                        <p className="text-xs text-[#64748B]">{detail.wilayah} • {detail.kantor} • {detail.jarak} m {hit ? `• ${hit.site.nama_lokasi} ${hit.site.radius}m • ${inRadius ? 'Dalam' : 'Di luar'}` : '• Tanpa titik (422)'} • {statusLabel[detail.status]}</p>
                                     </div>
                                     <button type="button" onClick={()=>setDetail(null)} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center">✕</button>
                                 </div>
@@ -172,13 +172,16 @@ export default function Attendances() {
                                             <span className="text-xs font-semibold text-[#1E3A8A]">Lihat titik →</span>
                                         </Link>
                                     ) : (
-                                        <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-xl p-3"><p className="text-sm font-medium text-[#991B1B]">Tanpa titik assigned — absen seharusnya ditolak 422</p><p className="text-xs text-[#991B1B]/70">Karyawan belum di-assign ke titik proyek (office_location_id null) — tidak bisa absen. Assign di halaman titik.</p></div>
+                                        <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-xl p-3"><p className="text-sm font-medium text-[#991B1B]">Tanpa titik assigned — absen seharusnya ditolak 422</p><p className="text-xs text-[#991B1B]/70">Karyawan belum di-assign ke titik proyek (office_location_id null) — tidak bisa absen.</p></div>
                                     )}
                                     <div className="bg-[#FFF7E6] rounded-xl p-3 flex items-center justify-between">
                                         <p className="text-xs text-[#92400E]">Status: {statusLabel[detail.status]} {detail.love ? `• Love ${detail.love}` : ''}</p>
                                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusTone[detail.status]}`}>{statusLabel[detail.status]}</span>
                                     </div>
-                                    <p className="text-xs text-[#94A3B8] text-center">Foto selfie S3 /attendance/{detail.wilayah}/{detail.nama}/... • Jam global 07:30 toleransi 15m → ≤07:45 on_time</p>
+                                    <div className="flex gap-2">
+                                        <button type="button" onClick={()=>handleDelete(detail.id)} className="flex-1 bg-[#FEF2F2] text-[#991B1B] rounded-xl py-2.5 text-sm font-semibold">Hapus (CRUD lokal)</button>
+                                        <button type="button" onClick={()=>setDetail(null)} className="flex-1 bg-[#0F172A] text-white rounded-xl py-2.5 text-sm font-semibold">Tutup</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

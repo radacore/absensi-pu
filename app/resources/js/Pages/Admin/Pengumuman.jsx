@@ -12,16 +12,20 @@ const initial = [
 ];
 const regions = ['','Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
 const empty = { judul:'', konten:'', scope:'Global', region:'', pin:false };
+const LS_PENGUMUMAN = 'bbws_mock_pengumuman_v3';
+function loadPengumuman() { try { const raw = localStorage.getItem(LS_PENGUMUMAN); if (raw) return JSON.parse(raw); } catch {} return initial; }
+function savePengumuman(list) { try { localStorage.setItem(LS_PENGUMUMAN, JSON.stringify(list)); } catch {} }
 
 export default function PengumumanAdmin() {
     const { url } = usePage();
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
-    const [list, setList] = useState(initial);
+    const [list, setList] = useState(() => loadPengumuman());
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState(isWilayah ? { ...empty, scope: 'Wilayah', region: OWN_REGION } : empty);
     const [toast, setToast] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null);
 
     const openAdd = () => { setEditing(null); setForm(isWilayah ? { ...empty, scope: 'Wilayah', region: OWN_REGION } : empty); setOpen(true); };
     const openEdit = (p) => {
@@ -39,18 +43,23 @@ export default function PengumumanAdmin() {
         }
         const tgl = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
         if (editing) {
-            setList((l)=>l.map((x)=>x.id===editing.id ? { ...x, judul: form.judul, konten: form.konten, scope: form.scope, region: form.scope==='Wilayah' ? form.region : '', pin: form.pin, tgl } : x));
-            setToast('Pengumuman diperbarui (frontend only)');
+            const next = list.map((x)=>x.id===editing.id ? { ...x, judul: form.judul, konten: form.konten, scope: form.scope, region: form.scope==='Wilayah' ? form.region : '', pin: form.pin, tgl } : x);
+            setList(next); savePengumuman(next); setToast('Pengumuman diperbarui');
         } else {
-            const next = { id: Date.now(), judul: form.judul, konten: form.konten, scope: form.scope, region: form.scope==='Wilayah' ? form.region : '', pin: form.pin, tgl, stat: form.scope==='Global' ? 'Terkirim 24 kantor' : `Terkirim ${form.region}` };
-            setList((l)=>[next, ...l]); setToast('Pengumuman dibuat (frontend only)');
+            const nextItem = { id: Date.now(), judul: form.judul, konten: form.konten, scope: form.scope, region: form.scope==='Wilayah' ? form.region : '', pin: form.pin, tgl, stat: form.scope==='Global' ? 'Terkirim 24 kantor' : `Terkirim ${form.region}` };
+            const next = [nextItem, ...list]; setList(next); savePengumuman(next); setToast('Pengumuman dibuat');
         }
         setOpen(false); setTimeout(()=>setToast(null),2000);
     };
     const remove = (id) => {
         const target = list.find((x)=>x.id===id);
-        if (isWilayah && target && target.scope === 'Global') { setToast('Tidak bisa hapus Global'); setTimeout(()=>setToast(null),2000); return; }
-        setList((l)=>l.filter((x)=>x.id!==id)); setToast('Dihapus (frontend only)'); setTimeout(()=>setToast(null),2000);
+        if (!target) return;
+        if (isWilayah && target.scope === 'Global') { setToast('Tidak bisa hapus Global'); setTimeout(()=>setToast(null),2000); return; }
+        setConfirmDelete(target);
+    };
+    const confirmRemove = () => {
+        if (!confirmDelete) return;
+        const next = list.filter((x)=>x.id!==confirmDelete.id); setList(next); savePengumuman(next); setToast(`"${confirmDelete.judul}" dihapus`); setConfirmDelete(null); setTimeout(()=>setToast(null),2000);
     };
 
     return (
@@ -88,6 +97,22 @@ export default function PengumumanAdmin() {
                 </div>
 
                 {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2">{toast}</p>}
+
+                {confirmDelete && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
+                        <div className="bg-white rounded-2xl w-full max-w-[400px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
+                            <div className="px-6 py-4">
+                                <h3 className="font-semibold text-[#0F172A]">Hapus pengumuman?</h3>
+                                <p className="text-sm text-[#64748B] mt-1">“{confirmDelete.judul}” — {confirmDelete.scope}{confirmDelete.region ? ` • ${confirmDelete.region}` : ''}</p>
+                                <p className="text-xs text-[#94A3B8] mt-2">Pengumuman akan dihapus. Tidak dapat dibatalkan.</p>
+                            </div>
+                            <div className="px-6 pb-5 flex gap-2">
+                                <button type="button" onClick={() => setConfirmDelete(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
+                                <button type="button" onClick={confirmRemove} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {open && (
                     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={close}>

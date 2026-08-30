@@ -1,12 +1,13 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { loadRegions, loadEmployees } from '@/Pages/Admin/_shared';
+import { loadRegions, loadEmployees, saveEmployees } from '@/Pages/Admin/_shared';
 
 const MOCK_KARYAWAN_ID = 1;
 
 export default function Profil() {
-    const [photo, setPhoto] = useState(null);
-    const [preview, setPreview] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(null);
+    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
     const fileRef = useRef(null);
     const [pwd, setPwd] = useState({ old: '', next: '', confirm: '' });
     const [msg, setMsg] = useState(null);
@@ -20,6 +21,12 @@ export default function Profil() {
         return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); };
     }, []);
     const me = useMemo(() => employees.find((e) => e.id === MOCK_KARYAWAN_ID) || employees[0], [employees]);
+    useEffect(() => {
+        if (!me) return;
+        setPhone(localStorage.getItem('bbws_mock_phone_v3') || '0812-3456-7890');
+        setEmail(me.email || '');
+        try { const p = localStorage.getItem('bbws_mock_photo_v3'); if (p) setPhotoPreview(p); } catch {}
+    }, [me]);
     const assigned = useMemo(() => {
         if (!me || me.office_location_id == null) return null;
         for (const r of regionsData) {
@@ -32,26 +39,36 @@ export default function Profil() {
     const handlePhoto = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setPhoto(file);
         const reader = new FileReader();
-        reader.onload = () => setPreview(reader.result);
+        reader.onload = () => {
+            const data = reader.result;
+            setPhotoPreview(data);
+            try { localStorage.setItem('bbws_mock_photo_v3', data); } catch {}
+        };
         reader.readAsDataURL(file);
+    };
+    const clearPhoto = () => {
+        setPhotoPreview(null);
+        try { localStorage.removeItem('bbws_mock_photo_v3'); } catch {}
+        if (fileRef.current) fileRef.current.value = '';
+    };
+
+    const handleSaveProfile = () => {
+        if (!phone.trim() || !email.trim()) { setMsg({ type: 'error', text: 'Phone & email wajib diisi' }); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setMsg({ type: 'error', text: 'Format email tidak valid' }); return; }
+        try { localStorage.setItem('bbws_mock_phone_v3', phone.trim()); } catch {}
+        // persist email ke employees
+        const next = employees.map((e) => e.id === me.id ? { ...e, email: email.trim() } : e);
+        setEmployees(next); saveEmployees(next);
+        if (photoPreview) try { localStorage.setItem('bbws_mock_photo_v3', photoPreview); } catch {}
+        setMsg({ type: 'success', text: 'Data pribadi disimpan (sinkron ke Admin → Karyawan)' });
     };
 
     const handleReset = (e) => {
         e.preventDefault();
-        if (!pwd.old || !pwd.next || !pwd.confirm) {
-            setMsg({ type: 'error', text: 'Lengkapi semua field kata sandi' });
-            return;
-        }
-        if (pwd.next.length < 8) {
-            setMsg({ type: 'error', text: 'Kata sandi baru minimal 8 karakter' });
-            return;
-        }
-        if (pwd.next !== pwd.confirm) {
-            setMsg({ type: 'error', text: 'Konfirmasi tidak cocok' });
-            return;
-        }
+        if (!pwd.old || !pwd.next || !pwd.confirm) { setMsg({ type: 'error', text: 'Lengkapi semua field kata sandi' }); return; }
+        if (pwd.next.length < 8) { setMsg({ type: 'error', text: 'Kata sandi baru minimal 8 karakter' }); return; }
+        if (pwd.next !== pwd.confirm) { setMsg({ type: 'error', text: 'Konfirmasi tidak cocok' }); return; }
         setMsg({ type: 'success', text: 'Kata sandi berhasil diperbarui (frontend only)' });
         setPwd({ old: '', next: '', confirm: '' });
     };
@@ -61,8 +78,8 @@ export default function Profil() {
             <div className="space-y-5">
                 <div className="bg-white rounded-2xl p-6 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center">
                     <div className="mx-auto w-20 h-20 rounded-full bg-[#F1F5F9] overflow-hidden flex items-center justify-center border-2 border-white shadow-sm">
-                        {preview ? (
-                            <img src={preview} alt="Foto profil" className="w-full h-full object-cover" />
+                        {photoPreview ? (
+                            <img src={photoPreview} alt="Foto profil" className="w-full h-full object-cover" />
                         ) : (
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0116 0"/></svg>
                         )}
@@ -90,24 +107,23 @@ export default function Profil() {
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
                     <h3 className="font-medium text-sm text-[#0F172A]">Data pribadi</h3>
-                    <p className="text-xs text-[#94A3B8]">NIK, NIP, golongan, dan unit tidak dapat diubah mandiri</p>
+                    <p className="text-xs text-[#94A3B8]">NIK, NIP, golongan, dan unit tidak dapat diubah mandiri — phone/email tersinkron Admin ↔ Karyawan</p>
                     <div className="space-y-3">
                         <div>
                             <label htmlFor="phone" className="text-xs font-medium text-[#334155]">Nomor ponsel</label>
-                            <input id="phone" defaultValue="0812-3456-7890" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                            <input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
                         </div>
                         <div>
                             <label htmlFor="email" className="text-xs font-medium text-[#334155]">Email</label>
-                            <input id="email" defaultValue={me?.email || 'andi@pu-sulsel.go.id'} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                            <input id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
                         </div>
                     </div>
                     <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
                     <div className="grid grid-cols-2 gap-2 pt-2">
-                        <button type="button" onClick={() => fileRef.current?.click()} className="rounded-xl bg-[#F8FAFC] py-2.5 text-sm font-medium text-[#334155]">{photo ? 'Ganti lagi' : 'Upload foto'}</button>
-                        <button type="button" onClick={() => setMsg({ type: 'success', text: 'Data pribadi disimpan (frontend only)' })} className="rounded-xl bg-[#0F172A] text-white py-2.5 text-sm font-semibold">Simpan</button>
+                        <button type="button" onClick={() => fileRef.current?.click()} className="rounded-xl bg-[#F8FAFC] py-2.5 text-sm font-medium text-[#334155]">{photoPreview ? 'Ganti foto' : 'Upload foto'}</button>
+                        <button type="button" onClick={handleSaveProfile} className="rounded-xl bg-[#0F172A] text-white py-2.5 text-sm font-semibold">Simpan</button>
                     </div>
-                    {photo && <p className="text-xs text-[#10B981]">Terpilih: {photo.name} • Preview di atas</p>}
-                    {preview && <button type="button" onClick={() => { setPreview(null); setPhoto(null); }} className="text-xs text-[#EF4444] font-medium">Hapus preview</button>}
+                    {photoPreview && <button type="button" onClick={clearPhoto} className="text-xs text-[#EF4444] font-medium">Hapus foto</button>}
                     {msg && msg.text.includes('Data pribadi') && <p className={`text-xs px-3 py-2 rounded-xl ${msg.type === 'success' ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{msg.text}</p>}
                 </div>
 

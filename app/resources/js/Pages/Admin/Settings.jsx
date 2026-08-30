@@ -4,17 +4,33 @@ import { useState } from 'react';
 
 function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
+const LS_SETTINGS = 'bbws_mock_settings_v3';
+function loadSettings() {
+    try {
+        const raw = localStorage.getItem(LS_SETTINGS);
+        if (raw) return JSON.parse(raw);
+    } catch {}
+    return { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4 };
+}
+function saveSettings(v) { try { localStorage.setItem(LS_SETTINGS, JSON.stringify(v)); } catch {} }
+
 export default function Settings() {
     const { url } = usePage();
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
-    const [jamMasuk, setJamMasuk] = useState('07:30');
-    const [jamPulang, setJamPulang] = useState('16:00');
-    const [toleransi, setToleransi] = useState(15);
-    const [loveMax, setLoveMax] = useState(4);
+    const init = loadSettings();
+    const [jamMasuk, setJamMasuk] = useState(init.jamMasuk);
+    const [jamPulang, setJamPulang] = useState(init.jamPulang);
+    const [toleransi, setToleransi] = useState(init.toleransi);
+    const [loveMax, setLoveMax] = useState(init.loveMax);
     const [saved, setSaved] = useState(false);
+    const [err, setErr] = useState(null);
     const handleSave = () => {
         if (isWilayah) return;
+        if (jamMasuk >= jamPulang) { setErr('Jam masuk harus sebelum jam pulang'); setTimeout(()=>setErr(null),2500); return; }
+        if (toleransi < 0 || toleransi > 60) { setErr('Toleransi 0–60 menit'); setTimeout(()=>setErr(null),2500); return; }
+        if (loveMax < 1 || loveMax > 10) { setErr('Love 1–10'); setTimeout(()=>setErr(null),2500); return; }
+        saveSettings({ jamMasuk, jamPulang, toleransi, loveMax });
         setSaved(true); setTimeout(() => setSaved(false), 2000);
     };
     return (
@@ -75,7 +91,8 @@ export default function Settings() {
                 </div>
 
                 <button type="button" onClick={handleSave} disabled={isWilayah} className={`w-full rounded-xl py-3 text-sm font-semibold transition ${isWilayah ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white hover:bg-[#1E3A8A]'}`}>{isWilayah ? 'Read-only — hanya Super Admin bisa simpan' : 'Simpan pengaturan'}</button>
-                {saved && <p className="text-xs text-center text-[#10B981] bg-[#ECFDF5] rounded-xl py-2">Tersimpan (frontend only) — jam & love akan dipakai bulan depan</p>}
+                {err && <p className="text-xs text-center text-[#991B1B] bg-[#FEF2F2] rounded-xl py-2">{err}</p>}
+                {saved && <p className="text-xs text-center text-[#10B981] bg-[#ECFDF5] rounded-xl py-2">Tersimpan — jam & love akan dipakai bulan depan</p>}
                 {isWilayah && <p className="text-xs text-center text-[#94A3B8]">Wilayah lihat saja — perubahan hanya di /super-admin/settings oleh Super Admin</p>}
             </div>
         </AdminLayout>

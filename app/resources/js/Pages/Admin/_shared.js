@@ -58,6 +58,39 @@ export const DUMMY_EMPLOYEES = [
 
 const LS_REGIONS = 'bbws_mock_regions_v3';
 const LS_EMPLOYEES = 'bbws_mock_employees_v3';
+export const LS_CUTI = 'bbws_mock_cuti_v3';
+export const LS_CUTI_OLD = 'bbws_mock_cuti_karyawan_v3';
+export const LS_LOVE = 'bbws_mock_love_v3';
+export const LS_ATTENDANCES = 'bbws_mock_attendances_v3';
+export const LS_SETTINGS = 'bbws_mock_settings_v3';
+export const LS_PENGUMUMAN = 'bbws_mock_pengumuman_v3';
+export const LS_READ = 'bbws_mock_pengumuman_read_v3';
+
+// Mocking API seed — unified across Admin ↔ Karyawan (Frontend-Driven Development)
+export const DUMMY_CUTI = [
+    { id: 1, employee_id: 1, nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', wilayah: 'Kab. Gowa', regionId: 2, office_location_id: 201, jenis: 'Tahunan', tgl: '28–30 Agu 2026', mulai: '2026-08-28', selesai: '2026-08-30', alasan: 'Acara keluarga', dokumen: null, status: 'Menunggu', level: 2, createdAt: '2026-08-24T07:00:00+08:00' },
+    { id: 2, employee_id: 99, nama: 'Rudi Hartono', email: 'rudi@bbws-pj.go.id', wilayah: 'Kab. Bone', regionId: 4, office_location_id: 401, jenis: 'Sakit', tgl: '23 Agu 2026', mulai: '2026-08-23', selesai: '2026-08-23', alasan: 'Demam — surat dokter', dokumen: 'surat-dokter.jpg', status: 'Menunggu', level: 1, createdAt: '2026-08-23T08:00:00+08:00' },
+    { id: 3, employee_id: 2, nama: 'Siti Rahma', email: 'siti@bbws-pj.go.id', wilayah: 'Kota Makassar', regionId: 1, office_location_id: 101, jenis: 'Besar', tgl: '20 Agu 2026', mulai: '2026-08-20', selesai: '2026-08-20', alasan: 'Haji', dokumen: 'jadwal-haji.pdf', status: 'Disetujui', level: 3, createdAt: '2026-08-20T09:00:00+08:00' },
+    { id: 4, employee_id: 3, nama: 'Budi Santoso', email: 'budi@bbws-pj.go.id', wilayah: 'Kab. Gowa', regionId: 2, office_location_id: 202, jenis: 'Tahunan', tgl: '25–26 Agu 2026', mulai: '2026-08-25', selesai: '2026-08-26', alasan: 'Keperluan pribadi', dokumen: null, status: 'Ditolak', level: 1, createdAt: '2026-08-24T09:30:00+08:00', note: 'Stok cuti habis' },
+    { id: 5, employee_id: 4, nama: 'Rina Wati', email: 'rina@bbws-pj.go.id', wilayah: 'Kab. Gowa', regionId: 2, office_location_id: null, jenis: 'Melahirkan', tgl: '15 Agu–15 Nov 2026', mulai: '2026-08-15', selesai: '2026-11-15', alasan: 'Cuti melahirkan', dokumen: null, status: 'Menunggu', level: 2, createdAt: '2026-08-15T10:00:00+08:00' },
+];
+
+export const DUMMY_LOVE = [
+    { id: 1, employee_id: 1, nama: 'Andi Saputra', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 201, jam: '07:52', jarak: 42, radius: 200, alasan: 'Macet poros Gowa — lampiran foto jalan', dokumen: 'surat.pdf', status: 'pending', createdAt: '2026-08-24T07:52:00+08:00' },
+    { id: 2, employee_id: 4, nama: 'Rina Wati', wilayah: 'Kab. Maros', kantor: 'Kantor Maros', office_location_id: null, jam: '07:48', jarak: 28, radius: null, alasan: 'Antar anak sakit — surat dokter', dokumen: 'foto.jpg', status: 'pending', createdAt: '2026-08-24T07:48:00+08:00' },
+    { id: 3, employee_id: 99, nama: 'Rudi Hartono', wilayah: 'Kab. Bone', kantor: 'Kantor Bone', office_location_id: 401, jam: '07:55', jarak: 18, radius: 150, alasan: 'Ban bocor', dokumen: 'bukti.jpg', status: 'approved', createdAt: '2026-08-23T07:55:00+08:00' },
+    { id: 4, employee_id: 5, nama: 'Dewi Lestari', wilayah: 'Kab. Takalar', kantor: 'Kantor Takalar', office_location_id: 2001, jam: '08:05', jarak: 95, radius: 200, alasan: 'Hujan deras', dokumen: 'surat.pdf', status: 'rejected', note: 'Dokumen tidak relevan', createdAt: '2026-08-22T08:05:00+08:00' },
+    { id: 5, employee_id: 3, nama: 'Budi Santoso', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 202, jam: '07:44', jarak: 21, radius: 150, alasan: 'Keterlambatan KRL', dokumen: 'tiket.pdf', status: 'pending', createdAt: '2026-08-24T07:44:00+08:00' },
+];
+
+export const DUMMY_ATTENDANCES = [
+    { id: 1, employee_id: 1, nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 201, tgl: '2026-08-24', datang: '07:52', pulang: '16:12', status: 'late', love: 'pending', jarak: 42, lat: -5.3114, lng: 119.42, foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face&auto=format' },
+    { id: 2, employee_id: 2, nama: 'Siti Rahma', email: 'siti@bbws-pj.go.id', wilayah: 'Kota Makassar', kantor: 'Kantor Pusat', office_location_id: 101, tgl: '2026-08-24', datang: '07:38', pulang: '16:05', status: 'on_time', love: null, jarak: 38, lat: -5.1477, lng: 119.4327, foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&crop=face&auto=format' },
+    { id: 3, employee_id: 3, nama: 'Budi Santoso', email: 'budi@bbws-pj.go.id', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 202, tgl: '2026-08-24', datang: '07:40', pulang: '16:05', status: 'on_time', love: null, jarak: 21, lat: -5.32, lng: 119.45, foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face&auto=format' },
+    { id: 4, employee_id: 4, nama: 'Rina Wati', email: 'rina@bbws-pj.go.id', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: null, tgl: '2026-08-24', datang: '07:48', pulang: '', status: 'late', love: null, jarak: 18, lat: -5.3114, lng: 119.42, foto: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face&auto=format' },
+    { id: 5, employee_id: 99, nama: 'Rudi Hartono', email: 'rudi@bbws-pj.go.id', wilayah: 'Kab. Bone', kantor: 'Kantor Bone', office_location_id: 401, tgl: '2026-08-24', datang: '07:55', pulang: '15:40', status: 'excused_love', love: 'approved', jarak: 28, lat: -4.54, lng: 120.33, foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face&auto=format' },
+    { id: 6, employee_id: 5, nama: 'Dewi Lestari', email: 'dewi@bbws-pj.go.id', wilayah: 'Kab. Takalar', kantor: 'Kantor Takalar', office_location_id: 2001, tgl: '2026-08-24', datang: '08:05', pulang: '', status: 'late', love: null, jarak: 95, lat: -5.41, lng: 119.44, foto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=face&auto=format' },
+];
 
 export function loadRegions() {
     try {
@@ -79,9 +112,47 @@ export function loadEmployees() {
 export function saveEmployees(list) {
     try { localStorage.setItem(LS_EMPLOYEES, JSON.stringify(list)); } catch {}
 }
+export function loadCuti() {
+    try {
+        const raw = localStorage.getItem(LS_CUTI);
+        if (raw) return JSON.parse(raw);
+        const old = localStorage.getItem(LS_CUTI_OLD);
+        if (old) {
+            const parsed = JSON.parse(old);
+            // migrate karyawan-only shape (jenis/tgl/alasan/status/tone/step) → unified
+            const migrated = parsed.map((c) => c.wilayah ? c : ({
+                id: c.id, employee_id: 1, nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', wilayah: 'Kab. Gowa', regionId: 2, office_location_id: 201,
+                jenis: c.jenis, tgl: c.tgl, mulai: '', selesai: '', alasan: c.alasan, dokumen: null,
+                status: c.status?.includes('Menunggu') ? 'Menunggu' : c.status?.includes('Disetujui') ? 'Disetujui' : c.status?.includes('Ditolak') ? 'Ditolak' : c.status || 'Menunggu',
+                level: c.step ?? 0, createdAt: new Date().toISOString(),
+            }));
+            localStorage.setItem(LS_CUTI, JSON.stringify(migrated.length ? migrated : DUMMY_CUTI));
+            return migrated.length ? migrated : DUMMY_CUTI;
+        }
+    } catch {}
+    return DUMMY_CUTI;
+}
+export function saveCuti(list) { try { localStorage.setItem(LS_CUTI, JSON.stringify(list)); } catch {} }
+export function loadLove() {
+    try { const raw = localStorage.getItem(LS_LOVE); if (raw) return JSON.parse(raw); } catch {}
+    return DUMMY_LOVE;
+}
+export function saveLove(list) { try { localStorage.setItem(LS_LOVE, JSON.stringify(list)); } catch {} }
+export function loadAttendances() {
+    try { const raw = localStorage.getItem(LS_ATTENDANCES); if (raw) return JSON.parse(raw); } catch {}
+    return DUMMY_ATTENDANCES;
+}
+export function saveAttendances(list) { try { localStorage.setItem(LS_ATTENDANCES, JSON.stringify(list)); } catch {} }
+export function loadSettings() {
+    try { const raw = localStorage.getItem(LS_SETTINGS); if (raw) return JSON.parse(raw); } catch {}
+    return { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4 };
+}
+export function saveSettings(v) { try { localStorage.setItem(LS_SETTINGS, JSON.stringify(v)); } catch {} }
 export function getBase(url) {
     if (url.startsWith('/super-admin')) return '/super-admin';
     if (url.startsWith('/admin')) return '/admin';
     if (url.startsWith('/wilayah')) return '/wilayah';
     return '/admin';
 }
+// Settings live helper for karyawan loveMax
+export function getLoveMax() { try { const s = loadSettings(); return s.loveMax ?? 4; } catch { return 4; } }

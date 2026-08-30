@@ -1,15 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { getBase, loadRegions, loadEmployees, OWN_REGION, WILAYAH_LIST as wilayahList, getSitesForWilayah, getValidSiteIds, siteById } from './_shared';
-
-const initial = [
-    { id: 1, nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', wilayah: 'Kab. Gowa', office_location_id: 201, jenis: 'Tahunan', tgl: '28–30 Agu', alasan: 'Acara keluarga', status: 'Menunggu', level: 2 },
-    { id: 2, nama: 'Rudi Hartono', email: 'rudi@bbws-pj.go.id', wilayah: 'Kab. Bone', office_location_id: 401, jenis: 'Sakit', tgl: '23 Agu', alasan: 'Demam — surat dokter', status: 'Menunggu', level: 1 },
-    { id: 3, nama: 'Siti Rahma', email: 'siti@bbws-pj.go.id', wilayah: 'Kota Makassar', office_location_id: 101, jenis: 'Besar', tgl: '20 Agu', alasan: 'Haji', status: 'Disetujui', level: 3 },
-    { id: 4, nama: 'Budi Santoso', email: 'budi@bbws-pj.go.id', wilayah: 'Kab. Gowa', office_location_id: 202, jenis: 'Tahunan', tgl: '25–26 Agu', alasan: 'Keperluan pribadi', status: 'Ditolak', level: 1 },
-    { id: 5, nama: 'Rina Wati', email: 'rina@bbws-pj.go.id', wilayah: 'Kab. Gowa', office_location_id: null, jenis: 'Melahirkan', tgl: '15 Agu–15 Nov', alasan: 'Cuti melahirkan', status: 'Menunggu', level: 2 },
-];
+import { getBase, loadRegions, loadEmployees, OWN_REGION, WILAYAH_LIST as wilayahList, getSitesForWilayah, getValidSiteIds, siteById, loadCuti, saveCuti } from './_shared';
 
 export default function CutiAdmin() {
     const { url } = usePage();
@@ -20,9 +12,11 @@ export default function CutiAdmin() {
     const [siteFilter, setSiteFilter] = useState('Semua');
     const [status, setStatus] = useState('Semua');
     const [regionsData, setRegionsData] = useState(() => loadRegions());
-    const [employees] = useState(() => loadEmployees());
+    const employees = useMemo(() => loadEmployees(), []);
+    const [list, setList] = useState(() => loadCuti());
+    const [toast, setToast] = useState(null);
     useEffect(() => {
-        const sync = () => setRegionsData(loadRegions());
+        const sync = () => { setRegionsData(loadRegions()); setList(loadCuti()); };
         window.addEventListener('focus', sync);
         const onVis = () => { if (document.visibilityState === 'visible') sync(); };
         document.addEventListener('visibilitychange', onVis);
@@ -34,7 +28,23 @@ export default function CutiAdmin() {
     }, [wilayah, siteFilter, regionsData, isWilayah]);
     const sitesForWilayah = useMemo(() => getSitesForWilayah(regionsData, wilayah, isWilayah), [regionsData, wilayah, isWilayah]);
 
-    const baseList = isWilayah ? initial.filter((c) => c.wilayah === OWN_REGION) : initial;
+    const update = (id, patch) => {
+        const next = list.map((c) => c.id === id ? { ...c, ...patch } : c);
+        setList(next); saveCuti(next);
+    };
+    const handleApprove = (c) => {
+        if (c.status !== 'Menunggu') return;
+        if (c.level < 3) update(c.id, { level: c.level + 1, status: c.level + 1 >= 3 ? 'Disetujui' : 'Menunggu' });
+        else update(c.id, { status: 'Disetujui' });
+        setToast(`${c.nama} — naik level ${Math.min(3, c.level + 1)}${c.level + 1 >= 3 ? ' • Disetujui' : ''}`); setTimeout(()=>setToast(null),2200);
+    };
+    const handleReject = (c) => { update(c.id, { status: 'Ditolak' }); setToast(`${c.nama} ditolak`); setTimeout(()=>setToast(null),2200); };
+    const handleDelete = (c) => {
+        if (!confirm(`Hapus cuti ${c.nama} — ${c.jenis} ${c.tgl}?`)) return;
+        const next = list.filter((x) => x.id !== c.id); setList(next); saveCuti(next);
+    };
+
+    const baseList = isWilayah ? list.filter((c) => c.wilayah === OWN_REGION) : list;
     const filtered = useMemo(() => baseList.filter((c) => {
         if (!isWilayah && wilayah !== 'Semua' && c.wilayah !== wilayah) return false;
         if (isWilayah && wilayah !== OWN_REGION) return false;
@@ -47,7 +57,7 @@ export default function CutiAdmin() {
         return true;
     }), [q, wilayah, siteFilter, status, baseList, isWilayah]);
 
-    const counts = { pending: initial.filter((c)=>c.status==='Menunggu').length, approved: initial.filter((c)=>c.status==='Disetujui').length, rejected: initial.filter((c)=>c.status==='Ditolak').length };
+    const counts = { pending: list.filter((c)=>c.status==='Menunggu').length, approved: list.filter((c)=>c.status==='Disetujui').length, rejected: list.filter((c)=>c.status==='Ditolak').length };
 
     return (
         <AdminLayout>
@@ -56,6 +66,7 @@ export default function CutiAdmin() {
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Cuti — ${OWN_REGION}` : 'Cuti — Berjenjang'}</h1>
                         <p className="text-sm text-[#64748B]">{isWilayah ? `Approve own region level sesuai kewenangan • ${OWN_REGION} • 1 karyawan = 1 titik` : 'Atasan → Admin Wilayah → Kantor Pusat • 3 level, reject terminal • 1 karyawan = 1 titik'}</p>
+                        <p className="text-xs text-[#94A3B8] mt-1">Mocking API: karyawan ajukan di /karyawan/cuti → langsung muncul di sini (CRUD lokal localStorage)</p>
                     </div>
                     <span className="hidden lg:inline-flex bg-[#F8FAFC] border border-[#E2E8F0] text-xs font-medium px-3 py-1.5 rounded-full text-[#64748B]">{filtered.length} hasil • {counts.pending} menunggu</span>
                 </div>
@@ -87,13 +98,14 @@ export default function CutiAdmin() {
                         <option value="Ditolak">Ditolak</option>
                     </select>
                     <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Cari nama / email / jenis..." className="flex-1 min-w-[180px] rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
-                    <span className="text-xs text-[#94A3B8]">{filtered.length} dari {initial.length}</span>
+                    <span className="text-xs text-[#94A3B8]">{filtered.length} dari {list.length}</span>
                 </div>
+                {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2">{toast}</p>}
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-[#F8FAFC] text-xs font-medium text-[#64748B]"><tr><th className="text-left px-4 py-3">Karyawan</th><th className="text-left px-4 py-3">Titik Proyek</th><th className="text-left px-4 py-3">Jenis</th><th className="text-left px-4 py-3">Tanggal</th><th className="text-left px-4 py-3">Level</th><th className="text-left px-4 py-3">Status</th><th className="px-4 py-3"></th></tr></thead>
+                            <thead className="bg-[#F8FAFC] text-xs font-medium text-[#64748B]"><tr><th className="text-left px-4 py-3">Karyawan</th><th className="text-left px-4 py-3">Titik Proyek</th><th className="text-left px-4 py-3">Jenis</th><th className="text-left px-4 py-3">Tanggal</th><th className="text-left px-4 py-3">Level</th><th className="text-left px-4 py-3">Status</th><th className="px-4 py-3 text-right">Aksi</th></tr></thead>
                             <tbody className="divide-y divide-[#F1F5F9]">
                                 {filtered.map((c) => {
                                     const hit = siteById(c.office_location_id, regionsData);
@@ -109,7 +121,18 @@ export default function CutiAdmin() {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-1 rounded-full ${c.status === 'Disetujui' ? 'bg-[#ECFDF5] text-[#065F46]' : c.status === 'Menunggu' ? 'bg-[#FFF7E6] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{c.status}</span></td>
-                                            <td className="px-4 py-3 text-right"><Link href={`${base}/cuti/${c.id}`} className="text-xs font-medium bg-[#0F172A] text-white px-3 py-1.5 rounded-lg inline-block hover:bg-[#1E3A8A]">Review</Link></td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex gap-1 justify-end flex-wrap">
+                                                    {c.status === 'Menunggu' ? (
+                                                        <>
+                                                            <button type="button" onClick={()=>handleApprove(c)} className="text-xs font-medium bg-[#0F172A] text-white px-2.5 py-1.5 rounded-lg">Setujui</button>
+                                                            <button type="button" onClick={()=>handleReject(c)} className="text-xs font-medium bg-[#F1F5F9] text-[#64748B] px-2.5 py-1.5 rounded-lg">Tolak</button>
+                                                        </>
+                                                    ) : <span className="text-xs text-[#94A3B8]">—</span>}
+                                                    <Link href={`${base}/cuti/${c.id}`} className="text-xs font-medium bg-white border px-2.5 py-1.5 rounded-lg">Detail</Link>
+                                                    <button type="button" onClick={()=>handleDelete(c)} className="text-xs font-medium bg-[#FEF2F2] text-[#991B1B] px-2.5 py-1.5 rounded-lg">Hapus</button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -119,7 +142,7 @@ export default function CutiAdmin() {
                     {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada data untuk filter ini</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
                         <span>{isWilayah ? `Admin Wilayah: review & approve hanya ${OWN_REGION} • level sesuai kewenangan` : 'Super Admin approve semua level • Admin Wilayah approve own region level sesuai kewenangan'} • 1 karyawan = 1 titik</span>
-                        <span>Reject terminal — tidak lanjut level berikutnya</span>
+                        <span>CRUD lokal — persist localStorage • Karyawan create → Admin approve/reject/delete</span>
                     </div>
                 </div>
             </div>

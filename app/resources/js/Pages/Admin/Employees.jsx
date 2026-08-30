@@ -17,6 +17,7 @@ export default function Employees() {
     const [filterStatus, setFilterStatus] = useState('Semua');
     const [photo, setPhoto] = useState(null);
     const [preview, setPreview] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null);
 
     const [form, setForm] = useState({
         nik: '', nip: '', nama: '', email: '', gol: '-', jabatan: '', unit: '', status: 'PNS',
@@ -115,8 +116,14 @@ export default function Employees() {
     };
     const remove = (id) => {
         const target = list.find((x)=>x.id===id);
-        if (isWilayah && target && target.region !== OWN_REGION) { showToast('Hanya own region'); return; }
-        const nextList = list.filter((x)=>x.id!==id); setList(nextList); saveEmployees(nextList); showToast('Dihapus');
+        if (!target) return;
+        if (isWilayah && target.region !== OWN_REGION) { showToast('Hanya own region'); return; }
+        setConfirmDelete(target);
+    };
+    const confirmRemove = () => {
+        if (!confirmDelete) return;
+        const nextList = list.filter((x)=>x.id!==confirmDelete.id); setList(nextList); saveEmployees(nextList); showToast(`${confirmDelete.nama} dihapus`);
+        setConfirmDelete(null);
     };
 
     const countUnassigned = scopedList.filter((e)=>e.office_location_id==null).length;
@@ -214,6 +221,22 @@ export default function Employees() {
                 </div>
 
                 {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2">{toast}</p>}
+
+                {confirmDelete && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
+                        <div className="bg-white rounded-2xl w-full max-w-[400px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
+                            <div className="px-6 py-4">
+                                <h3 className="font-semibold text-[#0F172A]">Hapus {confirmDelete.nama}?</h3>
+                                <p className="text-sm text-[#64748B] mt-1">{confirmDelete.email} • {confirmDelete.region}{confirmDelete.office_location_id ? '' : ' • Tanpa titik'}</p>
+                                <p className="text-xs text-[#94A3B8] mt-2">Karyawan akan dihapus dari daftar. Tidak dapat dibatalkan.</p>
+                            </div>
+                            <div className="px-6 pb-5 flex gap-2">
+                                <button type="button" onClick={() => setConfirmDelete(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
+                                <button type="button" onClick={confirmRemove} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {open && (
                     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={close}>

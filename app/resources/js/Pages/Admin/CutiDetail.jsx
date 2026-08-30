@@ -1,21 +1,32 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { getBase, loadCuti, saveCuti } from './_shared';
 
-const dataMap = {
-    1: { nama: 'Andi Saputra', kantor: 'Gowa', jenis: 'Tahunan', tgl: '28–30 Agu 2026', alasan: 'Acara keluarga di Makassar — mohon izin 3 hari', dokumen: 'surat-keluarga.pdf', status: 'Menunggu', level: 2, foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face&auto=format' },
-    2: { nama: 'Rudi Hartono', kantor: 'Bone', jenis: 'Sakit', tgl: '23 Agu 2026', alasan: 'Demam tinggi — surat dokter terlampir', dokumen: 'surat-dokter.jpg', status: 'Menunggu', level: 1, foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face&auto=format' },
-    3: { nama: 'Siti Rahma', kantor: 'Makassar', jenis: 'Besar', tgl: '20 Agu 2026', alasan: 'Ibadah haji — 12 hari', dokumen: 'jadwal-haji.pdf', status: 'Disetujui', level: 3, foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face&auto=format' },
-};
-
-function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 export default function CutiDetail() {
     const { props, url } = usePage();
     const base = getBase(url);
     const id = props.id || 1;
-    const data = dataMap[id] || dataMap[1];
-    const [status, setStatus] = useState(data.status);
+    const [list, setList] = useState(() => loadCuti());
+    useEffect(() => {
+        const sync = () => setList(loadCuti());
+        window.addEventListener('focus', sync);
+        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
+        document.addEventListener('visibilitychange', onVis);
+        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); };
+    }, []);
+    const data = useMemo(() => list.find((c) => String(c.id) === String(id)) || list[0] || null, [list, id]);
     const [showDoc, setShowDoc] = useState(false);
+    const [note, setNote] = useState('');
+
+    if (!data) return <AdminLayout><p className="text-sm text-[#94A3B8]">Cuti tidak ditemukan</p></AdminLayout>;
+
+    const patch = (p) => { const next = list.map((c) => c.id === data.id ? { ...c, ...p } : c); setList(next); saveCuti(next); };
+    const approve = () => {
+        if (data.level < 3) patch({ level: data.level + 1, status: data.level + 1 >= 3 ? 'Disetujui' : 'Menunggu' });
+        else patch({ status: 'Disetujui' });
+    };
+    const reject = () => patch({ status: 'Ditolak', note: note.trim() || data.note || '' });
 
     return (
         <AdminLayout>
@@ -27,11 +38,12 @@ export default function CutiDetail() {
 
                 <div className="bg-white rounded-2xl p-6 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <div className="flex items-start gap-4">
-                        <img src={data.foto} alt={data.nama} className="w-14 h-14 rounded-full object-cover" />
+                        <div className="w-14 h-14 rounded-full bg-[#F1F5F9] flex items-center justify-center text-sm font-semibold text-[#334155]">{data.nama.split(' ').map((w)=>w[0]).join('').slice(0,2)}</div>
                         <div className="flex-1">
                             <h1 className="text-lg font-semibold tracking-tight text-[#0F172A]">{data.nama}</h1>
-                            <p className="text-sm text-[#64748B]">{data.kantor} • {data.jenis} • {data.tgl}</p>
-                            <span className={`inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${status === 'Disetujui' ? 'bg-[#ECFDF5] text-[#065F46]' : status === 'Menunggu' ? 'bg-[#FFF7E6] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{status}</span>
+                            <p className="text-sm text-[#64748B]">{data.wilayah} • {data.jenis} • {data.tgl}</p>
+                            <p className="text-xs text-[#94A3B8]">{data.email} • titik {data.office_location_id ?? 'Tanpa titik'}</p>
+                            <span className={`inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${data.status === 'Disetujui' ? 'bg-[#ECFDF5] text-[#065F46]' : data.status === 'Menunggu' ? 'bg-[#FFF7E6] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{data.status} • Level {data.level}/3</span>
                         </div>
                     </div>
 
@@ -43,41 +55,49 @@ export default function CutiDetail() {
                             </div>
                             <div>
                                 <p className="text-xs font-medium text-[#94A3B8]">Dokumen pendukung</p>
-                                <button type="button" onClick={() => setShowDoc(true)} className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-[#1E3A8A] bg-[#EFF6FF] px-3 py-2 rounded-xl hover:bg-[#DBEAFE]">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M14 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
-                                    {data.dokumen} — Lihat
-                                </button>
+                                {data.dokumen ? (
+                                    <button type="button" onClick={() => setShowDoc(true)} className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-[#1E3A8A] bg-[#EFF6FF] px-3 py-2 rounded-xl hover:bg-[#DBEAFE]">
+                                        {data.dokumen} — Lihat
+                                    </button>
+                                ) : <p className="text-sm text-[#94A3B8] mt-1">Tidak ada dokumen</p>}
                             </div>
                         </div>
                         <div className="bg-[#F8FAFC] rounded-2xl p-4">
                             <p className="text-xs font-medium text-[#94A3B8]">Timeline berjenjang</p>
                             <div className="mt-3 space-y-3">
                                 {[
-                                    { l: 1, name: 'Atasan Langsung', state: data.level >= 1 ? 'approved' : 'pending' },
-                                    { l: 2, name: 'Admin Wilayah Gowa', state: data.level >= 2 ? (status === 'Disetujui' && data.level === 2 ? 'current' : 'approved') : 'pending' },
-                                    { l: 3, name: 'Kantor Pusat', state: data.level === 3 ? 'approved' : 'pending' },
-                                ].map((s) => (
-                                    <div key={s.l} className="flex items-center gap-3">
-                                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${s.state === 'approved' ? 'bg-[#0F172A] text-white' : s.state === 'current' ? 'bg-[#FCB833] text-[#0F172A]' : 'bg-white border border-[#E2E8F0] text-[#94A3B8]'}`}>{s.l}</span>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-[#0F172A]">{s.name}</p>
-                                            <p className="text-xs text-[#64748B]">{s.state === 'approved' ? 'Disetujui' : s.state === 'current' ? 'Menunggu Anda' : 'Menunggu'}</p>
+                                    { l: 1, name: 'Atasan Langsung' },
+                                    { l: 2, name: `Admin Wilayah ${data.wilayah}` },
+                                    { l: 3, name: 'Kantor Pusat' },
+                                ].map((s) => {
+                                    const state = data.status === 'Ditolak' ? (data.level >= s.l ? 'approved' : 'pending') : data.level >= s.l ? 'approved' : data.level + 1 === s.l && data.status === 'Menunggu' ? 'current' : 'pending';
+                                    return (
+                                        <div key={s.l} className="flex items-center gap-3">
+                                            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${state === 'approved' ? 'bg-[#0F172A] text-white' : state === 'current' ? 'bg-[#FCB833] text-[#0F172A]' : 'bg-white border border-[#E2E8F0] text-[#94A3B8]'}`}>{s.l}</span>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-[#0F172A]">{s.name}</p>
+                                                <p className="text-xs text-[#64748B]">{state === 'approved' ? 'Disetujui' : state === 'current' ? 'Menunggu Anda' : 'Menunggu'}</p>
+                                            </div>
+                                            {state === 'approved' && <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>}
                                         </div>
-                                        {s.state === 'approved' && <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>}
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
+                            {data.note && data.status === 'Ditolak' && <p className="text-xs text-[#991B1B] bg-[#FEF2F2] rounded-lg px-3 py-1.5 mt-3">Catatan: {data.note}</p>}
                         </div>
                     </div>
 
-                    {status === 'Menunggu' && (
-                        <div className="mt-6 flex gap-3">
-                            <button type="button" onClick={() => setStatus('Ditolak')} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Tolak</button>
-                            <button type="button" onClick={() => setStatus('Disetujui')} className="flex-1 rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold hover:bg-[#1E3A8A]">Setujui</button>
+                    {data.status === 'Menunggu' && (
+                        <div className="mt-6 space-y-3">
+                            <input value={note} onChange={(e)=>setNote(e.target.value)} placeholder="Catatan penolakan (opsional, untuk Tolak)" className="w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
+                            <div className="flex gap-3">
+                                <button type="button" onClick={reject} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Tolak</button>
+                                <button type="button" onClick={approve} className="flex-1 rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold hover:bg-[#1E3A8A]">Setujui → Level {Math.min(3, data.level + 1)}</button>
+                            </div>
                         </div>
                     )}
-                    {status !== 'Menunggu' && (
-                        <p className="mt-6 text-center text-sm font-medium text-[#64748B]">Status final: <span className={status === 'Disetujui' ? 'text-[#065F46]' : 'text-[#991B1B]'}>{status}</span> — frontend only</p>
+                    {data.status !== 'Menunggu' && (
+                        <p className="mt-6 text-center text-sm font-medium text-[#64748B]">Status final: <span className={data.status === 'Disetujui' ? 'text-[#065F46]' : 'text-[#991B1B]'}>{data.status}</span> — CRUD lokal (localStorage)</p>
                     )}
                 </div>
 
@@ -94,7 +114,7 @@ export default function CutiDetail() {
                                 ) : (
                                     <div className="bg-[#F8FAFC] rounded-xl p-8 text-center">
                                         <p className="text-sm font-medium text-[#0F172A]">Preview PDF</p>
-                                        <p className="text-xs text-[#64748B] mt-1">{data.dokumen} — dummy preview (frontend only)</p>
+                                        <p className="text-xs text-[#64748B] mt-1">{data.dokumen} — dummy preview (Mocking API, S3 /cuti/...)</p>
                                         <div className="mt-4 h-32 bg-white rounded-xl border-2 border-dashed border-[#E2E8F0] flex items-center justify-center">
                                             <span className="text-xs text-[#94A3B8]">PDF content preview</span>
                                         </div>

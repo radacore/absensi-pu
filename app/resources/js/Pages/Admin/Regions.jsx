@@ -24,6 +24,7 @@ export default function Regions() {
     const [addSiteFor, setAddSiteFor] = useState(null); // region id
     const [siteForm, setSiteForm] = useState(emptySite);
     const [confirmDeleteSite, setConfirmDeleteSite] = useState(null);
+    const [confirmDeleteWilayah, setConfirmDeleteWilayah] = useState(null);
     const siteMapRef = useRef(null);
     const siteLeafletRef = useRef(null);
 
@@ -72,8 +73,24 @@ export default function Regions() {
     };
     const handleDeleteWilayah = (id) => {
         if (isWilayah) { showToast('Admin Wilayah tidak bisa hapus wilayah'); return; }
-        setRegions((prev) => { const next = prev.filter((r) => r.id !== id); saveRegions(next); return next; });
-        showToast('Wilayah dihapus');
+        const r = regions.find((x) => x.id === id);
+        if (!r) return;
+        const nEmp = employees.filter((e) => e.region === r.name).length;
+        const nSites = r.locations.length;
+        setConfirmDeleteWilayah({ id, name: r.name, nEmp, nSites });
+    };
+    const confirmDeleteWilayahAction = () => {
+        if (!confirmDeleteWilayah) return;
+        const id = confirmDeleteWilayah.id;
+        const r = regions.find((x) => x.id === id);
+        setRegions((prev) => { const next = prev.filter((x) => x.id !== id); saveRegions(next); return next; });
+        // orphan employees: set Tanpa titik + region keep but site null
+        const emps = loadEmployees();
+        const siteIds = new Set((r?.locations || []).map((s) => s.id));
+        const nextEmps = emps.map((e) => siteIds.has(e.office_location_id) ? { ...e, office_location_id: null } : e);
+        saveEmployees(nextEmps); setEmployees(nextEmps);
+        showToast(r ? `Wilayah ${r.name} dihapus — ${confirmDeleteWilayah.nEmp} karyawan jadi Tanpa titik` : 'Wilayah dihapus');
+        setConfirmDeleteWilayah(null);
     };
 
     // tambah 1 titik saja — with maps picker
@@ -354,6 +371,22 @@ export default function Regions() {
                             <div className="px-6 pb-5 flex gap-2">
                                 <button type="button" onClick={() => setConfirmDeleteSite(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
                                 <button type="button" onClick={confirmDeleteSiteAction} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus titik</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {confirmDeleteWilayah && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDeleteWilayah(null)}>
+                        <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="px-6 py-4">
+                                <h3 className="font-semibold text-[#0F172A]">Hapus wilayah {confirmDeleteWilayah.name}?</h3>
+                                <p className="text-sm text-[#64748B] mt-2">{confirmDeleteWilayah.nSites} titik • {confirmDeleteWilayah.nEmp > 0 ? <span className="font-semibold text-[#991B1B]">{confirmDeleteWilayah.nEmp} karyawan akan jadi Tanpa titik — tidak bisa absen</span> : 'Tidak ada karyawan di wilayah ini.'}</p>
+                                <p className="text-xs text-[#94A3B8] mt-1">Titik di wilayah ini juga terhapus.</p>
+                            </div>
+                            <div className="px-6 pb-5 flex gap-2">
+                                <button type="button" onClick={() => setConfirmDeleteWilayah(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
+                                <button type="button" onClick={confirmDeleteWilayahAction} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus wilayah</button>
                             </div>
                         </div>
                     </div>

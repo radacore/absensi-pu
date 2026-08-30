@@ -1,24 +1,11 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { loadRegions, loadEmployees } from './_shared';
+import { loadRegions, loadEmployees, loadAttendances, loadCuti, loadLove, loadSettings } from './_shared';
 
 function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
 const wilayahList = ['Semua','Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
-
-const attendanceSeed = [
-    { name: 'Kantor Pusat', wilayah: 'Kota Makassar', hadir: 142, total: 148, late: 6 },
-    { name: 'Kantor Gowa', wilayah: 'Kab. Gowa', hadir: 68, total: 72, late: 2 },
-    { name: 'Kantor Maros', wilayah: 'Kab. Maros', hadir: 54, total: 58, late: 1 },
-    { name: 'Kantor Bone', wilayah: 'Kab. Bone', hadir: 48, total: 52, late: 3 },
-    { name: 'Kantor Parepare', wilayah: 'Kota Parepare', hadir: 36, total: 38, late: 0 },
-    { name: 'Kantor Palopo', wilayah: 'Kota Palopo', hadir: 42, total: 44, late: 2 },
-    { name: 'Kantor Takalar', wilayah: 'Kab. Takalar', hadir: 28, total: 32, late: 4 },
-    { name: 'Kantor Bantaeng', wilayah: 'Kab. Bantaeng', hadir: 22, total: 24, late: 1 },
-    { name: 'Kantor Bulukumba', wilayah: 'Kab. Bulukumba', hadir: 31, total: 34, late: 2 },
-    { name: 'Kantor Sinjai', wilayah: 'Kab. Sinjai', hadir: 18, total: 20, late: 0 },
-];
 
 export default function Dashboard() {
     const { url } = usePage();
@@ -27,12 +14,16 @@ export default function Dashboard() {
     const OWN_DASH = 'Kab. Gowa';
     const [regionsData, setRegionsData] = useState(() => loadRegions());
     const [employees, setEmployees] = useState(() => loadEmployees());
+    const [attendances, setAttendances] = useState(() => loadAttendances());
+    const [cuti, setCuti] = useState(() => loadCuti());
+    const [love, setLove] = useState(() => loadLove());
+    const [settings, setSettings] = useState(() => loadSettings());
     const [wilayah, setWilayah] = useState(isWilayah ? OWN_DASH : 'Semua');
     const [siteFilter, setSiteFilter] = useState('Semua');
     const [tgl] = useState(() => new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }));
 
     useEffect(() => {
-        const sync = () => { setRegionsData(loadRegions()); setEmployees(loadEmployees()); };
+        const sync = () => { setRegionsData(loadRegions()); setEmployees(loadEmployees()); setAttendances(loadAttendances()); setCuti(loadCuti()); setLove(loadLove()); setSettings(loadSettings()); };
         window.addEventListener('focus', sync);
         const onVis = () => { if (document.visibilityState === 'visible') sync(); };
         document.addEventListener('visibilitychange', onVis);
@@ -40,16 +31,6 @@ export default function Dashboard() {
     }, []);
     useEffect(() => { setSiteFilter('Semua'); }, [wilayah]);
 
-    const filtered = useMemo(() => {
-        if (isWilayah) return attendanceSeed.filter((c) => c.wilayah === OWN_DASH);
-        return wilayah === 'Semua' ? attendanceSeed : attendanceSeed.filter((c) => c.wilayah === wilayah);
-    }, [wilayah, isWilayah]);
-    const hadir = filtered.reduce((s, c) => s + c.hadir, 0);
-    const total = filtered.reduce((s, c) => s + c.total, 0);
-    const late = filtered.reduce((s, c) => s + c.late, 0);
-    const pct = total ? Math.round((hadir / total) * 100) : 0;
-
-    // per-titik breakdown: pakai regionsData + employees per titik
     const activeRegionName = isWilayah ? OWN_DASH : wilayah;
     const activeRegion = useMemo(() => regionsData.find((r) => r.name === activeRegionName) || null, [regionsData, activeRegionName]);
     const sitesForActive = activeRegion ? activeRegion.locations : [];
@@ -66,18 +47,50 @@ export default function Dashboard() {
         return employees.filter((e) => e.regionId === activeRegion.id && e.office_location_id == null).length;
     }, [employees, activeRegion]);
 
+    // Live kehadiran per wilayah dari LS_ATTENDANCES + LS_EMPLOYEES (mock sinkron)
+    const wilayahStats = useMemo(() => {
+        const targetNames = isWilayah ? [OWN_DASH] : wilayah === 'Semua' ? regionsData.map((r) => r.name) : [wilayah];
+        const rows = targetNames.map((name) => {
+            const total = employees.filter((e) => e.region === name).length;
+            // hadir hari ini = attendances untuk wilayah itu (dummy tgl 2026-08-24 fallback ke semua tgl)
+            const list = attendances.filter((a) => a.wilayah === name);
+            const hadir = list.length;
+            const late = list.filter((a) => a.status === 'late').length;
+            const kantor = regionsData.find((r) => r.name === name)?.kantor || name;
+            return { name: kantor, wilayah: name, hadir, total: total || hadir || 1, late };
+        }).filter((r) => r.total > 0 || r.hadir > 0);
+        // limit top 12 when Semua
+        if (!isWilayah && wilayah === 'Semua') return rows.slice(0, 12);
+        return rows;
+    }, [regionsData, employees, attendances, wilayah, isWilayah]);
+
+    const filtered = wilayahStats; // for bar chart
+    const hadir = filtered.reduce((s, c) => s + c.hadir, 0);
+    const total = filtered.reduce((s, c) => s + c.total, 0);
+    const late = filtered.reduce((s, c) => s + c.late, 0);
+    const pct = total ? Math.round((hadir / total) * 100) : 0;
+
+    const cutiPending = useMemo(() => {
+        const list = isWilayah ? cuti.filter((c) => c.wilayah === OWN_DASH) : wilayah === 'Semua' ? cuti : cuti.filter((c) => c.wilayah === wilayah);
+        return list.filter((c) => c.status === 'Menunggu').length;
+    }, [cuti, wilayah, isWilayah]);
+    const lovePending = useMemo(() => {
+        const list = isWilayah ? love.filter((c) => c.wilayah === OWN_DASH) : wilayah === 'Semua' ? love : love.filter((c) => c.wilayah === wilayah);
+        return list.filter((c) => c.status === 'pending').length;
+    }, [love, wilayah, isWilayah]);
+
     const stats = isWilayah
         ? [
-            { label: 'Total Karyawan', value: String(total), sub: `${OWN_DASH} • 1 kantor`, accent: 'gold', href: `${base}/employees` },
+            { label: 'Total Karyawan', value: String(employees.filter((e)=>e.region===OWN_DASH).length), sub: `${OWN_DASH} • 1 kantor`, accent: 'gold', href: `${base}/employees` },
             { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late • ${OWN_DASH}`, accent: 'emerald', href: `${base}/attendances` },
-            { label: 'Cuti pending', value: '3', sub: `${OWN_DASH} • butuh approval`, accent: 'amber', href: `${base}/cuti` },
-            { label: 'Love pending', value: '2', sub: `${OWN_DASH} • claim hari ini`, accent: 'gold', href: `${base}/love` },
+            { label: 'Cuti pending', value: String(cutiPending), sub: `${OWN_DASH} • butuh approval`, accent: 'amber', href: `${base}/cuti` },
+            { label: 'Love pending', value: String(lovePending), sub: `${OWN_DASH} • claim hari ini`, accent: 'gold', href: `${base}/love` },
           ]
         : [
-            { label: 'Total Karyawan', value: wilayah === 'Semua' ? '1,248' : String(total), sub: wilayah === 'Semua' ? '24 wilayah' : `${wilayah}`, accent: 'gold', href: `${base}/employees` },
+            { label: 'Total Karyawan', value: wilayah === 'Semua' ? String(employees.length) : String(total), sub: wilayah === 'Semua' ? '24 wilayah' : `${wilayah}`, accent: 'gold', href: `${base}/employees` },
             { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late`, accent: 'emerald', href: `${base}/attendances` },
-            { label: 'Cuti pending', value: '23', sub: 'butuh approval • semua wilayah', accent: 'amber', href: `${base}/cuti` },
-            { label: 'Love pending', value: '8', sub: 'claim hari ini • semua wilayah', accent: 'gold', href: `${base}/love` },
+            { label: 'Cuti pending', value: String(cutiPending), sub: 'butuh approval • semua wilayah', accent: 'amber', href: `${base}/cuti` },
+            { label: 'Love pending', value: String(lovePending), sub: 'claim hari ini • semua wilayah', accent: 'gold', href: `${base}/love` },
           ];
 
     const wilayahActivities = [
@@ -103,7 +116,7 @@ export default function Dashboard() {
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Dashboard ${OWN_DASH}` : `Dashboard ${wilayah === 'Semua' ? 'Super Admin' : 'Admin Wilayah'}`}</h1>
                         <p className="text-sm text-[#64748B]">{isWilayah ? `${OWN_DASH} • ${tgl} • WITA` : `Kantor Pusat Makassar • 24 Kantor Wilayah Sulsel • ${tgl} • WITA`}</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">{isWilayah ? `Hanya data ${OWN_DASH} — tidak tampil wilayah lain` : wilayah === 'Semua' ? 'Super Admin — semua wilayah' : `Filter: ${wilayah}`}</p>
+                        <p className="text-xs text-[#94A3B8] mt-1">{isWilayah ? `Hanya data ${OWN_DASH} — tidak tampil wilayah lain` : wilayah === 'Semua' ? 'Super Admin — semua wilayah • live LS' : `Filter: ${wilayah} • live LS`}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 flex-wrap">
                         {isWilayah ? (
@@ -134,7 +147,6 @@ export default function Dashboard() {
                     ))}
                 </div>
 
-                {/* Per-titik breakdown ketika fokus 1 wilayah / own region */}
                 {(isWilayah || wilayah !== 'Semua') && activeRegion && (
                     <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                         <div className="flex items-center justify-between">
@@ -162,20 +174,20 @@ export default function Dashboard() {
                 <div className="grid lg:grid-cols-3 gap-4">
                     <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                         <div className="flex items-center justify-between">
-                            <h3 className="font-medium text-sm text-[#0F172A]">{isWilayah ? `Kehadiran ${OWN_DASH} (hari ini)` : 'Kehadiran per wilayah (hari ini)'}</h3>
-                            <span className="text-xs text-[#94A3B8]">{isWilayah ? `1 kantor • ${OWN_DASH}` : `${filtered.length} wilayah ${wilayah !== 'Semua' ? `• ${wilayah}` : '• top 10'}`}</span>
+                            <h3 className="font-medium text-sm text-[#0F172A]">{isWilayah ? `Kehadiran ${OWN_DASH} (hari ini)` : 'Kehadiran per wilayah (live LS)'}</h3>
+                            <span className="text-xs text-[#94A3B8]">{isWilayah ? `1 kantor • ${OWN_DASH}` : `${filtered.length} wilayah ${wilayah !== 'Semua' ? `• ${wilayah}` : '• live'}`}</span>
                         </div>
                         <div className="mt-4 space-y-3 max-h-[320px] overflow-y-auto pr-1">
                             {filtered.map((c) => (
-                                <div key={c.name} className="flex items-center gap-3">
+                                <div key={c.wilayah} className="flex items-center gap-3">
                                     <span className="text-xs font-medium text-[#334155] w-[160px] truncate" title={c.wilayah}>{c.name} <span className="text-[#94A3B8] font-normal">• {c.wilayah.replace('Kab. ','').replace('Kota ','')}</span></span>
                                     <div className="flex-1 h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
-                                        <div className="h-full bg-[#0F172A]" style={{ width: `${(c.hadir / c.total) * 100}%` }}></div>
+                                        <div className="h-full bg-[#0F172A]" style={{ width: `${c.total ? (c.hadir / c.total) * 100 : 0}%` }}></div>
                                     </div>
                                     <span className="text-xs text-[#64748B] whitespace-nowrap">{c.hadir}/{c.total} • <span className="text-[#92400E] font-medium">{c.late} late</span></span>
                                 </div>
                             ))}
-                            {filtered.length===0 && <p className="text-xs text-[#94A3B8] text-center py-6">Tidak ada data untuk wilayah ini (seed top 10)</p>}
+                            {filtered.length===0 && <p className="text-xs text-[#94A3B8] text-center py-6">Tidak ada data — absen di Karyawan/Absensi akan muncul di sini (CRUD lokal)</p>}
                         </div>
                           <div className="mt-4 flex flex-wrap gap-2">
                             {isWilayah ? (
@@ -193,15 +205,15 @@ export default function Dashboard() {
                     </div>
                     <div className="bg-[#0F172A] rounded-2xl p-5 text-white flex flex-col">
                         <h3 className="font-medium text-sm">{isWilayah ? `Info ${OWN_DASH}` : 'Global Settings'}</h3>
-                        <p className="text-xs text-white/50 mt-1">{isWilayah ? `Kebijakan dari Pusat • read-only` : 'Hanya Super Admin bisa edit • berlaku konsisten'}</p>
+                        <p className="text-xs text-white/50 mt-1">{isWilayah ? `Kebijakan dari Pusat • read-only` : 'Hanya Super Admin bisa edit • live LS'}</p>
                         <div className="mt-4 space-y-3 text-sm">
-                            <div className="flex justify-between"><span className="text-white/60">Jam kerja</span><span className="font-medium">07:30–16:00 WITA</span></div>
-                            <div className="flex justify-between"><span className="text-white/60">Toleransi</span><span className="font-medium">15 menit</span></div>
-                            <div className="flex justify-between items-center"><span className="text-white/60">Love / bulan</span><span className="font-medium bg-[#FCB833] text-[#0F172A] px-2 py-0.5 rounded-full text-xs">4</span></div>
+                            <div className="flex justify-between"><span className="text-white/60">Jam kerja</span><span className="font-medium">{settings.jamMasuk}–{settings.jamPulang} WITA</span></div>
+                            <div className="flex justify-between"><span className="text-white/60">Toleransi</span><span className="font-medium">{settings.toleransi} menit</span></div>
+                            <div className="flex justify-between items-center"><span className="text-white/60">Love / bulan</span><span className="font-medium bg-[#FCB833] text-[#0F172A] px-2 py-0.5 rounded-full text-xs">{settings.loveMax}</span></div>
                             <div className="flex justify-between"><span className="text-white/60">Hari kerja</span><span className="font-medium">Sen–Jum</span></div>
                             <div className="flex justify-between"><span className="text-white/60">Timezone</span><span className="font-medium">Asia/Makassar</span></div>
                         </div>
-                        <p className="text-xs text-white/50 mt-4">{isWilayah ? 'Diatur Pusat — lihat di Pengaturan (read-only)' : 'Fleksibel — Super Admin atur di Pengaturan, berlaku bulan depan • Reset Love 1st 00:00 WITA'}</p>
+                        <p className="text-xs text-white/50 mt-4">{isWilayah ? 'Diatur Pusat — lihat di Pengaturan (read-only)' : 'Fleksibel — Super Admin atur di Pengaturan, live LS • Reset Love 1st 00:00 WITA'}</p>
                         <Link href={`${base}/settings`} className="mt-4 bg-white text-[#0F172A] rounded-xl py-2.5 text-sm font-semibold text-center">{isWilayah ? 'Lihat Pengaturan' : 'Buka Pengaturan'}</Link>
                         <div className="mt-4 grid grid-cols-2 gap-2">
                             <Link href={`${base}/cuti`} className="bg-white/10 rounded-xl py-2 text-xs font-medium text-center">{isWilayah ? `Cuti ${OWN_DASH.replace('Kab. ','')}` : 'Cuti berjenjang'}</Link>
@@ -213,7 +225,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="px-5 py-4 flex items-center justify-between">
                         <h3 className="font-medium text-sm text-[#0F172A]">{isWilayah ? `Aktivitas terbaru — ${OWN_DASH}` : 'Aktivitas terbaru'}</h3>
-                        <span className="text-xs text-[#94A3B8]">Hari ini • {hadir} hadir {isWilayah ? `• ${OWN_DASH}` : ''}</span>
+                        <span className="text-xs text-[#94A3B8]">Hari ini • {hadir} hadir {isWilayah ? `• ${OWN_DASH}` : ''} • live LS</span>
                     </div>
                     <div className="divide-y divide-[#F1F5F9]">
                         {activities.map((a, i) => (

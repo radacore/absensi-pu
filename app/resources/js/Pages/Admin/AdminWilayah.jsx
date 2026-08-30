@@ -11,16 +11,20 @@ const initial = [
 ];
 const regions = ['Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
 const empty = { nama: '', email: '', region: regions[1], password: '' };
+const LS_ADMINS = 'bbws_mock_admins_v3';
+function loadAdmins() { try { const raw = localStorage.getItem(LS_ADMINS); if (raw) return JSON.parse(raw); } catch {} return initial; }
+function saveAdmins(list) { try { localStorage.setItem(LS_ADMINS, JSON.stringify(list)); } catch {} }
 
 export default function AdminWilayah() {
     const { url } = usePage();
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
-    const [list, setList] = useState(initial);
+    const [list, setList] = useState(() => loadAdmins());
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState(empty);
     const [toast, setToast] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null);
 
     const openAdd = () => { setEditing(null); setForm(empty); setOpen(true); };
     const openEdit = (a) => { setEditing(a); setForm({ nama: a.nama, email: a.email, region: a.region, password: '' }); setOpen(true); };
@@ -30,11 +34,11 @@ export default function AdminWilayah() {
         if (!form.nama.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { setToast('Nama & email valid wajib'); setTimeout(()=>setToast(null),2000); return; }
         if (!editing && form.password.length < 8) { setToast('Password min 8 karakter'); setTimeout(()=>setToast(null),2000); return; }
         if (editing) {
-            setList((l)=>l.map((x)=>x.id===editing.id ? { ...x, nama: form.nama, email: form.email, region: form.region } : x));
-            setToast('Admin diperbarui (frontend only)');
+            const next = list.map((x)=>x.id===editing.id ? { ...x, nama: form.nama, email: form.email, region: form.region } : x);
+            setList(next); saveAdmins(next); setToast('Admin diperbarui');
         } else {
-            const next = { id: Date.now(), nama: form.nama, email: form.email, region: form.region, status: 'Aktif', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face&auto=format' };
-            setList((l)=>[...l, next]); setToast('Admin ditambah (frontend only)');
+            const nextItem = { id: Date.now(), nama: form.nama, email: form.email, region: form.region, status: 'Aktif', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face&auto=format' };
+            const next = [...list, nextItem]; setList(next); saveAdmins(next); setToast('Admin ditambah');
         }
         setOpen(false); setTimeout(()=>setToast(null),2000);
     };
@@ -42,8 +46,16 @@ export default function AdminWilayah() {
     const handleReset = (a) => {
         setToast(`Reset password — link kirim ke ${a.email} (frontend only)`); setTimeout(()=>setToast(null),3000);
     };
-    const toggleStatus = (id) => setList((l)=>l.map((x)=>x.id===id ? { ...x, status: x.status==='Aktif' ? 'Nonaktif' : 'Aktif' } : x));
-    const remove = (id) => { setList((l)=>l.filter((x)=>x.id!==id)); setToast('Dihapus (frontend only)'); setTimeout(()=>setToast(null),2000); };
+    const toggleStatus = (id) => { const next = list.map((x)=>x.id===id ? { ...x, status: x.status==='Aktif' ? 'Nonaktif' : 'Aktif' } : x); setList(next); saveAdmins(next); };
+    const remove = (id) => {
+        const target = list.find((x)=>x.id===id);
+        if (!target) return;
+        setConfirmDelete(target);
+    };
+    const confirmRemove = () => {
+        if (!confirmDelete) return;
+        const next = list.filter((x)=>x.id!==confirmDelete.id); setList(next); saveAdmins(next); setToast(`${confirmDelete.nama} dihapus`); setConfirmDelete(null); setTimeout(()=>setToast(null),2000);
+    };
 
     if (isWilayah) {
         return (
@@ -95,6 +107,22 @@ export default function AdminWilayah() {
                 </div>
 
                 {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2">{toast}</p>}
+
+                {confirmDelete && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
+                        <div className="bg-white rounded-2xl w-full max-w-[400px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
+                            <div className="px-6 py-4">
+                                <h3 className="font-semibold text-[#0F172A]">Hapus {confirmDelete.nama}?</h3>
+                                <p className="text-sm text-[#64748B] mt-1">{confirmDelete.email} • {confirmDelete.region}</p>
+                                <p className="text-xs text-[#94A3B8] mt-2">Akun Admin Wilayah akan dihapus. Tidak dapat dibatalkan.</p>
+                            </div>
+                            <div className="px-6 pb-5 flex gap-2">
+                                <button type="button" onClick={() => setConfirmDelete(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
+                                <button type="button" onClick={confirmRemove} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {open && (
                     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={close}>
