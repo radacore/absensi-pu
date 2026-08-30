@@ -63,7 +63,7 @@ export default function Cuti() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Cuti</h2>
-                        <p className="text-sm text-[#64748B]">Berjenjang 3 tahap {assigned ? `• ${assigned.site.nama_lokasi} • ${assigned.site.radius}m` : '• Tanpa titik'}</p>
+                        <p className="text-sm text-[#64748B]">Berjenjang 3 tahap • {assigned.site.nama_lokasi} • {assigned.site.radius}m</p>
                         <p className="text-xs text-[#94A3B8] mt-1">CRUD lokal — ajukan di sini, Admin setujui/tolak sinkron</p>
                     </div>
                     <button type="button" onClick={() => setShowForm(!showForm)} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">{showForm ? 'Tutup' : 'Ajukan cuti'}</button>
@@ -84,10 +84,7 @@ export default function Cuti() {
                                 <label htmlFor="selesai" className="text-xs font-medium text-[#334155]">Selesai</label>
                                 <input id="selesai" type="date" value={selesai} onChange={(e)=>setSelesai(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
                             </div>
-                            <div>
-                                <label htmlFor="dok" className="text-xs font-medium text-[#334155]">Dokumen (opsional)</label>
-                                <input id="dok" type="file" className="mt-1.5 w-full text-xs text-[#64748B]" />
-                            </div>
+
                         </div>
                         <div>
                             <label htmlFor="alasan" className="text-xs font-medium text-[#334155]">Alasan</label>
@@ -109,7 +106,7 @@ export default function Cuti() {
                                 <div>
                                     <p className="font-medium text-sm text-[#0F172A]">{r.jenis} • {r.tgl}</p>
                                     <p className="text-sm text-[#475569] mt-1">{r.alasan}</p>
-                                    <p className="text-xs text-[#94A3B8] mt-1">{r.wilayah} {r.office_location_id ? `• titik ${r.office_location_id}` : '• Tanpa titik'}</p>
+                                    <p className="text-xs text-[#94A3B8] mt-1">{r.wilayah} • titik {r.office_location_id}</p>
                                 </div>
                                 <span className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${tone(r.status)}`}>{r.status}</span>
                             </div>

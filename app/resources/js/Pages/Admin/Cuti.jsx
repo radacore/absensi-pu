@@ -25,7 +25,7 @@ export default function CutiAdmin() {
         return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
     }, []);
     useEffect(() => {
-        if (siteFilter === 'Semua' || siteFilter === '__null') return;
+        if (siteFilter === 'Semua') return;
         if (!getValidSiteIds(regionsData, wilayah, isWilayah).has(String(siteFilter))) setSiteFilter('Semua');
     }, [wilayah, siteFilter, regionsData, isWilayah]);
     const sitesForWilayah = useMemo(() => getSitesForWilayah(regionsData, wilayah, isWilayah), [regionsData, wilayah, isWilayah]);
@@ -51,8 +51,7 @@ export default function CutiAdmin() {
         if (!isWilayah && wilayah !== 'Semua' && c.wilayah !== wilayah) return false;
         if (isWilayah && wilayah !== OWN_REGION) return false;
         if (siteFilter !== 'Semua') {
-            if (siteFilter === '__null') { if (c.office_location_id != null) return false; }
-            else if (String(c.office_location_id) !== String(siteFilter)) return false;
+            if (String(c.office_location_id) !== String(siteFilter)) return false;
         }
         if (status !== 'Semua' && c.status !== status) return false;
         if (q && !c.nama.toLowerCase().includes(q.toLowerCase()) && !c.email.toLowerCase().includes(q.toLowerCase()) && !c.jenis.toLowerCase().includes(q.toLowerCase())) return false;
@@ -89,7 +88,6 @@ export default function CutiAdmin() {
                     )}
                     <select value={siteFilter} onChange={(e)=>setSiteFilter(e.target.value)} className="rounded-xl bg-[#FFF7E6] border border-[#FCB833]/20 px-3 py-2 text-sm outline-none min-w-[160px]">
                         <option value="Semua">Semua titik</option>
-                        <option value="__null">Tanpa titik {isWilayah ? '' : '(semua wilayah)'} </option>
                         {sitesForWilayah.map((s)=><option key={s.id} value={String(s.id)}>{s.nama_lokasi} • {s.radius}m</option>)}
                         {!isWilayah && wilayah==='Semua' && <option disabled>— pilih wilayah untuk titik spesifik</option>}
                     </select>
@@ -114,7 +112,7 @@ export default function CutiAdmin() {
                                     return (
                                         <tr key={c.id} className="hover:bg-[#F8FAFC]/50">
                                             <td className="px-4 py-3"><p className="font-medium text-[#0F172A]">{c.nama}</p><p className="text-xs text-[#64748B]">{c.email}</p><p className="text-xs text-[#94A3B8] line-clamp-1">{c.alasan}</p><span className="text-xs bg-[#F1F5F9] px-2 py-0.5 rounded-full">{c.wilayah}</span></td>
-                                            <td className="px-4 py-3 text-xs">{hit ? <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className="bg-[#EFF6FF] text-[#1E3A8A] px-2 py-1 rounded-full font-medium hover:bg-[#DBEAFE]">{hit.site.nama_lokasi}</Link> : <span className="bg-[#FEF2F2] text-[#991B1B] px-2 py-1 rounded-full border">Tanpa titik</span>}</td>
+                                            <td className="px-4 py-3 text-xs">{hit ? <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className="bg-[#EFF6FF] text-[#1E3A8A] px-2 py-1 rounded-full font-medium hover:bg-[#DBEAFE]">{hit.site.nama_lokasi}</Link> : <span className="bg-[#F1F5F9] text-[#64748B] px-2 py-1 rounded-full">—</span>}</td>
                                             <td className="px-4 py-3 text-xs"><span className="bg-[#EFF6FF] text-[#1E3A8A] px-2 py-1 rounded-full font-medium">{c.jenis}</span></td>
                                             <td className="px-4 py-3 text-xs text-[#334155]">{c.tgl}</td>
                                             <td className="px-4 py-3">

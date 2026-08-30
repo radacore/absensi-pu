@@ -45,13 +45,12 @@ export default function SiteDetail({ regionId, siteId }) {
     const anggota = useMemo(() => employees.filter((e) => e.office_location_id === Number(siteId)), [employees, siteId]);
     const kandidatTambah = useMemo(() => {
         if (!region) return [];
-        // Kandidat = karyawan di region yang sama yang belum punya titik atau di titik ini sudah (filter q)
-        // Karyawan per titik saja — jadi tampilkan yang office_location_id null atau sudah di site ini? Untuk assign: yang belum punya titik di region ini (null) atau beda titik bisa pindah via Move.
-        const pool = employees.filter((e) => e.regionId === region.id && e.office_location_id == null);
+        // Wajib 1 titik: tidak ada karyawan tanpa titik. Tambah anggota = pindah dari titik lain di region sama
+        const pool = employees.filter((e) => e.regionId === region.id && e.office_location_id !== Number(siteId));
         const q = addQ.toLowerCase().trim();
         if (!q) return pool;
         return pool.filter((e) => e.nama.toLowerCase().includes(q) || e.email.toLowerCase().includes(q) || e.nik.includes(q));
-    }, [employees, region, addQ]);
+    }, [employees, region, addQ, siteId]);
 
     const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
 
@@ -122,14 +121,9 @@ export default function SiteDetail({ regionId, siteId }) {
         showToast('Titik diperbarui');
     };
 
-    const handleRemoveFromSite = (empId) => {
-        if (!canEdit) { showToast('Hanya own region', false); return; }
-        setEmployees((prev) => {
-            const next = prev.map((e) => e.id === empId ? { ...e, office_location_id: null } : e);
-            saveEmployees(next); return next;
-        });
+    const handleRemoveFromSite = () => {
+        showToast('Tidak bisa keluarkan — 1 karyawan wajib punya 1 titik. Gunakan Pindah.', false);
         setConfirmRemove(null);
-        showToast('Karyawan dikeluarkan dari titik — jadi Tanpa titik (tidak bisa absen)');
     };
 
     const handleAssign = (empId) => {
@@ -274,7 +268,7 @@ export default function SiteDetail({ regionId, siteId }) {
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex gap-1 justify-end">
                                                 <button type="button" onClick={() => setMoveOpen(e)} className="text-xs font-medium text-[#1E3A8A] bg-[#EFF6FF] px-3 py-1.5 rounded-lg">Pindah</button>
-                                                <button type="button" onClick={() => setConfirmRemove(e)} title="Keluarkan → jadi Tanpa titik (tidak bisa absen)" className="text-xs font-medium text-[#991B1B] bg-[#FEF2F2] px-3 py-1.5 rounded-lg">Keluarkan</button>
+                                                <button type="button" onClick={() => setConfirmRemove(e)} title="Keluarkan — wajib pindah titik" className="text-xs font-medium text-[#991B1B] bg-[#FEF2F2] px-3 py-1.5 rounded-lg">Keluarkan</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -334,7 +328,7 @@ export default function SiteDetail({ regionId, siteId }) {
                         <div className="bg-white rounded-2xl w-full max-w-[520px] max-h-[80vh] overflow-hidden shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4 border-b shrink-0">
                                 <h3 className="font-semibold text-[#0F172A]">Tambah Anggota ke {site.nama_lokasi}</h3>
-                                <p className="text-xs text-[#64748B]">Hanya karyawan own region tanpa titik ({region.name}) — 1 karyawan = 1 titik. Pilih beberapa sekaligus.</p>
+                                <p className="text-xs text-[#64748B]">Pindah karyawan dari titik lain di {region.name} — 1 karyawan = 1 titik.</p>
                                 <input value={addQ} onChange={(e) => setAddQ(e.target.value)} placeholder="Cari nama / email / NIK..." className="mt-3 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
                                 {kandidatTambah.length > 0 && (
                                     <div className="mt-3 flex items-center justify-between">
@@ -359,7 +353,7 @@ export default function SiteDetail({ regionId, siteId }) {
                                 ))}
                                 {kandidatTambah.length === 0 && (
                                     <div className="py-8 px-6 text-center">
-                                        <p className="text-sm text-[#94A3B8]">Tidak ada kandidat — semua karyawan {region.name} sudah punya titik, atau filter tidak cocok.</p>
+                                        <p className="text-sm text-[#94A3B8]">Tidak ada kandidat — semua karyawan {region.name} sudah di titik ini, atau filter tidak cocok.</p>
                                         <Link href={`${base}/employees`} className="mt-3 inline-block text-xs font-semibold bg-[#0F172A] text-white px-4 py-2 rounded-xl">+ Buat karyawan baru di {region.name} →</Link>
                                     </div>
                                 )}
@@ -377,12 +371,12 @@ export default function SiteDetail({ regionId, siteId }) {
                         <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4">
                                 <h3 className="font-semibold text-[#0F172A]">Keluarkan {confirmRemove.nama}?</h3>
-                                <p className="text-sm text-[#64748B] mt-2">Akan jadi <span className="font-semibold text-[#991B1B]">Tanpa titik</span> — tidak bisa absen (422) & Love ditolak sampai di-assign lagi ke titik di {region.name}.</p>
+                                <p className="text-sm text-[#64748B] mt-2">1 karyawan wajib punya 1 titik — gunakan <span className="font-semibold">Pindah</span> ke titik lain di {region.name}. Tidak bisa tanpa titik.</p>
                                 <p className="text-xs text-[#94A3B8] mt-2">Dari: {site.nama_lokasi} • {site.radius} m</p>
                             </div>
                             <div className="px-6 pb-5 flex gap-2">
                                 <button type="button" onClick={() => setConfirmRemove(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
-                                <button type="button" onClick={handleConfirmRemove} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, keluarkan</button>
+                                <button type="button" onClick={() => { setConfirmRemove(null); if (confirmRemove) setMoveOpen(confirmRemove); }} className="flex-1 rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Pindah titik</button>
                             </div>
                         </div>
                     </div>
@@ -406,7 +400,7 @@ export default function SiteDetail({ regionId, siteId }) {
                                         <span className="text-xs font-semibold text-[#1E3A8A]">Pindah →</span>
                                     </button>
                                 ))}
-                                <button type="button" onClick={() => { setMoveOpen(null); setConfirmRemove(moveOpen); }} className="w-full mt-2 rounded-xl bg-[#FEF2F2] text-[#991B1B] py-2.5 text-sm font-semibold">Keluarkan (tanpa titik)</button>
+                                <p className="text-xs text-[#94A3B8] mt-2 text-center">1 karyawan wajib punya titik — tidak ada opsi tanpa titik.</p>
                             </div>
                         </div>
                     </div>

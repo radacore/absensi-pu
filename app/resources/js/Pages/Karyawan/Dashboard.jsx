@@ -70,11 +70,7 @@ export default function Dashboard() {
                     </div>
                     <h2 className="font-semibold text-[18px] tracking-tight text-[#0F172A] mt-1 text-center">{greeting}, {me?.nama || 'Andi Saputra'}</h2>
                     <p className="text-sm text-[#64748B] text-center mt-1">{dateStr} • {timeStr} WITA</p>
-                    {assigned ? (
-                        <p className="text-xs text-center mt-2 bg-[#EFF6FF] text-[#1E3A8A] px-2.5 py-1 rounded-full inline-flex mx-auto">{assigned.site.nama_lokasi} • {assigned.site.radius} m • {assigned.region.name} • {settings.jamMasuk}–{settings.jamPulang} WITA</p>
-                    ) : (
-                        <p className="text-xs text-center mt-2 bg-[#FEF2F2] text-[#991B1B] px-2.5 py-1 rounded-full inline-flex mx-auto">Tanpa titik — tidak bisa absen (hubungi Admin {me?.region})</p>
-                    )}
+                    <p className="text-xs text-center mt-2 bg-[#EFF6FF] text-[#1E3A8A] px-2.5 py-1 rounded-full inline-flex mx-auto">{assigned.site.nama_lokasi} • {assigned.site.radius} m • {assigned.region.name} • {settings.jamMasuk}–{settings.jamPulang} WITA</p>
                     <Link href="/karyawan/love" className="mt-4 flex items-center justify-center gap-2">
                         {Array.from({length: loveMax}, (_,i) => (
                             <span key={i} className={`w-8 h-8 rounded-xl flex items-center justify-center ${i < sisaLove ? 'bg-[#FFF7E6] border border-[#FCB833]/20' : 'bg-[#F1F5F9]'}`}>
@@ -92,7 +88,7 @@ export default function Dashboard() {
                         </span>
                         <div>
                             <p className="font-semibold text-sm leading-tight">Absensi</p>
-                            <p className="text-xs text-white/60 leading-tight">{assigned ? `${assigned.site.nama_lokasi} • ${assigned.site.radius}m` : 'Tanpa titik'}</p>
+                            <p className="text-xs text-white/60 leading-tight">{assigned.site.nama_lokasi} • {assigned.site.radius}m</p>
                         </div>
                     </Link>
                     <Link href="/karyawan/cuti" className="bg-white rounded-2xl p-5 flex flex-col justify-between min-h-[110px] shadow-[0_2px_16px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition">
@@ -123,7 +119,7 @@ export default function Dashboard() {
                     </span>
                     <div>
                         <p className="font-semibold text-sm text-[#0F172A] leading-tight">Rekap bulanan</p>
-                        <p className="text-xs text-[#92400E]">Kalender • {hadir} hadir {assigned ? `• ${assigned.site.nama_lokasi}` : ''} • live LS</p>
+                        <p className="text-xs text-[#92400E]">Kalender • {hadir} hadir • {assigned.site.nama_lokasi} • live LS</p>
                     </div>
                 </Link>
 

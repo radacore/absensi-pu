@@ -73,7 +73,7 @@ export default function Absensi() {
     const handleOpenCapture = () => { setCaptured(true); requestPos(); };
 
     const handleKirim = () => {
-        if (tanpaTitik) { setToast('Tanpa titik — tidak bisa absen (422)'); setTimeout(()=>setToast(null),2200); return; }
+        if (tanpaTitik) { setToast('Titik belum di-assign — tidak bisa absen (422)'); setTimeout(()=>setToast(null),2200); return; }
         if (jarak == null) { setToast(geoLoading ? 'Menunggu GPS...' : 'Lokasi belum siap — aktifkan GPS'); setTimeout(()=>setToast(null),2200); return; }
         if (!inRadius) { setToast(`${jarak} m / ${assigned.site.radius} m — di luar radius`); setTimeout(()=>setToast(null),2200); return; }
         if (alreadyToday) { setToast('Sudah absen hari ini'); setTimeout(()=>setToast(null),2200); return; }
@@ -113,20 +113,9 @@ export default function Absensi() {
             <div className="space-y-5">
                 <div>
                     <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Absensi</h2>
-                    {assigned ? (
-                        <p className="text-sm text-[#64748B] mt-1">{assigned.region.name} • {assigned.site.nama_lokasi} • Radius {assigned.site.radius} m • 1 karyawan = 1 titik</p>
-                    ) : (
-                        <p className="text-sm font-medium text-[#991B1B] mt-1">Belum punya titik — hubungi Admin {me?.region || ''} untuk assign titik</p>
-                    )}
+                    <p className="text-sm text-[#64748B] mt-1">{assigned.region.name} • {assigned.site.nama_lokasi} • Radius {assigned.site.radius} m • 1 karyawan = 1 titik</p>
                     <p className="text-xs text-[#94A3B8] mt-1">Valid hanya di titik assigned dalam radius titiknya — di luar / titik lain ditolak 422 • Jam {settings.jamMasuk}–{settings.jamPulang} WITA toleransi {settings.toleransi}m</p>
                 </div>
-
-                {tanpaTitik && (
-                    <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-2xl p-5">
-                        <p className="text-sm font-semibold text-[#991B1B]">Tidak bisa absen</p>
-                        <p className="text-xs text-[#991B1B]/80 mt-1">Akun {me?.nama} belum di-assign ke titik proyek (office_location_id null). Absen akan ditolak 422. Minta Admin {me?.region} assign di halaman titik.</p>
-                    </div>
-                )}
 
                 {assigned && (
                     <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-4">
@@ -139,9 +128,7 @@ export default function Absensi() {
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <div className="rounded-2xl bg-[#F8FAFC] h-[240px] flex flex-col items-center justify-center p-6">
-                        {tanpaTitik ? (
-                            <p className="text-sm text-[#991B1B] text-center font-medium">Absen terkunci — tanpa titik assigned<br/><span className="text-xs font-normal text-[#94A3B8]">422 office_location_id null</span></p>
-                        ) : !captured ? (
+                        {!captured ? (
                             <>
                                 <span className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><path d="M14 4a2 2 0 012 2v1h2a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2V6a2 2 0 012-2h4z"/><circle cx="12" cy="13" r="3.5"/><path d="M16 6h1"/></svg>
@@ -175,10 +162,10 @@ export default function Absensi() {
                         )}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button type="button" onClick={handlePulang} disabled={tanpaTitik} title={tanpaTitik ? 'Tanpa titik — hubungi Admin (422)' : ''} className={`rounded-xl py-3 text-sm font-medium ${tanpaTitik ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF]'}`}>Absen pulang</button>
-                        <button type="button" onClick={handleOpenCapture} disabled={tanpaTitik || (captured && jarak!=null && !inRadius)} title={tanpaTitik ? 'Tanpa titik — tidak bisa absen (422)' : captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius` : ''} className={`rounded-xl py-3 text-sm font-semibold ${tanpaTitik || (captured && jarak!=null && !inRadius) ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
+                        <button type="button" onClick={handlePulang} className="rounded-xl py-3 text-sm font-medium bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF]">Absen pulang</button>
+                        <button type="button" onClick={handleOpenCapture} disabled={captured && jarak!=null && !inRadius} title={captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius` : ''} className={`rounded-xl py-3 text-sm font-semibold ${captured && jarak!=null && !inRadius ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{tanpaTitik ? 'Tanpa titik tidak dapat absen (422)' : captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius ${assigned.site.nama_lokasi} (haversine)` : `Di luar radius ${assigned?.site.radius ?? '?'} m titik assigned tidak dapat absen — CRUD lokal sinkron Admin • haversine GPS`}</p>
+                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius ${assigned.site.nama_lokasi} (haversine)` : `Di luar radius ${assigned?.site.radius ?? '?'} m titik assigned tidak dapat absen — CRUD lokal sinkron Admin • haversine GPS`}</p>
                     {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2 mt-3">{toast}</p>}
                     {alreadyToday && <p className="text-xs text-center text-[#92400E] mt-2">Sudah absen hari ini ({todayISO}) — lihat riwayat</p>}
                 </div>
@@ -186,7 +173,7 @@ export default function Absensi() {
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="px-5 py-4 flex items-center justify-between">
                         <h3 className="font-medium text-sm text-[#0F172A]">Riwayat</h3>
-                        <span className="text-xs text-[#64748B]">{myHistory.length} entri • {assigned ? assigned.site.nama_lokasi : 'Tanpa titik'} • sinkron Admin</span>
+                        <span className="text-xs text-[#64748B]">{myHistory.length} entri • {assigned.site.nama_lokasi} • sinkron Admin</span>
                     </div>
                     <div className="divide-y divide-[#F1F5F9]">
                         {myHistory.length===0 ? <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada absen — kirim absen masuk di atas (CRUD lokal)</p> : myHistory.map((r) => {
@@ -197,13 +184,13 @@ export default function Absensi() {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-medium text-[#0F172A]">{r.tgl} • {r.datang}{r.pulang ? ` → ${r.pulang}` : ''} • {r.status==='late' ? 'Terlambat' : r.status==='on_time' ? 'Tepat waktu' : r.status}</p>
-                                            <p className="text-xs text-[#64748B]">{r.jarak} m / {assigned ? `${assigned.site.radius} m • ${ok ? 'Dalam' : 'Di luar'} • ${assigned.site.nama_lokasi}` : 'Tanpa titik'} {hit ? '' : '• titik lain'}</p>
+                                            <p className="text-xs text-[#64748B]">{r.jarak} m / {assigned.site.radius} m • {ok ? 'Dalam' : 'Di luar'} • {assigned.site.nama_lokasi} {hit ? '' : '• titik lain'}</p>
                                         </div>
                                         <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${r.status==='on_time' ? 'bg-[#ECFDF5] text-[#065F46]' : r.status==='excused_love' ? 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30' : 'bg-[#FFFBEB] text-[#92400E]'}`}>{r.status==='on_time' ? 'Tepat waktu' : r.status==='late' ? 'Terlambat' : r.status}</span>
                                     </div>
                                     {r.status === 'late' && (
                                         <div className="mt-3 bg-[#FFF7E6] rounded-xl p-3 flex items-center justify-between">
-                                            <p className="text-xs text-[#92400E]">Terlambat • bisa pakai 1 Love {assigned ? `• ${assigned.site.nama_lokasi}` : ''}</p>
+                                            <p className="text-xs text-[#92400E]">Terlambat • bisa pakai 1 Love • {assigned.site.nama_lokasi}</p>
                                             <a href="/karyawan/love" className="bg-[#FCB833] text-[#0F172A] rounded-lg px-3 py-1.5 text-xs font-semibold">Gunakan Love</a>
                                         </div>
                                     )}

@@ -44,9 +44,9 @@ export default function Dashboard() {
         }));
     }, [sitesForActive, employees, activeRegion]);
     const siteCards = siteFilter === 'Semua' ? countsPerSite : countsPerSite.filter((x) => String(x.site.id) === String(siteFilter));
-    const totalTanpaTitik = useMemo(() => {
+    const totalForActive = useMemo(() => {
         if (!activeRegion) return 0;
-        return employees.filter((e) => e.regionId === activeRegion.id && e.office_location_id == null).length;
+        return employees.filter((e) => e.regionId === activeRegion.id).length;
     }, [employees, activeRegion]);
 
     // Live kehadiran per wilayah dari LS_ATTENDANCES + LS_EMPLOYEES (mock sinkron)
@@ -153,7 +153,7 @@ export default function Dashboard() {
                     <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                         <div className="flex items-center justify-between">
                             <h3 className="font-medium text-sm text-[#0F172A]">Breakdown per Titik — {activeRegion.name} • {activeRegion.kantor}</h3>
-                            <span className="text-xs text-[#94A3B8]">{sitesForActive.length} titik • 1 karyawan = 1 titik • {totalTanpaTitik} tanpa titik</span>
+                            <span className="text-xs text-[#94A3B8]">{sitesForActive.length} titik • 1 karyawan = 1 titik • {totalForActive} karyawan</span>
                         </div>
                         <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {siteCards.map(({ site, anggota }) => (
@@ -169,7 +169,6 @@ export default function Dashboard() {
                             ))}
                         </div>
                         {sitesForActive.length === 0 && <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada titik di {activeRegion.name} — tambah 1 titik di Kelola Wilayah.</p>}
-                        {totalTanpaTitik > 0 && <p className="text-xs text-[#92400E] bg-[#FFF7E6] border border-[#FCB833]/20 rounded-xl px-3 py-2 mt-3">{totalTanpaTitik} karyawan {activeRegion.name} belum punya titik — tidak bisa absen (422). Assign di halaman titik.</p>}
                     </div>
                 )}
 

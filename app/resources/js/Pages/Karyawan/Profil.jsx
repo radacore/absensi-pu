@@ -90,22 +90,16 @@ export default function Profil() {
                     <p className="text-sm text-[#64748B]">{me?.jabatan} • {me?.unit}</p>
                     <p className="text-xs text-[#94A3B8] mt-1">{me?.status} • {me?.gol} • NIK {me?.nik?.slice(-4)} • NIP {me?.nip?.slice(0,4) || '—'}</p>
                     <span className="inline-block mt-3 text-xs font-medium bg-[#F1F5F9] text-[#334155] px-3 py-1 rounded-full">{me?.region}</span>
-                    {assigned ? (
-                        <p className="mt-3 text-xs bg-[#EFF6FF] text-[#1E3A8A] px-3 py-1.5 rounded-full inline-flex">{assigned.site.nama_lokasi} • {assigned.site.radius} m</p>
-                    ) : (
-                        <p className="mt-3 text-xs bg-[#FEF2F2] text-[#991B1B] px-3 py-1.5 rounded-full inline-flex">Tanpa titik — tidak bisa absen</p>
-                    )}
+                    <p className="mt-3 text-xs bg-[#EFF6FF] text-[#1E3A8A] px-3 py-1.5 rounded-full inline-flex">{assigned.site.nama_lokasi} • {assigned.site.radius} m</p>
                 </div>
 
-                {assigned && (
-                    <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
-                        <p className="text-xs font-medium text-[#94A3B8]">Titik assigned</p>
-                        <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.site.nama_lokasi}</p>
-                        <p className="text-xs font-mono text-[#64748B]">{assigned.site.lat.toFixed(4)}, {assigned.site.lng.toFixed(4)} • {assigned.site.radius} m</p>
-                        {assigned.site.address && <p className="text-xs text-[#94A3B8] mt-1">{assigned.site.address}</p>}
-                        <p className="text-xs text-[#94A3B8] mt-2">Absen valid hanya dalam radius titik assigned • di luar / titik lain ditolak 422 (1 karyawan = 1 titik)</p>
-                    </div>
-                )}
+                <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
+                    <p className="text-xs font-medium text-[#94A3B8]">Titik assigned</p>
+                    <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.site.nama_lokasi}</p>
+                    <p className="text-xs font-mono text-[#64748B]">{assigned.site.lat.toFixed(4)}, {assigned.site.lng.toFixed(4)} • {assigned.site.radius} m</p>
+                    {assigned.site.address && <p className="text-xs text-[#94A3B8] mt-1">{assigned.site.address}</p>}
+                    <p className="text-xs text-[#94A3B8] mt-2">Absen valid hanya dalam radius titik assigned • di luar / titik lain ditolak 422 (1 karyawan = 1 titik)</p>
+                </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
                     <h3 className="font-medium text-sm text-[#0F172A]">Data pribadi</h3>

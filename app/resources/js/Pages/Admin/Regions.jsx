@@ -94,13 +94,13 @@ export default function Regions() {
         if (!confirmDeleteWilayah) return;
         const id = confirmDeleteWilayah.id;
         const r = regions.find((x) => x.id === id);
-        setRegions((prev) => { const next = prev.filter((x) => x.id !== id); saveRegions(next); return next; });
-        // orphan employees: set Tanpa titik + region keep but site null
+        // Wajib 1 titik: hapus wilayah + karyawannya sekaligus
         const emps = loadEmployees();
         const siteIds = new Set((r?.locations || []).map((s) => s.id));
-        const nextEmps = emps.map((e) => siteIds.has(e.office_location_id) ? { ...e, office_location_id: null } : e);
+        const nextEmps = emps.filter((e) => !siteIds.has(e.office_location_id) && e.region !== r?.name);
         saveEmployees(nextEmps); setEmployees(nextEmps);
-        showToast(r ? `Wilayah ${r.name} dihapus — ${confirmDeleteWilayah.nEmp} karyawan jadi Tanpa titik` : 'Wilayah dihapus');
+        setRegions((prev) => { const next = prev.filter((x) => x.id !== id); saveRegions(next); return next; });
+        showToast(r ? `Wilayah ${r.name} dihapus — ${confirmDeleteWilayah.nEmp} karyawan terhapus` : 'Wilayah dihapus');
         setConfirmDeleteWilayah(null);
     };
 
@@ -210,14 +210,24 @@ export default function Regions() {
     const confirmDeleteSiteAction = () => {
         if (!confirmDeleteSite) return;
         const { regionId, siteId } = confirmDeleteSite;
+        if (confirmDeleteSite.nAnggota > 0) {
+            // Wajib 1 titik: pindah anggota ke titik lain di region sama sebelum hapus
+            const region = regions.find((r) => r.id === regionId);
+            const otherId = region?.locations.find((s) => s.id !== siteId)?.id;
+            if (otherId) {
+                const emps = loadEmployees();
+                const nextEmps = emps.map((e) => e.office_location_id === siteId ? { ...e, office_location_id: otherId } : e);
+                saveEmployees(nextEmps); setEmployees(nextEmps);
+            } else {
+                showToast('Tidak bisa hapus titik terakhir yang masih ada anggota — pindah dulu', false);
+                return;
+            }
+        }
         setRegions((prev) => {
             const next = prev.map((r) => r.id !== regionId ? r : { ...r, locations: r.locations.filter((s) => s.id !== siteId) });
             saveRegions(next); return next;
         });
-        const emps = loadEmployees();
-        const nextEmps = emps.map((e) => e.office_location_id === siteId ? { ...e, office_location_id: null } : e);
-        saveEmployees(nextEmps); setEmployees(nextEmps);
-        showToast(confirmDeleteSite.nAnggota > 0 ? `Titik ${confirmDeleteSite.siteName} dihapus — ${confirmDeleteSite.nAnggota} anggota jadi Tanpa titik (tidak bisa absen)` : `Titik ${confirmDeleteSite.siteName} dihapus`);
+        showToast(confirmDeleteSite.nAnggota > 0 ? `Titik ${confirmDeleteSite.siteName} dihapus — ${confirmDeleteSite.nAnggota} anggota dipindah` : `Titik ${confirmDeleteSite.siteName} dihapus`);
         setConfirmDeleteSite(null);
     };
 
@@ -265,7 +275,7 @@ export default function Regions() {
                                                                 </Link>
                                                                 <div className="flex items-center gap-1 shrink-0">
                                                                     <Link href={`${base}/regions/${r.id}/sites/${s.id}`} className="text-xs font-medium text-[#1E3A8A] bg-[#EFF6FF] px-2.5 py-1 rounded-lg">Kelola</Link>
-                                                                    {canEditRegion && <button type="button" onClick={() => handleDeleteSite(r.id, s.id)} title={`Hapus ${s.nama_lokasi}${countForSite(s.id) > 0 ? ` — ${countForSite(s.id)} anggota akan jadi Tanpa titik` : ''}`} className="text-xs text-[#991B1B] bg-[#FEF2F2] px-2 py-1 rounded-lg">Hapus</button>}
+                                                                    {canEditRegion && <button type="button" onClick={() => handleDeleteSite(r.id, s.id)} title={`Hapus ${s.nama_lokasi}${countForSite(s.id) > 0 ? ` — ${countForSite(s.id)} anggota akan dipindah` : ''}`} className="text-xs text-[#991B1B] bg-[#FEF2F2] px-2 py-1 rounded-lg">Hapus</button>}
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -381,7 +391,7 @@ export default function Regions() {
                         <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4">
                                 <h3 className="font-semibold text-[#0F172A]">Hapus {confirmDeleteSite.siteName}?</h3>
-                                <p className="text-sm text-[#64748B] mt-2">{confirmDeleteSite.regionName} • {confirmDeleteSite.nAnggota > 0 ? <span className="font-semibold text-[#991B1B]">{confirmDeleteSite.nAnggota} anggota akan jadi Tanpa titik — tidak bisa absen (422)</span> : 'Tidak ada anggota di titik ini.'}</p>
+                                <p className="text-sm text-[#64748B] mt-2">{confirmDeleteSite.regionName} • {confirmDeleteSite.nAnggota > 0 ? <span className="font-semibold text-[#92400E]">{confirmDeleteSite.nAnggota} anggota akan dipindah ke titik lain di wilayah ini</span> : 'Tidak ada anggota di titik ini.'}</p>
                             </div>
                             <div className="px-6 pb-5 flex gap-2">
                                 <button type="button" onClick={() => setConfirmDeleteSite(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
@@ -396,7 +406,7 @@ export default function Regions() {
                         <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4">
                                 <h3 className="font-semibold text-[#0F172A]">Hapus wilayah {confirmDeleteWilayah.name}?</h3>
-                                <p className="text-sm text-[#64748B] mt-2">{confirmDeleteWilayah.nSites} titik • {confirmDeleteWilayah.nEmp > 0 ? <span className="font-semibold text-[#991B1B]">{confirmDeleteWilayah.nEmp} karyawan akan jadi Tanpa titik — tidak bisa absen</span> : 'Tidak ada karyawan di wilayah ini.'}</p>
+                                <p className="text-sm text-[#64748B] mt-2">{confirmDeleteWilayah.nSites} titik • {confirmDeleteWilayah.nEmp > 0 ? <span className="font-semibold text-[#991B1B]">{confirmDeleteWilayah.nEmp} karyawan akan ikut terhapus</span> : 'Tidak ada karyawan di wilayah ini.'}</p>
                                 <p className="text-xs text-[#94A3B8] mt-1">Titik di wilayah ini juga terhapus.</p>
                             </div>
                             <div className="px-6 pb-5 flex gap-2">

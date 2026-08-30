@@ -44,7 +44,7 @@ export default function CutiDetail() {
                         <div className="flex-1">
                             <h1 className="text-lg font-semibold tracking-tight text-[#0F172A]">{data.nama}</h1>
                             <p className="text-sm text-[#64748B]">{data.wilayah} • {data.jenis} • {data.tgl}</p>
-                            <p className="text-xs text-[#94A3B8]">{data.email} • titik {data.office_location_id ?? 'Tanpa titik'}</p>
+                            <p className="text-xs text-[#94A3B8]">{data.email} • titik {data.office_location_id}</p>
                             <span className={`inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${data.status === 'Disetujui' ? 'bg-[#ECFDF5] text-[#065F46]' : data.status === 'Menunggu' ? 'bg-[#FFF7E6] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{data.status} • Level {data.level}/3</span>
                         </div>
                     </div>

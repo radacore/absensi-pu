@@ -11,7 +11,6 @@ export default function Love() {
     const [settings, setSettings] = useState(() => loadSettings());
     const [selected, setSelected] = useState(null);
     const [alasan, setAlasan] = useState('');
-    const [dokumen, setDokumen] = useState(null);
     const [toast, setToast] = useState(null);
     useEffect(() => {
         const sync = () => { setRegionsData(loadRegions()); setEmployees(loadEmployees()); setAllLove(loadLove()); setSettings(loadSettings()); };
@@ -40,26 +39,24 @@ export default function Love() {
 
     // eligible late: hari ini late = demo 1 eligible, real: dari LS_ATTENDANCES jika ada late hari ini dalam radius
     const eligible = useMemo(() => {
-        if (!assigned) return [];
         // demo: 1 late hari ini yang belum di-claim
         const alreadyClaimedToday = myClaims.some((c) => c.jam === '07:52');
         if (alreadyClaimedToday) return [];
         return [{ id: 901, tgl: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }), jam: '07:52', jarak: 42, status: 'late' }];
-    }, [assigned, myClaims]);
+    }, [myClaims]);
 
     const handleClaim = () => {
         if (!selected || !alasan.trim()) { setToast('Pilih late & isi alasan'); setTimeout(()=>setToast(null),2200); return; }
         if (sisa <= 0) { setToast('Sisa Love 0 — reset bulan depan'); setTimeout(()=>setToast(null),2200); return; }
-        if (!assigned) { setToast('Tanpa titik — tidak bisa claim'); setTimeout(()=>setToast(null),2200); return; }
         if (selected.jarak > assigned.site.radius) { setToast('Di luar radius — tidak bisa claim (422)'); setTimeout(()=>setToast(null),2200); return; }
         const next = {
             id: Date.now(), employee_id: MOCK_KARYAWAN_ID, nama: me?.nama || 'Andi Saputra', wilayah: me?.region || 'Kab. Gowa', kantor: assigned.region.kantor,
             office_location_id: assigned.site.id, jam: selected.jam, jarak: selected.jarak, radius: assigned.site.radius,
-            alasan: alasan.trim(), dokumen: dokumen?.name || 'dokumen.pdf', status: 'pending', createdAt: new Date().toISOString(),
+            alasan: alasan.trim(), status: 'pending', createdAt: new Date().toISOString(),
         };
         const updated = [next, ...allLove];
         setAllLove(updated); saveLove(updated);
-        setSelected(null); setAlasan(''); setDokumen(null);
+        setSelected(null); setAlasan('');
         setToast('Love diajukan — menunggu Admin (sinkron)'); setTimeout(()=>setToast(null),2500);
     };
 
@@ -68,8 +65,7 @@ export default function Love() {
             <div className="space-y-5">
                 <div>
                     <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Love</h2>
-                    <p className="text-sm text-[#64748B]">{max} Love/bulan • Sisa {sisa}/{max} • Reset 1 {new Date(new Date().getFullYear(), new Date().getMonth()+1, 1).toLocaleDateString('id-ID',{month:'short'})} 00:00 WITA {assigned ? `• ${assigned.site.nama_lokasi} • ${assigned.site.radius} m` : '• Tanpa titik'}</p>
-                    {!assigned && <p className="text-xs font-medium text-[#991B1B] mt-1">Tanpa titik — late di luar titik assigned tidak bisa di-excuse (melebihi radius)</p>}
+                    <p className="text-sm text-[#64748B]">{max} Love/bulan • Sisa {sisa}/{max} • Reset 1 {new Date(new Date().getFullYear(), new Date().getMonth()+1, 1).toLocaleDateString('id-ID',{month:'short'})} 00:00 WITA • {assigned.site.nama_lokasi} • {assigned.site.radius} m</p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
@@ -85,17 +81,15 @@ export default function Love() {
                     <div className="mt-4 flex gap-2">
                         {Array.from({length: max}, (_,i) => (<span key={i} className={`flex-1 h-2.5 rounded-full ${i < sisa ? 'bg-[#FCB833]' : 'bg-[#F1F5F9]'}`}></span>))}
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3">Pakai 1 Love untuk 1 keterlambatan <span className="font-medium text-[#0F172A]">dalam radius {assigned ? `${assigned.site.nama_lokasi} ${assigned.site.radius} m` : 'titik assigned'}</span> + dokumen (bulan sama) → approval 1 level {assigned ? `Admin ${assigned.region.name}` : 'Admin Wilayah'} • CRUD lokal</p>
+                    <p className="text-xs text-[#94A3B8] mt-3">Pakai 1 Love untuk 1 keterlambatan <span className="font-medium text-[#0F172A]">dalam radius {assigned.site.nama_lokasi} {assigned.site.radius} m</span> (bulan sama, cukup alasan) → approval 1 level Admin {assigned.region.name} • CRUD lokal</p>
                     {sisa === 0 && <p className="text-xs font-medium text-[#EF4444] mt-2">Sisa 0 — keterlambatan berikutnya tidak bisa di-excuse</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <h3 className="font-medium text-sm text-[#0F172A]">Terlambat yang bisa pakai Love</h3>
-                    <p className="text-xs text-[#94A3B8] mt-1">Hanya late bulan sama & dalam radius {assigned ? `${assigned.site.nama_lokasi} ${assigned.site.radius} m` : 'titik assigned'} • Di luar radius ditolak 422</p>
+                    <p className="text-xs text-[#94A3B8] mt-1">Hanya late bulan sama & dalam radius {assigned.site.nama_lokasi} {assigned.site.radius} m • Di luar radius ditolak 422</p>
                     <div className="mt-4 space-y-3">
-                        {!assigned ? (
-                            <p className="text-sm text-[#991B1B] bg-[#FEF2F2] rounded-xl p-3 text-center">Tanpa titik assigned — tidak ada late yang bisa pakai Love. Hubungi Admin untuk assign titik.</p>
-                        ) : eligible.length === 0 ? (
+                        {eligible.length === 0 ? (
                             <p className="text-sm text-[#64748B] text-center py-4">Tidak ada keterlambatan yang bisa pakai Love (sudah diajukan atau tidak ada late hari ini)</p>
                         ) : (
                             eligible.map((l) => {
@@ -114,19 +108,15 @@ export default function Love() {
                             })
                         )}
                     </div>
-                    {selected && assigned && (
+                    {selected && (
                         <div className="mt-4 space-y-3 border-t border-[#F1F5F9] pt-4">
                             <p className="text-xs font-medium text-[#0F172A]">Ajukan Love untuk {selected.tgl} • {selected.jam} • {assigned.site.nama_lokasi}</p>
                             <div>
-                                <label htmlFor="alasan" className="text-xs font-medium text-[#334155]">Alasan</label>
+                                <label htmlFor="alasan" className="text-xs font-medium text-[#334155]">Alasan (wajib)</label>
                                 <textarea id="alasan" rows={2} value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder="Contoh: Macet poros Gowa karena perbaikan jalan" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20"></textarea>
+                                <p className="text-xs text-[#94A3B8] mt-1">Cukup alasan</p>
                             </div>
-                            <div>
-                                <label htmlFor="dok" className="text-xs font-medium text-[#334155]">Dokumen pendukung</label>
-                                <input id="dok" type="file" onChange={(e) => setDokumen(e.target.files?.[0] || null)} className="mt-1.5 w-full text-xs text-[#64748B] file:mr-3 file:rounded-lg file:border-0 file:bg-[#0F172A] file:text-white file:px-3 file:py-1.5 file:text-xs file:font-medium" />
-                                {dokumen && <p className="text-xs text-[#10B981] mt-1">Terpilih: {dokumen.name}</p>}
-                            </div>
-                            <button type="button" onClick={handleClaim} disabled={!alasan.trim() || sisa <= 0 || !assigned || selected.jarak > assigned.site.radius} title={!alasan.trim() ? 'Isi alasan dulu' : sisa <= 0 ? 'Sisa Love 0 — reset 1 bulan depan' : !assigned ? 'Tanpa titik — tidak bisa claim' : selected.jarak > assigned.site.radius ? `${selected.jarak} m / ${assigned.site.radius} m — di luar radius` : ''} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 Love — Kirim ke {assigned ? `Admin ${assigned.region.name}` : 'Admin Wilayah'}</button>
+                            <button type="button" onClick={handleClaim} disabled={!alasan.trim() || sisa <= 0 || selected.jarak > assigned.site.radius} title={!alasan.trim() ? 'Isi alasan dulu' : sisa <= 0 ? 'Sisa Love 0 — reset 1 bulan depan' : selected.jarak > assigned.site.radius ? `${selected.jarak} m / ${assigned.site.radius} m — di luar radius` : ''} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 Love — Kirim ke Admin {assigned.region.name}</button>
                             <p className="text-xs text-[#94A3B8] text-center">Mocking API — langsung sinkron ke Admin/Love (localStorage)</p>
                         </div>
                     )}
@@ -144,7 +134,6 @@ export default function Love() {
                                 <div>
                                     <p className="text-sm font-medium text-[#0F172A]">{new Date(c.createdAt).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})} • {c.jam} • {c.jarak}m/{c.radius ?? '?'}m</p>
                                     <p className="text-xs text-[#64748B] mt-0.5">{c.alasan} {c.note ? `• ${c.note}` : ''}</p>
-                                    <p className="text-xs text-[#94A3B8]">{c.dokumen}</p>
                                 </div>
                                 <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${c.status === 'approved' ? 'bg-[#ECFDF5] text-[#065F46]' : c.status === 'pending' ? 'bg-[#FFFBEB] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{c.status}</span>
                             </div>
