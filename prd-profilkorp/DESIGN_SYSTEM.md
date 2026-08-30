@@ -27,6 +27,7 @@ BBWS Pompengan Jeneberang is a corporate profile application designed to project
 | Light Sky | `#E0F2FE` | `--color-secondary-light` | Backgrounds, card accents |
 | Warm Gray | `#F3F4F6` | `--color-neutral-light` | Section backgrounds, borders |
 | Success Green | `#10B981` | `--color-success` | Form validation, success messages |
+| **Love Gold** | `#FCB833` | `--color-love-gold` | Love 4 hati dot terisi, badge sisa toleransi, gold CTA — 1 karyawan=1 titik, reset 00:00 WITA 1st |
 
 ### Neutral & Semantic Colors
 | Color | Hex | CSS Variable | Usage |
@@ -38,12 +39,14 @@ BBWS Pompengan Jeneberang is a corporate profile application designed to project
 | Error Red | `#EF4444` | `--color-error` | Error messages, validation |
 | Warning Amber | `#F59E0B` | `--color-warning` | Warning alerts, caution states |
 | White | `#FFFFFF` | `--color-white` | Card backgrounds, overlays |
+| Love Empty | `#E2E8F0` | `--color-love-empty` | Love dot kosong 4 hati |
+| Love Disabled | `#94A3B8` | `--color-love-disabled` | Love CTA disabled saat `!inRadius` / `tanpaTitik` (`isWithinAssignedSite`) |
 
 ### CSS Custom Properties Block
 
 ```css
 :root {
-  /* Primary */
+  /* Primary — navy #0F172A / blue #1E3A8A */
   --color-primary: #1E3A8A;
   --color-primary-dark: #0F172A;
   --color-accent: #0D9488;
@@ -52,6 +55,8 @@ BBWS Pompengan Jeneberang is a corporate profile application designed to project
   --color-secondary-light: #E0F2FE;
   --color-neutral-light: #F3F4F6;
   --color-success: #10B981;
+  --color-love-gold: #FCB833;  /* Love 4 hati terisi — 1 karyawan=1 titik */
+  --color-love-empty: #E2E8F0; /* Love dot kosong */
   
   /* Neutral */
   --color-text-primary: #1F2937;
@@ -61,8 +66,9 @@ BBWS Pompengan Jeneberang is a corporate profile application designed to project
   --color-error: #EF4444;
   --color-warning: #F59E0B;
   --color-white: #FFFFFF;
+  --color-love-disabled: #94A3B8; /* disabled !inRadius/tanpaTitik */
   
-  /* Semantic */
+  /* Semantic — 1 karyawan=1 titik (office_location_id) */
   --color-bg-primary: #FFFFFF;
   --color-bg-secondary: #F9FAFB;
   --color-bg-tertiary: #F3F4F6;
@@ -72,7 +78,7 @@ BBWS Pompengan Jeneberang is a corporate profile application designed to project
 ### Tailwind Configuration Snippet (v4 - CSS-first)
 
 ```css
-/* app.css - Tailwind v4 */
+/* app.css - Tailwind v4 — 1 karyawan=1 titik, gold #FCB833 navy #0F172A */
 @import "tailwindcss";
 
 @theme {
@@ -82,6 +88,9 @@ BBWS Pompengan Jeneberang is a corporate profile application designed to project
   --color-secondary-light: #E0F2FE;
   --color-neutral-light: #F3F4F6;
   --color-success: #10B981;
+  --color-love-gold: #FCB833;  /* 4 hati terisi — isWithinAssignedSite only */
+  --color-love-empty: #E2E8F0;
+  --color-love-disabled: #94A3B8;
   --color-error: #EF4444;
   --color-warning: #F59E0B;
   --color-white: #FFFFFF;
@@ -208,16 +217,16 @@ All spacing, padding, margins, and sizing should be multiples of 8px to maintain
 
 ## Screen Priorities
 
-### Admin Dashboard Screens (Administrator Priority Order — Super Admin & Admin Wilayah)
+### Admin Dashboard Screens (Administrator Priority Order — Super Admin & Admin Wilayah — 1 Karyawan=1 Titik)
 
 1. **Admin Login (Opsi B Pisah URL)** — **Super Admin** `SUPER_ADMIN_PATH/login` vs **Admin Wilayah** `WILAYAH_PATH/login` (dev `/super-admin/login` / `/wilayah/login`), email+password, guard terpisah tidak cross-login, obfuscated + rate-limited per guard.
-2. **Dashboard Overview (Role-Scoped)** — Super Admin: all regions stats; Admin Wilayah: own region (employee count, attendance today, pending cuti) + read-only global.
-3. **Region Management + N Titik Proyek (Super Admin / Admin Wilayah own)** — CRUD Kabupaten/Kota + **N titik proyek per wilayah** (tiap titik: nama titik ex Bendungan A/Jembatan B, lat/lng Leaflet, radius 50–1000) — Super Admin all wilayah, Admin Wilayah tambah/edit N titik di wilayahnya sendiri (read-only wilayah lain) + assign admin wilayah.
-4. **Karyawan Management (Lengkap HR)** — List filtered own region (toggle read all), Create/Edit with NIK/NIP/golongan/jabatan/unit/status, foto S3, region auto-scoped.
-5. **Attendance Viewer** — List per region with date/status filter, detail with selfie + map + distance.
-6. **Leave Requests (Berjenjang)** — Queue per level, approve/reject with notes, timeline UI, region-scoped.
-7. **Love Claims (1 Level)** — Queue pending Love Claims own region (late dalam radius + dokumen/alasan), Approve/Reject 1 level Admin Wilayah, notifikasi karyawan, update love_sisa & attendance excused_love.
-7. **Announcement Management** — Create broadcast (global) or region-targeted, attachment S3, pinned handling.
+2. **Dashboard Overview (Role-Scoped, Per Titik)** — Super Admin: all regions stats **breakdown per Titik** (cards `anggota`/`lat/lng•radius` Link `${base}/regions/{id}/sites/{id}`); Admin Wilayah: **own region breakdown per Titik** + `siteFilter` `Semua titik` + `totalTanpaTitik` (`office_location_id IS NULL`). Source `_shared.js` `DUMMY_REGIONS` 24 (`101/102/201/202/301...`) + `DUMMY_EMPLOYEES` 1=1 (Andi 201, Siti 101, Budi 202, Rina null).
+3. **Region Management + N Titik Proyek + Dedicated Page per Titik (Super Admin / Admin Wilayah own)** — CRUD Kabupaten/Kota + **N titik proyek per wilayah** (`MAX_SITES=20`, hapus last 422) tiap titik: nama ex Bendungan Bili-Bili/Jembatan Pampang, lat/lng **Leaflet draggable+circle**, radius 50–1000 — Super Admin all wilayah, Admin Wilayah tambah/edit N titik di wilayahnya sendiri (read-only wilayah lain) + assign admin wilayah. **Dedicated `GET /regions/{region}/sites/{site}`** (`Admin/SiteDetail`) x3 prefix `super_admin|admin|wilayah.sites.show` + helper `getAdminBase(url)` — Leaflet edit + anggota per titik saja + kandidat `office_location_id IS NULL`.
+4. **Karyawan Management (Lengkap HR, 1 Karyawan=1 Titik)** — List **filtered own region + filter `Titik Proyek` (`__null` tanpa titik)** incl. `Wilayah→Titik Proyek→Status`, kolom **Titik Proyek** Link SiteDetail + badge status, Create/Edit with NIK/NIP/golongan/jabatan/unit/status + **`office_location_id` select 1=1 titik** (NULL=belum assign 422), foto S3, region auto-scoped, pindah via SiteDetail `Pindah`.
+5. **Attendance Viewer (Per Titik)** — List **filter `Wilayah→Titik Proyek→Status`** incl. `__null`, kolom **Titik Proyek** Link `GET /regions/.../sites/...`, badge **`Dalam/Di luar` (`distance <= radius_m(assigned)` via `isWithinAssignedSite`)** + `Jarak` kolom, detail drawer selfie + map Leaflet + `distance_m/radius_m` + S3 path.
+6. **Leave Requests (Berjenjang, Per Titik)** — Queue **filter `Titik Proyek` + `__null`**, kolom **Titik Proyek** Link SiteDetail, approve/reject with notes per level, timeline UI, region-scoped.
+7. **Love Claims (1 Level, Per Titik Assigned Only)** — Queue **filtered per Titik own region** (`office_location_id` + `__null`), kolom **Titik Proyek** Link, badge **`jarak/radius Dalam/Di luar` (assigned)**, Approve **disabled `sisaLove==0 || !hit`** (`isWithinAssignedSite` only, bukan `isWithinAnySite`), `tanpaTitik` tidak ada claim.
+8. **Announcement Management** — Create broadcast (global) or region-targeted, attachment S3, pinned handling.
 9. **Blog Management** — Create, edit, publish articles. Frequent content updates.
 10. **Portfolio Management** — Manage projects, upload media. Regular content maintenance.
 11. **Contact Submissions Viewer** — View and archive form submissions. Lead management.
@@ -226,20 +235,20 @@ All spacing, padding, margins, and sizing should be multiples of 8px to maintain
 14. **Testimonial Management** — Approve and manage testimonials. Periodic moderation.
 15. **Media Library** — Browse, upload, delete media from S3. Utility function.
 16. **SEO Management** — Override meta tags, manage Open Graph. Periodic optimization.
-17. **Global Settings (Super Admin Only)** — Company info, logo, contact details, social links. Admin Wilayah read-only.
+17. **Global Settings (Super Admin Only)** — Company info, logo, contact details, social links + `global_settings.love_max_default` 1–10. Admin Wilayah read-only.
 18. **Content Versioning** — View and rollback page history. Emergency/audit function.
 
-### Karyawan PWA Screens (Mobile-First, 320px+, Installable — Priority Order)
+### Karyawan PWA Screens (Mobile-First, 320px+, Installable — Priority Order — 1 Karyawan=1 Titik)
 
-1. **Karyawan Login (Email + Password, KARYAWAN_PATH)** — Mobile-first 320px, `KARYAWAN_PATH/login` (dev `/karyawan/login`, obfuscated di prod), email input, show/hide password, rate-limit error UX, PWA install banner. Tidak cross-login dengan `/super-admin` / `/wilayah`.
-2. **Dashboard Home** — Greeting + today attendance status (on_time/late/belum absen), pending cuti count, unread pengumuman count, quick actions (Absen, Ajukan Cuti).
-3. **Absensi (GPS + Selfie — N Titik Proyek)** — Big "Absen Masuk/Pulang" button 44px+, GPS permission UX, camera capture, preview selfie + **"Titik terdekat: Bendungan A • 48m • Dalam radius"** badge, status on_time/late (di luar semua titik ditolak 422), history list with titik label, offline queue indicator.
-4. **Cuti (Berjenjang)** — Form ajukan (jenis, tgl mulai/selesai, alasan, dokumen), list own requests with status timeline (pending → level1 → level2 → approved/rejected), detail with approver notes.
-5. **Pengumuman Inbox** — Combined global+region, pinned first, unread dot, tap to read (marks read), attachment download, pull-to-refresh.
-6. **Love (4 Hati)** — 4 dot gold #FCB833 (terisi) / #E2E8F0 (kosong), text "Sisa toleransi: 3/4", gold CTA "Gunakan Love" saat late dalam radius, history claim (pending/approved/rejected), reset info "Reset 1 Agu".
-7. **Profil Saya** — View Lengkap HR (NIK,NIP,golongan,jabatan,unit,status,region, foto), edit limited (foto, phone, email, password), region read-only badge.
-7. **Love Detail in Rekap** — Rekap kalender gold dot hadir, detail late dengan opsi pakai Love jika dalam radius.
-8. **Bottom Navigation** — 5 tabs: Home, Absensi, Cuti, Info, Profil; 44px tap targets, safe-area-inset-bottom (tanpa Slip). Love tidak di bottom nav, via Dashboard & Rekap.
+1. **Karyawan Login (Email + Password, KARYAWAN_PATH)** — Mobile-first 320px, `KARYAWAN_PATH/login` (dev `/karyawan/login`, obfuscated di prod), email input, show/hide password, rate-limit error UX (5/15min per IP+email), PWA install banner. Tidak cross-login dengan `/super-admin` / `/wilayah` (guard `karyawan`).
+2. **Dashboard Home (Per Titik Assigned)** — Greeting + **badge `Ditugaskan di: Bendungan Bili-Bili — Kab. Gowa lat/lng • radius 200m`** (via `loadRegions/loadEmployees` `_shared.js` `MOCK_KARYAWAN_ID=1` 201) atau warning `Belum di-assign titik — hubungi Admin Wilayah` jika `office_location_id IS NULL`, today status (on_time/late/belum absen + `distance/radius` assigned), pending cuti, unread pengumuman, quick actions (Absen, Ajukan Cuti). Love sisa/max dot gold `#FCB833`.
+3. **Absensi (GPS + Selfie — Hanya Titik Assigned)** — Banner **titik assigned** `lat/lng • radius` (bukan nearest dari N), Big "Absen Masuk/Pulang" button 44px+, GPS+camera capture, preview selfie + **`jarak/radius` ex `48/200m` + badge `Dalam/Di luar radius titik assigned` (`isWithinAssignedSite` only)**, status on_time/late (**di luar assigned atau `NULL` ditolak 422 tidak tercatat**), buttons **disabled `!inRadius || tanpaTitik`**, history `jarak/radius` per assigned, offline queue (server re-validasi `isWithinAssignedSite` + jam `07:30–16:00`).
+4. **Cuti (Berjenjang, Per Titik)** — Form ajukan (jenis, tgl, alasan, dokumen) dengan konteks titik assigned read-only, list own requests timeline (pending→level1→level2→approved/rejected) incl. titik link, detail with approver notes.
+5. **Pengumuman Inbox** — Combined global+region, pinned first, unread dot, tap to read (marks read), attachment S3 download, pull-to-refresh.
+6. **Love (4 Hati, Dalam Radius Titik Assigned)** — 4 dot **gold `#FCB833` terisi / `#E2E8F0` kosong**, text `Sisa toleransi: 3/4` (`--color-love-gold/empty`), gold CTA **"Gunakan Love" aktif hanya `inRadius(assigned) && sisa>0 && !tanpaTitik`**, disabled state `--color-love-disabled`, badge `jarak/radius Dalam/Di luar`, history claim (pending/approved/rejected), reset `1st 00:00 WITA` + bulan sama.
+7. **Profil Saya (Per Titik)** — View Lengkap HR (NIK,NIP,golongan,jabatan,unit,status,region, foto) + **card titik assigned** (nama `Bendungan Bili-Bili`, lat/lng, radius, alamat) atau placeholder `— Belum di-assign titik`, edit limited (foto, phone, email, password), region read-only badge.
+8. **Rekap (Per Titik)** — Kalender gold dot hadir + note **`Di luar {radius}m tidak tercatat 422`** (`Karyawan/Rekap.jsx` header `Ditugaskan di:`), detail late dengan opsi Love jika `Dalam radius titik assigned` (bukan any site).
+9. **Bottom Navigation** — 5 tabs: Home, Absensi, Cuti, Info, Profil; 44px tap targets, safe-area-inset-bottom (tanpa Slip). Love tidak di bottom nav, via Dashboard & Rekap.
 
 ## Interaction & Motion
 
@@ -354,8 +363,8 @@ All text and interactive elements must meet WCAG 2.1 Level AA standards (minimum
 
 ---
 
-**Stack:** Laravel 13 + React 19 + Inertia v2 + Tailwind v4 + Vite 7 + MySQL 8.4 LTS + PWA  
-**Roles:** Super Admin Pusat, Admin Wilayah (per Kabupaten/Kota, write own region), Karyawan (NIK login, own-data-only, mobile PWA)  
-**Document Version:** 3.0 (added karyawan PWA + regional multi-tenancy)  
-**Last Updated:** 2026-08-24  
-**Status:** Ready for Development
+**Stack:** Laravel 13 + React 19 + Inertia v2 + Tailwind v4 + Vite 7 + MySQL 8.4 LTS + PWA — **1 karyawan=1 titik (office_location_id), Geofence `isWithinAssignedSite` only, NULL 422, N≤20**  
+**Roles:** Super Admin Pusat, Admin Wilayah (per Kab/Kota, write own `region_id` + `office_location_id` 1=1 assign/pindah per titik), Karyawan (email login, own-data-only, **absen/Love hanya titik assigned**, mobile PWA banner titik)  
+**Document Version:** 3.1 (per-titik strict — 1 karyawan=1 titik, dedicated `GET /regions/{region}/sites/{site}`, PWA assigned-only)  
+**Last Updated:** 2026-08-30  
+**Status:** Synced per-titik strict — Ready for Development

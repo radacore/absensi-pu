@@ -5,11 +5,11 @@
 | Phase | Duration | Goals | Key Deliverables |
 |:---|:---|:---|:---|
 | **Phase 1: Foundation & HR Core** | 4 weeks | Establish project infrastructure, database schema (including regions), and core public pages. | Laravel 13 + React 19 + Inertia v2 setup, Regions scaffolding, Homepage, About Us, Services pages, Tailwind v4 styling. |
-| **Phase 2: Admin Dashboard & Content Management** | 4 weeks | Build RBAC auth (Super Admin vs Admin Wilayah) and core CRUD (N titik proyek). | Multi-guard Sanctum, role+region middleware, Admin login, Dashboard role-scoped, Page/Blog/Portfolio/Team CRUD, Regions CRUD **+ N Titik Proyek per wilayah** (Super Admin all, Admin Wilayah own region), WYSIWYG. |
+| **Phase 2: Admin Dashboard & Content Management** | 4 weeks | Build RBAC auth (Super Admin vs Admin Wilayah) + **1 karyawan=1 titik** CRUD (N titik + per-titik dedicated). | Multi-guard Sanctum (`super_admin`/`wilayah`), role+region middleware + `getAdminBase(url)`, Admin login, **Dashboard breakdown per Titik** (`countsPerSite`/`totalTanpaTitik`), Page/Blog/Portfolio/Team CRUD, **Regions CRUD + N Titik Proyek** (`MAX_SITES=20` last delete 422, **dedicated `GET /regions/{region}/sites/{site}`** (`Admin/SiteDetail` draggable Leaflet) Super Admin all, Admin Wilayah own region), **Employees per Titik** (`office_location_id` filter kolom Link SiteDetail), WYSIWYG. |
 | **Phase 3: Advanced Features & Media Handling** | 3 weeks | Implement AWS S3 integration, SEO management, content versioning. | Media Library S3, Advanced SEO, Content versioning, Global Settings (Super Admin only). |
 | **Phase 4: HR Features & Polish** | 3 weeks | Complete remaining public pages, contact form, testimonials. | Portfolio/Projects, Team, Blog listing, Contact form with notifications, Testimonials. |
-| **Phase 5: Karyawan Mobile PWA (HR Self-Service)** | 4 weeks | Build employee PWA: auth NIK, profile, absensi, cuti, pengumuman. | Karyawan login (NIK+password), Profile own-data, Absensi GPS+selfie (geofence), Cuti berjenjang (3 levels), Pengumuman inbox, PWA manifest+SW + offline queue, S3 paths. |
-| **Phase 6: Testing, Security Hardening & Deployment** | 2 weeks | Comprehensive testing, security audit (RBAC+region isolation), performance, deploy. | Unit & integration tests (>80% inc. region scoping & own-data 403 tests), OWASP Top 10, Rate limit & geofence tests, Load test 1000 public + 500 PWA, Live deployment. |
+| **Phase 5: Karyawan Mobile PWA (HR Self-Service) — 1 Karyawan=1 Titik** | 4 weeks | Build employee PWA: auth email + **per-titik assigned only** + pengumuman. | Karyawan login (**email+password**, `KARYAWAN_PATH`), Profile own-data + **card titik assigned** (`office_location_id`), **Absensi GPS+selfie `isWithinAssignedSite` only** (banner `Ditugaskan di:` + `jarak/radius` + disabled `!inRadius‖tanpaTitik` + 422 `NULL`/di luar assigned), **Love 4 hati assigned-only** (gate `sisa>0 && Dalam`), Cuti berjenjang per-titik context, Pengumuman inbox, **Rekap** header+note `Di luar {radius}m 422`, PWA manifest+SW + offline queue (server re-validasi `isWithinAssignedSite`), S3 `/attendance/{region}/{emp}/{date}/`. |
+| **Phase 6: Testing, Security Hardening & Deployment — Per Titik** | 2 weeks | Comprehensive testing, security audit (RBAC+region+**titik** isolation), performance, deploy. | Unit & integration tests (>80% inc. region scoping & **1 karyawan=1 titik scope** & own-data 403 & **`isWithinAssignedSite` vs any-site** & `NULL 422` & `N≤20 last 422` tests), OWASP Top 10, **Rate limit + geofence assigned-only** tests, Dashboard per-Titik & Attendances/Cuti/Love filter tests, Load test 1000 public + 500 PWA, Live deployment. |
 
 **Timeline Disclaimer:** This roadmap assumes a team of **2 developers** (1 backend-focused, 1 frontend-focused). Adjust phase durations proportionally: for 1 developer, multiply by ~1.8; for 3 developers, multiply by ~0.7. Actual timelines may vary based on design approval cycles, client feedback, and scope changes.
 
@@ -25,7 +25,7 @@ These features are **critical** for the initial release. Without them, the appli
 |:---|:---|:---|:---|
 | RBAC Authentication (Admin+Karyawan — Opsi B Pisah URL) | FR-10/FR-22 | Core | Super Admin (`SUPER_ADMIN_PATH` /super-admin + guard super_admin) + Admin Wilayah (`WILAYAH_PATH` /wilayah + guard wilayah) + Karyawan (`KARYAWAN_PATH` /karyawan) — email login semua role, Sanctum multi-guard terpisah tidak cross-login, rate limiting per guard. |
 | Admin Dashboard (Role-Scoped) | FR-11 | Core | Overview scoped by region; Super Admin all regions, Admin Wilayah own region. |
-| Region Management — N Titik Proyek | FR-28/FR-29 | Core | Super Admin CRUD Kabupaten/Kota + **N titik proyek per wilayah** (tiap titik nama/lat/lng/radius 50–1000); Admin Wilayah tambah/edit N titik own region (Bendungan A, Jembatan B). |
+| Region Management — N Titik Proyek (1=1, Dedicated Page) | FR-28/FR-29 | Core | Super Admin CRUD 24 Kabupaten/Kota + **N titik proyek per wilayah** (`MAX_SITES=20`, hapus last 422, tiap titik nama/lat/lng/Leaflet draggable+circle/radius 50–1000, **dedicated `GET /regions/{region}/sites/{site}`** (`super_admin|admin|wilayah.sites.show`)); Admin Wilayah tambah/edit N titik own region (Bendungan Bili-Bili 201/Jembatan Pampang) + **assign/pindah 1 karyawan=1 titik** (`office_location_id`) kandidat `NULL` saja. |
 | Employee Data Management | FR-24 | Core | Admin Wilayah CRUD Lengkap HR per region (read all, write own). |
 | Page Content Management | FR-12 | Core | WYSIWYG editor for static pages. |
 | Portfolio Management | FR-13 | Core | Full CRUD for projects. |
@@ -35,11 +35,11 @@ These features are **critical** for the initial release. Without them, the appli
 | Media Library (AWS S3) | FR-18 | Core | Upload, delete, and browse media on S3. |
 | Global Settings | FR-21 | Core | Manage company name, logo, contact info, social links (Super Admin only). |
 | HTTPS & Security Basics | NFR-Security | Core | HTTPS, CSRF, rate limiting terpisah per guard (super-admin / wilayah / karyawan), region isolation middleware, tiga URL obfuscated pisah. |
-| Karyawan PWA - Auth & Profile | FR-22/FR-23 | Core | Email login (`KARYAWAN_PATH`), view own profile, edit limited fields, PWA installable. Guard terpisah dari super-admin/wilayah. |
-| Karyawan PWA - Absensi (Geofence N Titik) | FR-25 | Core | GPS+selfie check-in/out with **geofence ke titik proyek terdekat** (N titik per wilayah, Haversine), S3 selfie + `office_location_id`. |
-| Karyawan PWA - Cuti | FR-26 | Core | Ajukan cuti + berjenjang approval (3 levels) with notifications. |
-| 
-| Karyawan PWA - Pengumuman | FR-28 | Core | Inbox global+region with read status. |
+| Karyawan PWA - Auth & Profile (Per Titik) | FR-22/FR-23 | Core | **Email** login (`KARYAWAN_PATH`), view own profile + **titik assigned** (`office_location` card `Ditugaskan di: lat/lng•radius` or NULL warning), edit limited fields, **tanpa titik 422 disabled**, PWA installable. Guard `karyawan` terpisah + `_shared.js` `MOCK_KARYAWAN_ID=1` 201. |
+| Karyawan PWA - Absensi (Geofence Titik Assigned — 1=1) | FR-25 | Core | GPS+selfie check-in/out **hanya ke titik assigned** (`GeofenceService::isWithinAssignedSite`, `distance <= radius_m(assigned)` — bukan `isWithinAnySite`), **tanpa titik 422 + di luar assigned 422 ditolak**; S3 `/attendance/{region}/{emp}/{date}/` + `office_location_id==assigned`. |
+| Karyawan PWA - Cuti (Per Titik) | FR-26 | Core | Ajukan cuti + berjenjang approval (3 levels) **per-titik context** (`Titik Proyek` kolom/filter `__null` Link SiteDetail) with notifications. |
+| Karyawan PWA - Love (4 Hati, Assigned Only) | FR-31 | Core | **4 hati `#FCB833` dalam radius titik assigned saja** (`isWithinAssignedSite`, `sisa>0 && Dalam`), tanpa titik/diluar disabled, bulan sama, approve disabled `!inRadius‖sisa==0`. |
+| Karyawan PWA - Pengumuman + Rekap | FR-28 | Core | Inbox global+region with read status; **Rekap** header titik assigned + `Di luar {radius}m 422` calendar gold dot. |
 | PWA Infrastructure | FR-30 | Core | Manifest, service worker, offline cache, 44px touch, push ready. |
 
 ### P1: Should Have Within 1 Month Post-Launch
@@ -75,14 +75,14 @@ These features are valuable but can be deferred to post-launch iterations.
 | Milestone | Phase | Target Date | Deliverables |
 |:---|:---|:---|:---|
 | **Project Setup & Architecture** | 1 | Week 1 | Laravel 13 + React 19 + Inertia v2 + Vite 7 + Tailwind v4, database schema (MySQL 8.4) with regions/employees, Git repo, workflow documented. |
-| **HR Core Foundation** | 1 | Week 2–3 | Karyawan PWA core (Login, Dashboard) with responsive design. Tailwind styling complete. |
+| **HR Core Foundation — 1=1 Titik** | 1 | Week 2–3 | Karyawan PWA core (**email** Login, **Dashboard per Titik** badge `Ditugaskan di:` + `MOCK_KARYAWAN_ID=1` 201 via `_shared.js`) with responsive 320px+. Tailwind v4 gold/navy tokens complete. |
 | **Admin RBAC & Dashboard** | 2 | Week 5 | Multi-guard Sanctum, Super Admin vs Admin Wilayah, region middleware, role-scoped dashboard. |
 | **Core Content Management** | 2 | Week 6–7 | WYSIWYG, Page/Blog/Portfolio/Team CRUD, Regions CRUD (Super Admin). |
 | **AWS S3 Integration & Media Library** | 3 | Week 8 | Media Library S3, transactional uploads, browsing. |
 | **SEO & Content Versioning** | 3 | Week 9 | Advanced SEO editor, version history with rollback. |
-| **HR Features Complete** | 4 | Week 10–11 | Absensi, Cuti, Rekap, Pengumuman, Profil, Love. |
-| **Karyawan PWA Core** | 5 | Week 12–13 | NIK login, profile own-data, absensi GPS+selfie + geofence, cuti form. |
-| **Karyawan PWA Extended** | 5 | Week 14–15 | pengumuman inbox, PWA manifest/SW/offline queue. |
+| **HR Features Complete (Per Titik Strict)** | 4 | Week 10–11 | Absensi `isWithinAssignedSite only` (`NULL` 422), Cuti/Love/Attendances filter kolom `Titik Proyek` + `__null` + Link SiteDetail, Rekap calendar note, Pengumuman, Profil card titik. |
+| **Karyawan PWA Core (1=1)** | 5 | Week 12–13 | **email** login, profile **+ titik assigned** + Rekap `Di luar {radius}m 422`, **Absensi banner titik assigned + `jarak/radius Dalam/Di luar` + disabled `!inRadius‖tanpaTitik`**, **Love gate assigned** (`isWithinAssignedSite` bulan sama), cuti form per-titik. |
+| **Karyawan PWA Extended** | 5 | Week 14–15 | pengumuman inbox, **Dashboard/Love/Profil/Rekap per Titik sync `_shared.js` `DUMMY_EMPLOYEES`**, PWA manifest/SW/offline queue (server re-validasi assigned) + **SiteDetail dedicated Leaflet per titik**. |
 | **Testing & Security Audit** | 6 | Week 16 | Unit tests (>80% inc. region/own-data tests), integration, OWASP, geofence & rate limit tests, load test 1000+500. |
 | **Production Deployment** | 6 | Week 17 | VPS deploy, DNS, SSL, monitoring, PWA Lighthouse >90. |
 | **Post-Launch Stabilization** | 6 | Week 18 | Bug fixes, tuning, client training (Admin Wilayah + Karyawan PWA). |
@@ -170,16 +170,16 @@ These are deliverables and artifacts that must be completed before or in paralle
 ### Phase 2: Admin Dashboard & Content Management (Weeks 5–8)
 
 **Week 5:**
-- Multi-guard login (Super Admin email + Admin Wilayah email, Karyawan NIK) with Sanctum 4.x
-- Role-scoped dashboard (Super Admin all regions, Admin Wilayah own region stats)
-- Navigation + layout with role gates, region middleware + policies
-- Session management + logout per guard + rate limiting
+- Multi-guard login (Super Admin email + Admin Wilayah email, **Karyawan email** — all email) with Sanctum 4.x (`super_admin`/`wilayah`/`karyawan`), Opsi B `SUPER_ADMIN_PATH`/`WILAYAH_PATH`/`KARYAWAN_PATH`
+- **Role-scoped dashboard breakdown per Titik** (`Dashboard.jsx` `countsPerSite` + `totalTanpaTitik` + `siteFilter` `Semua titik`, cards Link `${base}/regions/{id}/sites/{id}`) + `getAdminBase(url)` — Super Admin all, Admin Wilayah own region
+- Navigation + layout with role gates, **region + titik** middleware + policies (`office_location_id` scoping)
+- Session management + logout per guard + rate limiting per guard 5/15min
 
 **Week 6–7:**
- - Regions CRUD **+ N Titik Proyek per wilayah** (Super Admin all, Admin Wilayah own region — Leaflet picker per titik) + Admin Wilayah assignment
- - Page content management with TinyMCE, Blog/Portfolio/Team CRUD
- - Employee Management (Lengkap HR) — Admin Wilayah CRUD own region (read all indicator), NIK/NIP validation, foto S3
-- Form validation + region isolation + own-data policy tests
+  - **Regions CRUD + N Titik Proyek** (`MAX_SITES=20`, dedicated `GET /regions/{region}/sites/{site}` `Admin/SiteDetail` Leaflet draggable+circle per titik + anggota per titik + kandidat `NULL`) Super Admin all, Admin Wilayah own region + **Employees per Titik** (`office_location_id` 1=1, kolom/filter `Titik Proyek` Link SiteDetail + `__null` tanpa titik) + Admin Wilayah assignment 1 titik per karyawan
+  - Page content management with TinyMCE, Blog/Portfolio/Team CRUD
+  - Employee Management (Lengkap HR) — Admin Wilayah CRUD own region (read all indicator) incl. `office_location_id` select, NIK/NIP validation, foto S3, pindah via SiteDetail `Pindah`
+- Form validation + **region + titik** isolation + own-data + **`isWithinAssignedSite` vs any-site** policy tests
 
 **Week 8:**
 - Admin panel deployed to staging
@@ -234,21 +234,22 @@ These are deliverables and artifacts that must be completed before or in paralle
 ### Phase 5: Karyawan Mobile PWA (Weeks 12–15)
 
 **Week 12–13:**
-- Karyawan PWA: NIK login, bottom nav, profile view/edit (limited fields), foto upload S3
- - Absensi: GPS+selfie capture, **geofence N titik proyek** Haversine ke titik terdekat server-side, S3 selfie, status on_time/late/early_leave (di luar semua titik ditolak 422), distance + nama titik UI, offline queue
+- Karyawan PWA: **email** login (NIK→email migrated), bottom nav, profile view/edit + **card titik assigned** (`office_location` 201 ex) or NULL placeholder, foto upload S3 `/attendance/...`, `loadRegions/loadEmployees` `_shared.js` sync
+  - Absensi: GPS+selfie capture, **geofence `isWithinAssignedSite` only** (Haversine `dist <= radius_m(assigned)` — bukan nearest dari N) server-side, **`NULL assigned 422` + `!within assigned 422`**, S3 selfie, status on_time/late/early_leave (di luar assigned ditolak 422), **`jarak/radius` + badge `Dalam/Di luar radius titik assigned` + disabled `!inRadius‖tanpaTitik`**, offline queue server re-validasi
 - Cuti: form ajukan, list status, detail timeline, berjenjang approval UI per level
 
 **Week 14–15:**
-- Pengumuman: Super Admin broadcast + Admin Wilayah targeted, karyawan inbox with read/unread + pinned, attachment S3
-- PWA: manifest.json, service-worker.js (cache profile+pengumuman), install prompt, VAPID push ready, Lighthouse PWA >90, 44px touch targets
+- Pengumuman: Super Admin broadcast + Admin Wilayah targeted per region, karyawan inbox with read/unread + pinned, attachment S3
+- **Love 4 hati:** gate `isWithinAssignedSite` (`sisa>0 && Dalam` + bulan sama), tanpa titik disabled, Approve disabled `!inRadius‖sisa==0` — Karyawan `Love.jsx` + Admin `Love.jsx` per Titik (kolom `Titik Proyek` + `jarak/radius` + Link SiteDetail)
+- PWA: manifest.json (`start_url=/karyawan`), service-worker.js (cache profile+pengumuman+offline queue), install prompt, VAPID push ready, Lighthouse PWA >90, 44px touch targets — **per-titik headers `Ditugaskan di:` (Dashboard/Absensi/Rekap)**
 
 ### Phase 6: Testing, Security Hardening & Deployment (Weeks 16–18)
 
 **Week 16:**
-- Unit tests >80% inc. RBAC, region scoping (write own 403), own-data 403, geofence validation, NIK uniqueness
-- Integration tests for all Karyawan PWA flows (absensi, cuti berjenjang, pengumuman)
-- Frontend PWA tests with React Testing Library + PWA audit
-- OWASP Top 10 + region isolation audit, rate limit tests
+- Unit tests >80% inc. RBAC, **region + titik scoping** (write own 403 + **cross-`office_location_id` 403** + **`isWithinAssignedSite` only vs any-site** + **`NULL 422`** + **`N≤20 last delete 422`**), own-data 403, **geofence assigned-only** (`distance > radius_m(assigned)` 422), NIK+email uniqueness, love 4/month per titik assigned
+- Integration tests for all Karyawan PWA flows (**absensi tanpa titik 422 / di luar assigned 422 / Dalam `distance<=radius` OK**, **love bulan sama + `!inRadius` disabled**, cuti berjenjang per-titik, pengumuman, Rekap calendar)
+- Frontend PWA tests with React Testing Library + PWA audit (per-titik banner `Ditugaskan di:` + disabled states)
+- OWASP Top 10 + **region+titik** isolation audit, **rate limit per guard** 5/15min per IP tests
 - Performance load test: 1,000 public + 500 PWA concurrent, TTFB <200ms cached
 
 **Week 17:**
@@ -346,15 +347,17 @@ These are deliverables and artifacts that must be completed before or in paralle
 ## Assumptions & Constraints
 
 **Assumptions:**
-- Client provides initial content + region list (Kabupaten/Kota) + geofence lat/lng/radius by end of Week 1.
-- Client provides Lengkap HR employee data per region or admin wilayah will input via UI.
-- AWS account + S3 bucket (with folders for media, attendance selfies) configured before Phase 3.
-- Karyawan devices support GPS + camera; modern browser supports PWA install + VAPID push.
-- No major scope changes after Phase 1 kickoff (HR fields + cuti flow frozen).
+- Client provides initial content + **24 wilayah** + **N titik proyek** (Bendungan A/Jembatan B) lat/lng/radius per titik + **mapping 1 karyawan=1 titik** by end of Week 1 — at least 1 titik per wilayah, **`MAX_SITES=20`**, `regionId==office_location.region_id`.
+- Client provides Lengkap HR employee data **per titik** (`office_location_id` 1=1, `NULL` invalid untuk absen) or admin wilayah input via **SiteDetail dedicated page** + **Employees per Titik** UI.
+- AWS account + S3 bucket (with folders for media, **`attendance/{region}/{emp}/{date}/`** selfies, **`love-claims/...`**) configured before Phase 3 — paths per titik assigned.
+- Karyawan devices support GPS + camera; modern browser supports PWA install + VAPID push; PWA **320px+** required (absen disabled `!inRadius‖tanpaTitik` via `isWithinAssignedSite`).
+- No major scope changes after Phase 1 kickoff (HR fields + **per-titik `office_location_id`** + cuti/love gate `isWithinAssignedSite` + `love_max 1–10 default 4` frozen).
 
 **Constraints:**
-- Technology stack (Laravel 13, React 19, Inertia v2, Tailwind v4, Vite 7, MySQL 8.4 LTS, AWS S3, PWA) is fixed — all latest stable.
-- RBAC 3 roles required: Super Admin, Admin Wilayah per region, Karyawan (NIK login own-data-only).
-- Multi-tenancy per Kabupaten/Kota via region_id — Admin Wilayah write own region only (read all), Karyawan only own data.
-- Initial release includes PWA mandatory; native app is post-launch.
+- Technology stack (Laravel 13, React 19, Inertia v2 Leaflet 1.9.4, Tailwind v4 (`@theme`), Vite 8.2.2, MySQL 8.4 LTS, AWS S3, PWA `vite-plugin-pwa` 1.3 `start_url=/karyawan`) is fixed — `app-BINGqzgl.js` 519kB gzip 134.89kB.
+- RBAC 3 roles required: Super Admin (`super_admin` region NULL) + Admin Wilayah per region (`wilayah` guard own `region_id` + **assign 1 titik per karyawan**) + Karyawan (**email login** own-data-only + **absen/Love hanya titik assigned**, `NULL 422`).
+- Multi-tenancy per **Kabupaten/Kota + Titik Proyek** via `region_id` + **`office_location_id` (1 karyawan=1 titik, SetNull on delete titik, N≤20, last delete 422)** — Admin Wilayah write own region+titik only (read all wilayah lain), Karyawan only own `employee_id`+own assigned titik (`isWithinAssignedSite` only, bukan `isWithinAnySite`).
+- Opsi B: **3 URL obfuscated pisah** `SUPER_ADMIN_PATH`/`WILAYAH_PATH`/`KARYAWAN_PATH` (`super_admin|admin|wilayah.sites.show` per titik + `getAdminBase(url)`), guard terpisah tidak cross-login; `/admin` legacy alias, prod `/super-admin-<hash>`/`<hash>`.
+- Dedicated page per Titik: **`GET /regions/{region}/sites/{site}`** x3 prefix fixed — all existing prefixes verified `route:list` + `curl 200` untuk `101/102/201/202/301`.
+- Initial release includes PWA mandatory — **per-titik headers `Ditugaskan di:` + `MOCK_KARYAWAN_ID=1` Andi 201** + `_shared.js` `DUMMY_REGIONS`/`DUMMY_EMPLOYEES` LS `bbws_mock_*_v3`; native app is post-launch.
 - Team size 2 devs; timeline scales with size changes.

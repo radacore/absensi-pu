@@ -2,9 +2,9 @@
 
 ## Overview
 
-This document provides comprehensive deployment strategies, infrastructure configuration, CI/CD pipeline setup, monitoring, and rollback procedures for **BBWS Pompengan Jeneberang**—a Laravel 13 (PHP 8.4+) + React 19 + Inertia.js v2 + Tailwind v4 + Vite 7 corporate profile application with a regional admin dashboard (per Kabupaten/Kota) and a mobile PWA for employees (email login, GPS+selfie absensi, cuti berjenjang, pengumuman) — tanpa public site.
+This document provides comprehensive deployment strategies, infrastructure configuration, CI/CD pipeline setup, monitoring, and rollback procedures for **BBWS Pompengan Jeneberang**—a Laravel 13 (PHP 8.4+) + React 19 + Inertia.js v2 + Leaflet 1.9.4 + Tailwind v4 + Vite 8.2.2 corporate profile application with a regional admin dashboard (per Kabupaten/Kota **+ N titik proyek per wilayah, dedicated `GET /regions/{region}/sites/{site}` per titik**) and a mobile PWA for employees (**email login, GPS+selfie absensi hanya ke titik assigned via `GeofenceService::isWithinAssignedSite`, tanpa titik `NULL` 422, cuti berjenjang per titik, pengumuman, Love 4 gold `#FCB833` bulan sama dalam assigned**) — tanpa public site.
 
-The deployment architecture is designed for high availability, security (region isolation + PWA secure context, Love cron reset, N titik proyek geofence), and ease of maintenance on a VPS environment (Linode, DigitalOcean, or AWS EC2) running Ubuntu 24.04 LTS. Multi-tenant per region via `region_id`, RBAC 3 roles, S3 paths for attendance selfies & love dokumen, `office_locations` N titik per wilayah.
+The deployment architecture is designed for high availability, security (**region + titik isolation**, PWA secure context, Love cron `1st 00:00 WITA` reset `love_max 1–10 default 4`, **N titik geofence `isWithinAssignedSite` only — bukan `isWithinAnySite`**, **N≤20 last delete 422**), and ease of maintenance on a VPS environment (Linode, DigitalOcean, or AWS EC2) running Ubuntu 24.04 LTS. Multi-tenant per **region + titik** via `region_id` + **`office_location_id` (1 karyawan=1 titik, FK NULLABLE SetNull, `MAX_SITES=20`)**, RBAC 3 roles (`super_admin`/`wilayah`/`karyawan` Opsi B pisah URL), S3 paths **per titik assigned** `attendance/{region}/{employee}/{date}/` & `love-claims/{region}/{employee}/…`, **`office_locations` N titik per wilayah** (seed 24 wilayah `101/102/201/202/301…`, LS `_shared.js` `bbws_mock_*_v3`).
 
 ## Environment Strategy
 
@@ -42,16 +42,20 @@ AWS_URL=https://profilkorp-prod.s3.amazonaws.com
 SANCTUM_STATEFUL_DOMAINS=www.profilkorp.com
 SESSION_DOMAIN=.profilkorp.com
 
-SUPER_ADMIN_PATH=/super-admin-<random-hash>
-WILAYAH_PATH=/wilayah-<random-hash>
-KARYAWAN_PATH=/karyawan-<random-hash>
+# Opsi B — 3 URL obfuscated pisah, guard terpisah tidak cross-login
+SUPER_ADMIN_PATH=/super-admin-<random-hash>  # dev /super-admin
+WILAYAH_PATH=/wilayah-<random-hash>          # dev /wilayah (alias /admin legacy)
+KARYAWAN_PATH=/karyawan-<random-hash>        # dev /karyawan — PWA start_url
 VAPID_PUBLIC_KEY=<vapid-public>
 VAPID_PRIVATE_KEY=<vapid-private>
 VAPID_SUBJECT=mailto:admin@profilkorp.com
 
-# Geofence defaults (can be overridden per region in DB)
-ATTENDANCE_STRICT_GEOFENCE=false
-ATTENDANCE_DEFAULT_RADIUS_M=500
+# Geofence per titik strict (1 karyawan=1 titik → office_location_id, bukan per region)
+# isWithinAssignedSite(dist <= radius_m(assigned)) only; tanpa titik (NULL) 422; N≤20 last delete 422
+ATTENDANCE_STRICT_GEOFENCE=true
+ATTENDANCE_DEFAULT_RADIUS_M=200
+LOVE_MAX_DEFAULT=4
+LOVE_RESET_CRON="0 0 1 * * Asia/Makassar"
 ```
 
 **Security Note:** Never commit `.env` files to version control. Use a secure secrets management system (e.g., AWS Secrets Manager, HashiCorp Vault, or environment-specific `.env.production` templates).
@@ -122,11 +126,12 @@ ATTENDANCE_DEFAULT_RADIUS_M=500
    sudo systemctl enable redis-server
    ```
 
-### PWA Assets & Service Worker
+### PWA Assets & Service Worker (Per Titik — `MOCK_KARYAWAN_ID=1`)
 
-- Serve `manifest.json` and `service-worker.js` from `public/` with correct MIME + cache headers (`no-cache` for SW, long cache for manifest icons).
-- Ensure HTTPS is enforced (PWA requires secure context for GPS/camera + installability).
-- Add `VAPID` keys for push notifications (future pengumuman push).
+- Serve `manifest.json` (`name=BBWS PJ — Karyawan`, `start_url=/karyawan` per `vite.config.js` `VitePWA`, `theme_color=#1E3A8A`) and `service-worker.js` (`public/build/sw.js` via `workbox` 17 entries 885KiB) from `public/build/` with correct MIME + cache headers (`no-cache` for `sw.js`, long cache for `manifest.webmanifest` + icons `pwa-192/512.png`).
+- Ensure HTTPS is enforced (PWA requires secure context for **GPS `isWithinAssignedSite` per titik + camera selfie + installability** — tanpa titik 422, di luar assigned 422).
+- Add `VAPID` keys for push notifications (pengumuman + love approved push per region+titik); offline queue cache `karyawan-api` `NetworkFirst 5s`.
+- Build artifact: `app-BINGqzgl.js 519.03kB gzip 134.89kB` + `leaflet-src 148.80kB` + `leaflet.css` — Tabs 512MB Vercel limit safe; chunk warning `app >500kB` expected (Leaflet + Inertia).
 
 ### Nginx Configuration
 
@@ -383,16 +388,18 @@ jobs:
             sudo systemctl restart nginx
 ```
 
-### Deployment Checklist
+### Deployment Checklist — Per Titik (`1 karyawan=1 titik`)
 
 Before each deployment:
 
-- [ ] All tests pass locally and in CI/CD
-- [ ] Database migrations are reversible
-- [ ] Environment variables are correctly set
-- [ ] Static assets are built and optimized
-- [ ] Backup of production database created
-- [ ] Rollback plan documented and tested
+- [ ] All tests pass locally and in CI/CD — incl. **per-titik `isWithinAssignedSite` vs any-site, `NULL 422`, `distance > radius_m(assigned) 422`, `N≤20` & last delete 422, region+titik isolation 403**
+- [ ] Database migrations are reversible — `employees.office_location_id` FK NULLABLE SetNull + `office_locations` N≤20 + `seed 24 wilayah (101/102/201…)` verified
+- [ ] Environment variables are correctly set — **3 paths** `SUPER_ADMIN_PATH`/`WILAYAH_PATH`/`KARYAWAN_PATH` (dev `/super-admin`/`/wilayah`/`/karyawan` + prod `<hash>`), `ATTENDANCE_STRICT_GEOFENCE`, `LOVE_MAX_DEFAULT`
+- [ ] Static assets are built and optimized — `vite build` (**`app-BINGqzgl.js 519.03kB`**, `leaflet` chunk, `sw.js` precache 17 entries)
+- [ ] `route:list --path=regions --path=sites` shows **6 routes** `super_admin|admin|wilayah` + **`GET /regions/{region}/sites/{site}`** (`curl 200` untuk `201/202/101` + `employees`/`karyawan/*` 9 URLs)
+- [ ] Backup of production database created — includes `office_locations` + `employees.office_location_id` + `attendances.office_location_id` + `love_*` per-titik
+- [ ] RBAC per-titik smoke: Super Admin all titik CRUD, Admin Wilayah own region assign `/regions/{region}/sites/{site}`, Karyawan banner `Ditugaskan di:` + disabled `!inRadius‖tanpaTitik`
+- [ ] Rollback plan documented and tested — last-site guard 422 awareness
 
 ## Monitoring & Logging
 
@@ -467,9 +474,9 @@ Configure in `config/cache.php`:
 ],
 ```
 
-### Cache Layers
+### Cache Layers — Per Titik (`region:{id}:sites`)
 
-1. **Page Caching** (for public pages)
+1. **Page Caching** (for public pages — if any)
    ```php
    Route::get('/about', function () {
        return cache()->remember('page.about', 3600, function () {
@@ -478,11 +485,13 @@ Configure in `config/cache.php`:
    })->middleware('cache.headers:public;max_age=3600');
    ```
 
-2. **Query Caching** (for frequently accessed data)
+2. **Query Caching — Geofence per Titik Assigned (invalidate per titik)**
    ```php
-   $services = cache()->remember('services.all', 86400, function () {
-       return Service::all();
-   });
+   // Cache per wilayah N titik — invalidated on create/update/delete titik
+   $sites = cache()->remember("region:{$regionId}:sites", 86400, fn() => OfficeLocation::where('region_id', $regionId)->where('is_active', true)->get());
+   // On assign/pindah per titik: invalidate region cache + employee cache
+   cache()->forget("region:{$regionId}:sites");
+   // Per-titik Love/Cuti list cached by office_location_id + status
    ```
 
 3. **Config Caching**
@@ -628,11 +637,11 @@ upstream profilkorp_backend {
         ->middleware('throttle:5,1');  // guard wilayah — terpisah
     ```
 
-4. **Admin Path Obfuscation — Opsi B Pisah URL (Tiga Path)**
-   - **Opsi B:** pisah `SUPER_ADMIN_PATH` + `WILAYAH_PATH` + `KARYAWAN_PATH` — masing-masing random hash, guard terpisah, tidak cross-login.
-   - Contoh prod: `SUPER_ADMIN_PATH=/super-admin-a7f3k9x2`, `WILAYAH_PATH=/wilayah-m2p8q1z4`, `KARYAWAN_PATH=/karyawan-b4n6r9w0` (dev: `/super-admin`, `/wilayah`, `/karyawan`).
-   - `/admin` generik tidak ada di production — legacy alias hanya untuk backward compat.
-   - Store in `.env`: `SUPER_ADMIN_PATH`, `WILAYAH_PATH`, `KARYAWAN_PATH`.
+4. **Admin Path Obfuscation — Opsi B Pisah URL (Tiga Path, Per Titik Dedicated)**
+   - **Opsi B:** pisah `SUPER_ADMIN_PATH` + `WILAYAH_PATH` + `KARYAWAN_PATH` — masing-masing random hash, guard terpisah (`super_admin`/`wilayah`/`karyawan`), tidak cross-login; **`getAdminBase(url)`** helper FE selects base per guard.
+   - Contoh prod: `SUPER_ADMIN_PATH=/super-admin-a7f3k9x2`, `WILAYAH_PATH=/wilayah-m2p8q1z4`, `KARYAWAN_PATH=/karyawan-b4n6r9w0` (dev: `/super-admin`, `/wilayah`, `/karyawan`). Dedicated per titik: **`GET /regions/{region}/sites/{site}`** under each admin prefix (`super_admin|admin|wilayah.sites.show` — `Admin/SiteDetail.jsx` Leaflet) + `route:list` 6 routes.
+   - `/admin` generik tidak ada di production — **legacy alias** (`admin.sites.show`) hanya backward compat untuk `getAdminBase` fallback.
+   - Store in `.env`: `SUPER_ADMIN_PATH`, `WILAYAH_PATH`, `KARYAWAN_PATH` — Frontend `OWN_REGION` fallback + `bbws_mock_*_v3` LS per titik sync.
 
 5. **Two-Factor Authentication (2FA)**
    ```bash
