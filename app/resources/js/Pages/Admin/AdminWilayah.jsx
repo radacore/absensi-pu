@@ -53,7 +53,7 @@ export default function AdminWilayah() {
     };
 
     const handleReset = (a) => {
-        setToast(`Reset password — link kirim ke ${a.email} (frontend only)`); setTimeout(()=>setToast(null),3000);
+        setToast(`Reset password — tautan dikirim ke ${a.email}`); setTimeout(()=>setToast(null),3000);
     };
     const toggleStatus = (id) => { const next = list.map((x)=>x.id===id ? { ...x, status: x.status==='Aktif' ? 'Nonaktif' : 'Aktif' } : x); setList(next); saveAdmins(next); };
     const remove = (id) => {
@@ -112,7 +112,7 @@ export default function AdminWilayah() {
                             </tbody>
                         </table>
                     </div>
-                    <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">Hanya Super Admin Makassar bisa CRUD & reset password Admin Wilayah • Email link (FR-32)</div>
+                    <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">Hanya Super Admin Makassar bisa kelola Admin Wilayah</div>
                 </div>
 
                 {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2">{toast}</p>}

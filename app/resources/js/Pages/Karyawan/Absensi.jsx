@@ -165,7 +165,7 @@ export default function Absensi() {
                         <button type="button" onClick={handlePulang} className="rounded-xl py-3 text-sm font-medium bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF]">Absen pulang</button>
                         <button type="button" onClick={handleOpenCapture} disabled={captured && jarak!=null && !inRadius} title={captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius` : ''} className={`rounded-xl py-3 text-sm font-semibold ${captured && jarak!=null && !inRadius ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius ${assigned.site.nama_lokasi} (haversine)` : `Di luar radius ${assigned?.site.radius ?? '?'} m titik assigned tidak dapat absen — CRUD lokal sinkron Admin • haversine GPS`}</p>
+                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius ${assigned.site.nama_lokasi}` : `Absen hanya dapat dilakukan di dalam radius titik penugasan`}</p>
                     {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2 mt-3">{toast}</p>}
                     {alreadyToday && <p className="text-xs text-center text-[#92400E] mt-2">Sudah absen hari ini ({todayISO}) — lihat riwayat</p>}
                 </div>
@@ -173,10 +173,10 @@ export default function Absensi() {
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="px-5 py-4 flex items-center justify-between">
                         <h3 className="font-medium text-sm text-[#0F172A]">Riwayat</h3>
-                        <span className="text-xs text-[#64748B]">{myHistory.length} entri • {assigned.site.nama_lokasi} • sinkron Admin</span>
+                        <span className="text-xs text-[#64748B]">{myHistory.length} entri • {assigned.site.nama_lokasi}</span>
                     </div>
                     <div className="divide-y divide-[#F1F5F9]">
-                        {myHistory.length===0 ? <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada absen — kirim absen masuk di atas (CRUD lokal)</p> : myHistory.map((r) => {
+                        {myHistory.length===0 ? <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada absensi</p> : myHistory.map((r) => {
                             const hit = assigned && r.office_location_id === assigned.site.id;
                             const ok = assigned ? r.jarak <= assigned.site.radius : false;
                             return (

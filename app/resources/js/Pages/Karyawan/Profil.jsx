@@ -63,7 +63,7 @@ export default function Profil() {
         const next = employees.map((e) => e.id === me.id ? { ...e, email: email.trim() } : e);
         setEmployees(next); saveEmployees(next);
         if (photoPreview) try { localStorage.setItem('bbws_mock_photo_v3', photoPreview); } catch {}
-        setMsg({ type: 'success', text: 'Data pribadi disimpan (sinkron ke Admin → Karyawan)' });
+        setMsg({ type: 'success', text: 'Data pribadi disimpan' });
     };
 
     const handleReset = (e) => {
@@ -71,7 +71,7 @@ export default function Profil() {
         if (!pwd.old || !pwd.next || !pwd.confirm) { setMsg({ type: 'error', text: 'Lengkapi semua field kata sandi' }); return; }
         if (pwd.next.length < 8) { setMsg({ type: 'error', text: 'Kata sandi baru minimal 8 karakter' }); return; }
         if (pwd.next !== pwd.confirm) { setMsg({ type: 'error', text: 'Konfirmasi tidak cocok' }); return; }
-        setMsg({ type: 'success', text: 'Kata sandi berhasil diperbarui (frontend only)' });
+        setMsg({ type: 'success', text: 'Kata sandi berhasil diperbarui' });
         setPwd({ old: '', next: '', confirm: '' });
     };
 
@@ -98,12 +98,12 @@ export default function Profil() {
                     <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.site.nama_lokasi}</p>
                     <p className="text-xs font-mono text-[#64748B]">{assigned.site.lat.toFixed(4)}, {assigned.site.lng.toFixed(4)} • {assigned.site.radius} m</p>
                     {assigned.site.address && <p className="text-xs text-[#94A3B8] mt-1">{assigned.site.address}</p>}
-                    <p className="text-xs text-[#94A3B8] mt-2">Absen valid hanya dalam radius titik assigned • di luar / titik lain ditolak 422 (1 karyawan = 1 titik)</p>
+                    <p className="text-xs text-[#94A3B8] mt-2">Absen valid hanya dalam radius titik penugasan</p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
                     <h3 className="font-medium text-sm text-[#0F172A]">Data pribadi</h3>
-                    <p className="text-xs text-[#94A3B8]">NIK, NIP, golongan, dan unit tidak dapat diubah mandiri — phone/email tersinkron Admin ↔ Karyawan</p>
+                    <p className="text-xs text-[#94A3B8]">NIK, NIP, golongan, dan unit tidak dapat diubah mandiri</p>
                     <div className="space-y-3">
                         <div>
                             <label htmlFor="phone" className="text-xs font-medium text-[#334155]">Nomor ponsel</label>
@@ -123,7 +123,7 @@ export default function Profil() {
                     {msg && msg.text.includes('Data pribadi') && <p className={`text-xs px-3 py-2 rounded-xl ${msg.type === 'success' ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{msg.text}</p>}
                 </div>
 
-                {/* Reset Password — frontend only */}
+                {/* Ganti Kata Sandi */}
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
                     <div className="flex items-center gap-2.5">
                         <span className="w-8 h-8 rounded-xl bg-[#FFF7E6] flex items-center justify-center">
@@ -151,7 +151,7 @@ export default function Profil() {
                     {msg && !msg.text.includes('Data pribadi') && !msg.text.includes('Keluar') && <p className={`text-xs px-3 py-2 rounded-xl ${msg.type === 'success' ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{msg.text}</p>}
                 </div>
 
-                <button type="button" onClick={() => setMsg({ type: 'success', text: 'Keluar — sesi dihapus (frontend only)' })} className="w-full rounded-xl bg-[#FEF2F2] text-[#991B1B] py-3 text-sm font-semibold">Keluar</button>
+                <button type="button" onClick={() => setMsg({ type: 'success', text: 'Berhasil keluar' })} className="w-full rounded-xl bg-[#FEF2F2] text-[#991B1B] py-3 text-sm font-semibold">Keluar</button>
                 {msg && msg.text.includes('Keluar') && <p className="text-xs text-center bg-[#FEF2F2] text-[#991B1B] rounded-xl py-2">{msg.text}</p>}
             </div>
         </KaryawanLayout>

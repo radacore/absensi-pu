@@ -47,7 +47,7 @@ export default function Cuti() {
         };
         const updated = [next, ...allCuti];
         setAllCuti(updated); saveCuti(updated);
-        setToast('Pengajuan cuti dikirim — menunggu persetujuan berjenjang (sinkron ke Admin)'); setTimeout(()=>setToast(null),2500);
+        setToast('Pengajuan cuti dikirim — menunggu persetujuan'); setTimeout(()=>setToast(null),2500);
         setJenis('Tahunan'); setMulai(''); setSelesai(''); setAlasan(''); setShowForm(false);
     };
     const handleCancel = (id) => {
@@ -64,7 +64,6 @@ export default function Cuti() {
                     <div>
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Cuti</h2>
                         <p className="text-sm text-[#64748B]">Berjenjang 3 tahap • {assigned.site.nama_lokasi} • {assigned.site.radius}m</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">CRUD lokal — ajukan di sini, Admin setujui/tolak sinkron</p>
                     </div>
                     <button type="button" onClick={() => setShowForm(!showForm)} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">{showForm ? 'Tutup' : 'Ajukan cuti'}</button>
                 </div>

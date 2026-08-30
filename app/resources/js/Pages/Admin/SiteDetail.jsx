@@ -313,7 +313,7 @@ export default function SiteDetail({ regionId, siteId }) {
                                     <input value={form.radius} onChange={(e) => setForm({ ...form, radius: e.target.value })} type="range" min="50" max="1000" step="10" className="mt-1 w-full accent-[#FCB833]" />
                                     <div className="flex justify-between text-xs text-[#94A3B8]"><span>50m</span><span>1000m</span></div>
                                 </div>
-                                <p className="text-xs text-[#94A3B8]">Klik/drag di peta untuk ubah lat/lng — circle update live.</p>
+                                <p className="text-xs text-[#94A3B8]">Klik atau drag pin di peta untuk ubah titik</p>
                                 <div className="flex gap-2 pt-2">
                                     <button type="button" onClick={() => setEditOpen(false)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
                                     <button type="button" onClick={handleSaveSite} className="flex-1 rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Simpan Titik</button>

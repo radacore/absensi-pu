@@ -1,4 +1,4 @@
-// Shared mock — source of truth untuk Regions & SiteDetail (frontend only, localStorage)
+// Shared — source of truth untuk Regions & SiteDetail
 // 1 karyawan = 1 titik (office_location_id). Absen valid hanya di titik itu.
 
 export const OWN_REGION = 'Kab. Gowa';
@@ -86,7 +86,7 @@ export const LS_SETTINGS = 'bbws_mock_settings_v3';
 export const LS_PENGUMUMAN = 'bbws_mock_pengumuman_v3';
 export const LS_READ = 'bbws_mock_pengumuman_read_v3';
 
-// Mocking API seed — unified across Admin ↔ Karyawan (Frontend-Driven Development)
+// Seed — unified across Admin dan Karyawan
 export const DUMMY_CUTI = [
     { id: 1, employee_id: 1, nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', wilayah: 'Kab. Gowa', regionId: 2, office_location_id: 201, jenis: 'Tahunan', tgl: '28–30 Agu 2026', mulai: '2026-08-28', selesai: '2026-08-30', alasan: 'Acara keluarga', dokumen: null, status: 'Menunggu', level: 2, createdAt: '2026-08-24T07:00:00+08:00' },
     { id: 2, employee_id: 99, nama: 'Rudi Hartono', email: 'rudi@bbws-pj.go.id', wilayah: 'Kab. Bone', regionId: 4, office_location_id: 401, jenis: 'Sakit', tgl: '23 Agu 2026', mulai: '2026-08-23', selesai: '2026-08-23', alasan: 'Demam — surat dokter', dokumen: null, status: 'Menunggu', level: 1, createdAt: '2026-08-23T08:00:00+08:00' },
@@ -205,5 +205,5 @@ export function getBase(url) {
     if (url.startsWith('/wilayah')) return '/wilayah';
     return '/admin';
 }
-// Settings live helper for karyawan loveMax
+// Settings helper untuk loveMax
 export function getLoveMax() { try { const s = loadSettings(); return s.loveMax ?? 4; } catch { return 4; } }

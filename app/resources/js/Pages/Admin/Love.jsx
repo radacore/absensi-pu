@@ -55,7 +55,7 @@ export default function LoveAdmin() {
         const next = claims.map((c) => (c.id === id ? { ...c, status: nextStatus, note: nextStatus==='rejected' ? rejectNote.text.trim() : c.note } : c));
         setClaims(next); saveLove(next);
         setRejectNote({ id: null, text: '' });
-        setToast(nextStatus === 'approved' ? 'Disetujui — CRUD lokal' : 'Ditolak — CRUD lokal'); setTimeout(()=>setToast(null),2000);
+        setToast(nextStatus === 'approved' ? 'Disetujui' : 'Ditolak'); setTimeout(()=>setToast(null),2000);
     };
     const handleDelete = (id) => {
         if (!confirm('Hapus Love claim ini?')) return;
@@ -68,8 +68,8 @@ export default function LoveAdmin() {
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Love Claims — ${OWN_REGION}` : `Love Claims — ${loveMax} Hati / bulan`}</h1>
-                        <p className="text-sm text-[#64748B]">Hanya <span className="font-medium text-[#0F172A]">late/lupa absen/lupa pulang bulan sama</span> & dalam radius <span className="font-medium text-[#0F172A]">titik assigned</span> • Approval 1 level Admin (atasan dipilih karyawan) • 1 Love = 1 pengajuan • max {loveMax} share semua jenis • Mocking API</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">{isWilayah ? `Scope own region ${OWN_REGION} •` : ''} Terlambat cek jarak≤radius; lupa absen jam bebas 00–23:59 (tgl ≤today, bukan weekend) • 1 karyawan = 1 titik • Reset 1st 00:00 WITA • cukup alasan + atasan</p>
+                        <p className="text-sm text-[#64748B]">Hanya <span className="font-medium text-[#0F172A]">terlambat / lupa absen / lupa pulang bulan sama</span> & dalam radius <span className="font-medium text-[#0F172A]">titik penugasan</span> • Persetujuan 1 level Admin • 1 Love = 1 pengajuan • max {loveMax}/bulan</p>
+                        <p className="text-xs text-[#94A3B8] mt-1">Terlambat cek jarak ≤ radius; lupa absen jam bebas 00–23:59 • 1 karyawan = 1 titik • Reset tgl 1 pukul 00:00 WITA</p>
                     </div>
                     <span className="shrink-0 bg-[#FFF7E6] border border-[#FCB833]/30 text-[#92400E] text-xs font-medium px-3 py-1.5 rounded-full">{counts.pending} pending • {counts.approved} approved bulan ini • max {loveMax}</span>
                 </div>
@@ -152,7 +152,7 @@ export default function LoveAdmin() {
                         </table>
                     </div>
                     {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada claim untuk filter ini</p>}
-                    <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">{isWilayah ? `Admin Wilayah: review & approve hanya ${OWN_REGION}` : 'Super Admin lihat semua • Admin Wilayah own region saja'} • CRUD lokal — Karyawan pilih atasan (nama/NIP) → Admin approve/reject/delete</div>
+                    <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">{isWilayah ? `Admin Wilayah: review & approve hanya ${OWN_REGION}` : 'Super Admin lihat semua • Admin Wilayah own region saja'}</div>
                 </div>
 
 

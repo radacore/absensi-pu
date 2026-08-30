@@ -78,7 +78,7 @@ export default function Dashboard() {
                             </span>
                         ))}
                     </Link>
-                    <p className="text-xs text-center text-[#64748B] mt-1">Sisa {sisaLove}/{loveMax} Love • live LS</p>
+                    <p className="text-xs text-center text-[#64748B] mt-1">Sisa {sisaLove}/{loveMax} Love</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -97,7 +97,7 @@ export default function Dashboard() {
                         </span>
                         <div>
                             <p className="font-semibold text-sm text-[#0F172A] leading-tight">Cuti</p>
-                            <p className="text-xs text-[#64748B] leading-tight">{myCuti.length ? `${myCuti.length} pengajuan • live` : 'Ajukan & lacak'}</p>
+                            <p className="text-xs text-[#64748B] leading-tight">{myCuti.length ? `${myCuti.length} pengajuan` : 'Ajukan & lacak'}</p>
                         </div>
                     </Link>
                 </div>
@@ -105,12 +105,12 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 gap-3">
                     <Link href="/karyawan/rekap" className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition">
                         <p className="text-xl font-semibold tracking-tight text-[#0F172A]">{hadir}</p>
-                        <p className="text-xs text-[#64748B] mt-0.5">Hadir (live LS)</p>
+                        <p className="text-xs text-[#64748B] mt-0.5">Hadir</p>
                         <span className="mt-1.5 inline-block w-6 h-1 rounded-full bg-[#FCB833]"></span>
                     </Link>
                     <Link href="/karyawan/pengumuman" className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center">
                         <p className="text-xl font-semibold tracking-tight text-[#0F172A]">{unread}</p>
-                        <p className="text-xs text-[#64748B] mt-0.5">Info baru (live)</p>
+                        <p className="text-xs text-[#64748B] mt-0.5">Info baru</p>
                     </Link>
                 </div>
                 <Link href="/karyawan/rekap" className="bg-[#FFF7E6] rounded-2xl p-4 flex items-center gap-3 hover:bg-[#FFEDCC] transition flex">
@@ -119,7 +119,7 @@ export default function Dashboard() {
                     </span>
                     <div>
                         <p className="font-semibold text-sm text-[#0F172A] leading-tight">Rekap bulanan</p>
-                        <p className="text-xs text-[#92400E]">Kalender • {hadir} hadir • {assigned.site.nama_lokasi} • live LS</p>
+                        <p className="text-xs text-[#92400E]">Kalender • {hadir} hadir • {assigned.site.nama_lokasi}</p>
                     </div>
                 </Link>
 

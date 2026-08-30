@@ -76,7 +76,7 @@ export default function Pengumuman() {
                 </div>
 
                 {visible.length === 0 ? (
-                    <p className="text-sm text-[#94A3B8] bg-white rounded-2xl p-6 text-center">Belum ada pengumuman{me ? ` untuk ${me.region}` : ''} — Admin buat di /super-admin/pengumuman</p>
+                    <p className="text-sm text-[#94A3B8] bg-white rounded-2xl p-6 text-center">Belum ada pengumuman{me ? ` untuk ${me.region}` : ''}</p>
                 ) : (
                     <div className="space-y-3">
                         {visible.map((p) => {
@@ -98,7 +98,7 @@ export default function Pengumuman() {
                         })}
                     </div>
                 )}
-                <p className="text-xs text-[#94A3B8] text-center">Sinkron dari Admin • buat di /super-admin/pengumuman → langsung muncul di sini (targeted region)</p>
+
             </div>
         </KaryawanLayout>
     );

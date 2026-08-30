@@ -114,7 +114,7 @@ export default function Employees() {
 
     const handleReset = (e) => {
         if (isWilayah && e.region !== OWN_REGION) { showToast('Hanya own region'); return; }
-        showToast(`Reset password — link kirim ke ${e.email} (frontend only)`);
+        showToast(`Reset password — tautan dikirim ke ${e.email}`);
     };
     const remove = (id) => {
         const target = list.find((x)=>x.id===id);

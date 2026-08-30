@@ -67,7 +67,7 @@ export default function CutiAdmin() {
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Cuti — ${OWN_REGION}` : 'Cuti — Berjenjang'}</h1>
                         <p className="text-sm text-[#64748B]">{isWilayah ? `Approve own region level sesuai kewenangan • ${OWN_REGION} • 1 karyawan = 1 titik` : 'Atasan → Admin Wilayah → Kantor Pusat • 3 level, reject terminal • 1 karyawan = 1 titik'}</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">Mocking API: karyawan ajukan di /karyawan/cuti → langsung muncul di sini (CRUD lokal localStorage)</p>
+
                     </div>
                     <span className="hidden lg:inline-flex bg-[#F8FAFC] border border-[#E2E8F0] text-xs font-medium px-3 py-1.5 rounded-full text-[#64748B]">{filtered.length} hasil • {counts.pending} menunggu</span>
                 </div>
@@ -142,7 +142,7 @@ export default function CutiAdmin() {
                     {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada data untuk filter ini</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
                         <span>{isWilayah ? `Admin Wilayah: review & approve hanya ${OWN_REGION} • level sesuai kewenangan` : 'Super Admin approve semua level • Admin Wilayah approve own region level sesuai kewenangan'} • 1 karyawan = 1 titik</span>
-                        <span>CRUD lokal — persist localStorage • Karyawan create → Admin approve/reject/delete</span>
+                        <span>Karyawan mengajukan → Admin menyetujui/menolak/menghapus</span>
                     </div>
                 </div>
             </div>

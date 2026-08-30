@@ -84,10 +84,9 @@ export default function Love() {
             const updated = [next, ...allLove];
             setAllLove(updated); saveLove(updated);
             setSelected(null); setAlasan('');
-            setToast('Love diajukan — menunggu Admin (sinkron)'); setTimeout(()=>setToast(null),2500);
+            setToast('Love diajukan — menunggu persetujuan'); setTimeout(()=>setToast(null),2500);
             return;
         }
-        // lupa_absen / lupa_pulang — Opsi A: jam bebas 00:00-23:59, tgl <= today, bukan weekend, cukup alasan + atasan
         if (!tgl) { setToast('Pilih tanggal'); setTimeout(()=>setToast(null),2200); return; }
         if (tgl > todayISO()) { setToast('Tanggal tidak boleh melebihi hari ini'); setTimeout(()=>setToast(null),2200); return; }
         if (isWeekend(tgl)) { setToast('Tanggal tidak boleh weekend'); setTimeout(()=>setToast(null),2200); return; }
@@ -100,7 +99,7 @@ export default function Love() {
         const updated = [next, ...allLove];
         setAllLove(updated); saveLove(updated);
         setAlasan('');
-        setToast('Love diajukan — menunggu Admin (sinkron)'); setTimeout(()=>setToast(null),2500);
+        setToast('Love diajukan — menunggu persetujuan'); setTimeout(()=>setToast(null),2500);
     };
 
     if (!assigned) {
@@ -134,13 +133,13 @@ export default function Love() {
                     <div className="mt-4 flex gap-2">
                         {Array.from({length: max}, (_,i) => (<span key={i} className={`flex-1 h-2.5 rounded-full ${i < sisa ? 'bg-[#FCB833]' : 'bg-[#F1F5F9]'}`}></span>))}
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3">Pakai 1 Love untuk <span className="font-medium text-[#0F172A]">terlambat / lupa absen / lupa pulang</span> dalam radius {assigned.site.nama_lokasi} {assigned.site.radius} m (bulan sama, cukup alasan) → approval 1 level Admin {assigned.region.name} • kuota {max}/bulan untuk semua jenis • CRUD lokal</p>
+                    <p className="text-xs text-[#94A3B8] mt-3">Pakai 1 Love untuk <span className="font-medium text-[#0F172A]">terlambat / lupa absen / lupa pulang</span> dalam radius {assigned.site.nama_lokasi} {assigned.site.radius} m (bulan sama, cukup alasan) → persetujuan 1 level Admin {assigned.region.name} • kuota {max}/bulan</p>
                     {sisa === 0 && <p className="text-xs font-medium text-[#EF4444] mt-2">Sisa 0 — pengajuan berikutnya tidak bisa di-approve</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <h3 className="font-medium text-sm text-[#0F172A]">Ajukan Love</h3>
-                    <p className="text-xs text-[#94A3B8] mt-1">Pilih jenis → isi alasan → pilih atasan (dropdown cari nama/NIP) — scope dibatasi: Kantor Gowa + atasan titik {assigned.site.nama_lokasi}</p>
+                    <p className="text-xs text-[#94A3B8] mt-1">Pilih jenis → isi alasan → pilih atasan</p>
 
                     <div className="mt-4 flex gap-2 flex-wrap">
                         {LOVE_JENIS.map((j) => (
@@ -177,12 +176,10 @@ export default function Love() {
                             <div>
                                 <label className="text-xs font-medium text-[#334155]">{jenis === 'lupa_absen' ? 'Tanggal lupa absen' : 'Tanggal lupa pulang'}</label>
                                 <input type="date" value={tgl} max={todayISO()} onChange={(e)=>setTgl(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20" />
-                                <p className="text-xs text-[#94A3B8] mt-1">{jenis === 'lupa_pulang' ? 'Tanggal lupa absen pulang' : 'Tanggal lupa absen datang'} • tidak boleh future/weekend</p>
-                            </div>
+                                </div>
                             <div>
-                                <label className="text-xs font-medium text-[#334155]">Jam {jenis === 'lupa_pulang' ? 'pulang' : 'datang'} (bebas)</label>
+                                <label className="text-xs font-medium text-[#334155]">Jam {jenis === 'lupa_pulang' ? 'pulang' : 'datang'}</label>
                                 <input type="time" value={jam} onChange={(e)=>setJam(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20" />
-                                <p className="text-xs text-[#94A3B8] mt-1">Jam bebas 00:00–23:59 (validasi bebas, cukup alasan)</p>
                             </div>
                         </div>
                     )}
@@ -190,7 +187,7 @@ export default function Love() {
                     <div className="mt-4 space-y-3 border-t border-[#F1F5F9] pt-4">
                         <div className="relative">
                             <label className="text-xs font-medium text-[#334155]">Pilih atasan untuk di-ACC <span className="text-[#EF4444]">*</span></label>
-                            <p className="text-xs text-[#94A3B8]">Dibatasi: Kantor Gowa + atasan titik {assigned.site.nama_lokasi} • cari nama/NIP</p>
+                            <p className="text-xs text-[#94A3B8]">Cari nama atau NIP atasan</p>
                             <button type="button" onClick={()=>setOpenApprover((v)=>!v)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] px-3 py-2.5 text-sm text-left flex items-center justify-between outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20">
                                 <span className={selectedApprover ? 'text-[#0F172A] font-medium' : 'text-[#94A3B8]'}>{selectedApprover ? `${selectedApprover.nama} • ${selectedApprover.nip} • ${selectedApprover.scope}` : 'Pilih atasan...'}</span>
                                 <span className="text-[#94A3B8]">▾</span>
@@ -217,10 +214,10 @@ export default function Love() {
                         <div>
                             <label htmlFor="alasan" className="text-xs font-medium text-[#334155]">Alasan (wajib)</label>
                             <textarea id="alasan" rows={2} value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder={jenis === 'terlambat' ? 'Contoh: Macet poros Gowa karena perbaikan jalan' : jenis === 'lupa_absen' ? 'Contoh: Lupa absen datang karena HP lowbat' : 'Contoh: Lupa absen pulang — rapat di lapangan'} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20"></textarea>
-                            <p className="text-xs text-[#94A3B8] mt-1">Cukup alasan</p>
+
                         </div>
                         <button type="button" onClick={handleClaim} disabled={!alasan.trim() || !approverId || sisa <= 0 || (jenis==='terlambat' && (!selected || selected.jarak > assigned.site.radius))} title={!alasan.trim() ? 'Isi alasan dulu' : !approverId ? 'Pilih atasan' : sisa <= 0 ? 'Sisa Love 0 — reset 1 bulan depan' : jenis==='terlambat' && !selected ? 'Pilih keterlambatan' : ''} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 Love — Kirim ke {selectedApprover ? selectedApprover.nama : 'atasan'}</button>
-                        <p className="text-xs text-[#94A3B8] text-center">Mocking API — langsung sinkron ke Admin/Love (localStorage) • {loveJenisLabel(jenis)}</p>
+
                     </div>
                     {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2 mt-3">{toast}</p>}
                 </div>
@@ -228,7 +225,7 @@ export default function Love() {
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="px-5 py-4 flex items-center justify-between">
                         <h3 className="font-medium text-sm text-[#0F172A]">Riwayat Love saya</h3>
-                        <span className="text-xs text-[#94A3B8]">Bulan ini • {myClaims.length} • sinkron Admin</span>
+                        <span className="text-xs text-[#94A3B8]">Bulan ini • {myClaims.length}</span>
                     </div>
                     <div className="divide-y divide-[#F1F5F9]">
                         {myClaims.length === 0 ? <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada Love — ajukan saat terlambat/lupa absen</p> : myClaims.map((c) => (

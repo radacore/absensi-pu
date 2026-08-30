@@ -55,9 +55,9 @@ export default function Attendances() {
 
     const stats = { hadir: filtered.length, late: filtered.filter((r)=>r.status==='late').length, love: filtered.filter((r)=>r.love).length };
 
-    const handleExport = () => { setToast('Export CSV — frontend only (akan generate S3 /rekap/... )'); setTimeout(()=>setToast(null),2000); };
+    const handleExport = () => { setToast('Ekspor CSV'); setTimeout(()=>setToast(null),2000); };
     const handleDelete = (id) => {
-        if (!confirm('Hapus absensi ini? (CRUD lokal sinkron Karyawan)')) return;
+        if (!confirm('Hapus absensi ini?')) return;
         const next = attendances.filter((x)=>x.id!==id); setAttendances(next); saveAttendances(next); setDetail(null);
     };
 
@@ -68,7 +68,7 @@ export default function Attendances() {
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Absensi — ${OWN_REGION}` : 'Absensi'}</h1>
                         <p className="text-sm text-[#64748B]">{isWilayah ? `Hanya own region • 1 karyawan = 1 titik` : 'Filter wilayah → titik proyek → status • 1 karyawan = 1 titik • di luar titik assigned ditolak 422'}</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">Radius per titik 50–1000m — absen valid hanya di titik assigned karyawan dalam radius titiknya. Mocking API sinkron Karyawan ↔ Admin</p>
+                        <p className="text-xs text-[#94A3B8] mt-1">Radius per titik 50–1000 m — absen valid hanya di titik penugasan dalam radius</p>
                     </div>
                     <button type="button" onClick={handleExport} className="bg-white border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-sm font-medium text-[#334155] shrink-0">⬇ Export CSV{isWilayah ? ` ${OWN_REGION}` : ''}</button>
                 </div>
@@ -135,10 +135,10 @@ export default function Attendances() {
                             </tbody>
                         </table>
                     </div>
-                    {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada data untuk filter ini • ganti tanggal atau buat absen di Karyawan/Absensi (CRUD lokal)</p>}
+                    {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada data untuk filter ini</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
                         <span>{isWilayah ? `Admin Wilayah: hanya ${OWN_REGION}` : 'Super Admin lihat semua • Admin Wilayah own region saja'}</span>
-                        <span>Selfie S3 /attendance/... • 1 karyawan = 1 titik • Jam 07:30–16:00 WITA • CRUD lokal sinkron</span>
+                        <span>1 karyawan = 1 titik • Jam 07:30–16:00 WITA</span>
                     </div>
                 </div>
 
@@ -176,7 +176,7 @@ export default function Attendances() {
                                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusTone[detail.status]}`}>{statusLabel[detail.status]}</span>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button type="button" onClick={()=>handleDelete(detail.id)} className="flex-1 bg-[#FEF2F2] text-[#991B1B] rounded-xl py-2.5 text-sm font-semibold">Hapus (CRUD lokal)</button>
+                                        <button type="button" onClick={()=>handleDelete(detail.id)} className="flex-1 bg-[#FEF2F2] text-[#991B1B] rounded-xl py-2.5 text-sm font-semibold">Hapus</button>
                                         <button type="button" onClick={()=>setDetail(null)} className="flex-1 bg-[#0F172A] text-white rounded-xl py-2.5 text-sm font-semibold">Tutup</button>
                                     </div>
                                 </div>

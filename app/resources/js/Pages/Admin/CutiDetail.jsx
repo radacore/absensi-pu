@@ -99,7 +99,7 @@ export default function CutiDetail() {
                         </div>
                     )}
                     {data.status !== 'Menunggu' && (
-                        <p className="mt-6 text-center text-sm font-medium text-[#64748B]">Status final: <span className={data.status === 'Disetujui' ? 'text-[#065F46]' : 'text-[#991B1B]'}>{data.status}</span> — CRUD lokal (localStorage)</p>
+                        <p className="mt-6 text-center text-sm font-medium text-[#64748B]">Status final: <span className={data.status === 'Disetujui' ? 'text-[#065F46]' : 'text-[#991B1B]'}>{data.status}</span></p>
                     )}
                 </div>
 
@@ -116,7 +116,7 @@ export default function CutiDetail() {
                                 ) : (
                                     <div className="bg-[#F8FAFC] rounded-xl p-8 text-center">
                                         <p className="text-sm font-medium text-[#0F172A]">Preview PDF</p>
-                                        <p className="text-xs text-[#64748B] mt-1">{data.dokumen} — dummy preview (Mocking API, S3 /cuti/...)</p>
+                                        <p className="text-xs text-[#64748B] mt-1">{data.dokumen}</p>
                                         <div className="mt-4 h-32 bg-white rounded-xl border-2 border-dashed border-[#E2E8F0] flex items-center justify-center">
                                             <span className="text-xs text-[#94A3B8]">PDF content preview</span>
                                         </div>
