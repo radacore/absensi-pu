@@ -1,6 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
@@ -25,6 +25,18 @@ export default function Settings() {
     const [loveMax, setLoveMax] = useState(init.loveMax);
     const [saved, setSaved] = useState(false);
     const [err, setErr] = useState(null);
+    useEffect(() => {
+        const sync = () => {
+            const s = loadSettings();
+            setJamMasuk(s.jamMasuk); setJamPulang(s.jamPulang); setToleransi(s.toleransi); setLoveMax(s.loveMax);
+        };
+        window.addEventListener('focus', sync);
+        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
+        document.addEventListener('visibilitychange', onVis);
+        const onStorage = (e) => { if (!e.key || e.key === LS_SETTINGS) sync(); };
+        window.addEventListener('storage', onStorage);
+        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
+    }, []);
     const handleSave = () => {
         if (isWilayah) return;
         if (jamMasuk >= jamPulang) { setErr('Jam masuk harus sebelum jam pulang'); setTimeout(()=>setErr(null),2500); return; }

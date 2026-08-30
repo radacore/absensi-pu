@@ -35,7 +35,9 @@ export default function Regions() {
         // also on visibility
         const onVis = () => { if (document.visibilityState === 'visible') sync(); };
         document.addEventListener('visibilitychange', onVis);
-        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); };
+        const onStorage = () => sync();
+        window.addEventListener('storage', onStorage);
+        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
     }, []);
 
     const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };

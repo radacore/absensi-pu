@@ -1,6 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 const OWN_REGION = 'Kab. Gowa';
@@ -26,6 +26,15 @@ export default function PengumumanAdmin() {
     const [form, setForm] = useState(isWilayah ? { ...empty, scope: 'Wilayah', region: OWN_REGION } : empty);
     const [toast, setToast] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(null);
+    useEffect(() => {
+        const sync = () => setList(loadPengumuman());
+        window.addEventListener('focus', sync);
+        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
+        document.addEventListener('visibilitychange', onVis);
+        const onStorage = (e) => { if (!e.key || e.key === LS_PENGUMUMAN) sync(); };
+        window.addEventListener('storage', onStorage);
+        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
+    }, []);
 
     const openAdd = () => { setEditing(null); setForm(isWilayah ? { ...empty, scope: 'Wilayah', region: OWN_REGION } : empty); setOpen(true); };
     const openEdit = (p) => {

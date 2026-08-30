@@ -22,7 +22,9 @@ export default function LoveAdmin() {
         window.addEventListener('focus', sync);
         const onVis = () => { if (document.visibilityState === 'visible') sync(); };
         document.addEventListener('visibilitychange', onVis);
-        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); };
+        const onStorage = () => sync();
+        window.addEventListener('storage', onStorage);
+        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
     }, []);
     useEffect(() => {
         if (siteFilter === 'Semua' || siteFilter === '__null') return;

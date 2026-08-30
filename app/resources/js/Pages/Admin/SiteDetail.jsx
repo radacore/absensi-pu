@@ -28,6 +28,15 @@ export default function SiteDetail({ regionId, siteId }) {
 
     const [form, setForm] = useState(() => site ? { nama_lokasi: site.nama_lokasi, lat: String(site.lat), lng: String(site.lng), radius: site.radius, address: site.address || '' } : { nama_lokasi: '', lat: '', lng: '', radius: 200, address: '' });
     useEffect(() => { if (site) setForm({ nama_lokasi: site.nama_lokasi, lat: String(site.lat), lng: String(site.lng), radius: site.radius, address: site.address || '' }); }, [site?.id]);
+    useEffect(() => {
+        const sync = () => { setRegions(loadRegions()); setEmployees(loadEmployees()); };
+        window.addEventListener('focus', sync);
+        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
+        document.addEventListener('visibilitychange', onVis);
+        const onStorage = (e) => { if (!e.key || e.key === 'bbws_mock_regions_v3' || e.key === 'bbws_mock_employees_v3') sync(); };
+        window.addEventListener('storage', onStorage);
+        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
+    }, []);
 
     const canEdit = isWilayah ? region?.name === OWN_REGION : true;
     const anggota = useMemo(() => employees.filter((e) => e.office_location_id === Number(siteId)), [employees, siteId]);

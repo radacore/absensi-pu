@@ -45,7 +45,9 @@ export default function KaryawanLayout({ children }) {
         window.addEventListener('focus', calc);
         const onVis = () => { if (document.visibilityState === 'visible') calc(); };
         document.addEventListener('visibilitychange', onVis);
-        return () => { window.removeEventListener('focus', calc); document.removeEventListener('visibilitychange', onVis); };
+        const onStorage = (e) => { if (!e.key || e.key === 'bbws_mock_pengumuman_v3' || e.key === 'bbws_mock_pengumuman_read_v3' || e.key === 'bbws_mock_employees_v3') calc(); };
+        window.addEventListener('storage', onStorage);
+        return () => { window.removeEventListener('focus', calc); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
     }, [url]);
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex flex-col max-w-[480px] mx-auto shadow-[0_0_40px_rgba(15,23,42,0.06)]">
