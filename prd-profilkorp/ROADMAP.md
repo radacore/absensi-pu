@@ -2,14 +2,7 @@
 
 ## Phased Delivery Plan
 
-| Phase | Duration | Goals | Key Deliverables |
 |:---|:---|:---|:---|
-| **Phase 1: Foundation & HR Core** | 4 weeks | Establish project infrastructure, database schema (including regions), and core public pages. | Laravel 13 + React 19 + Inertia v2 setup, Regions scaffolding, Homepage, About Us, Services pages, Tailwind v4 styling. |
-| **Phase 2: Admin Dashboard & Content Management** | 4 weeks | Build RBAC auth (Super Admin vs Admin Wilayah) + **1 karyawan=1 titik** CRUD (N titik + per-titik dedicated). | Multi-guard Sanctum (`super_admin`/`wilayah`), role+region middleware + `getAdminBase(url)`, Admin login, **Dashboard breakdown per Titik** (`countsPerSite`/`totalTanpaTitik`), Page/Blog/Portfolio/Team CRUD, **Regions CRUD + N Titik Proyek** (`MAX_SITES=20` last delete 422, **dedicated `GET /regions/{region}/sites/{site}`** (`Admin/SiteDetail` draggable Leaflet) Super Admin all, Admin Wilayah own region), **Employees per Titik** (`office_location_id` filter kolom Link SiteDetail), WYSIWYG. |
-| **Phase 3: Advanced Features & Media Handling** | 3 weeks | Implement AWS S3 integration, SEO management, content versioning. | Media Library S3, Advanced SEO, Content versioning, Global Settings (Super Admin only). |
-| **Phase 4: HR Features & Polish** | 3 weeks | Complete remaining public pages, contact form, testimonials. | Portfolio/Projects, Team, Blog listing, Contact form with notifications, Testimonials. |
-| **Phase 5: Karyawan Mobile PWA (HR Self-Service) — 1 Karyawan=1 Titik** | 4 weeks | Build employee PWA: auth email + **per-titik assigned only** + pengumuman. | Karyawan login (**email+password**, `KARYAWAN_PATH`), Profile own-data + **card titik assigned** (`office_location_id`), **Absensi GPS+selfie `isWithinAssignedSite` only** (banner `Ditugaskan di:` + `jarak/radius` + disabled `!inRadius‖tanpaTitik` + 422 `NULL`/di luar assigned), **Love 4 hati assigned-only** (gate `sisa>0 && Dalam`), Cuti berjenjang per-titik context, Pengumuman inbox, **Rekap** header+note `Di luar {radius}m 422`, PWA manifest+SW + offline queue (server re-validasi `isWithinAssignedSite`), S3 `/attendance/{region}/{emp}/{date}/`. |
-| **Phase 6: Testing, Security Hardening & Deployment — Per Titik** | 2 weeks | Comprehensive testing, security audit (RBAC+region+**titik** isolation), performance, deploy. | Unit & integration tests (>80% inc. region scoping & **1 karyawan=1 titik scope** & own-data 403 & **`isWithinAssignedSite` vs any-site** & `NULL 422` & `N≤20 last 422` tests), OWASP Top 10, **Rate limit + geofence assigned-only** tests, Dashboard per-Titik & Attendances/Cuti/Love filter tests, Load test 1000 public + 500 PWA, Live deployment. |
 
 **Timeline Disclaimer:** This roadmap assumes a team of **2 developers** (1 backend-focused, 1 frontend-focused). Adjust phase durations proportionally: for 1 developer, multiply by ~1.8; for 3 developers, multiply by ~0.7. Actual timelines may vary based on design approval cycles, client feedback, and scope changes.
 
@@ -21,71 +14,25 @@
 
 These features are **critical** for the initial release. Without them, the application cannot go live.
 
-| Feature | Reference | Status | Notes |
 |:---|:---|:---|:---|
-| RBAC Authentication (Admin+Karyawan — Opsi B Pisah URL) | FR-10/FR-22 | Core | Super Admin (`SUPER_ADMIN_PATH` /super-admin + guard super_admin) + Admin Wilayah (`WILAYAH_PATH` /wilayah + guard wilayah) + Karyawan (`KARYAWAN_PATH` /karyawan) — email login semua role, Sanctum multi-guard terpisah tidak cross-login, rate limiting per guard. |
-| Admin Dashboard (Role-Scoped) | FR-11 | Core | Overview scoped by region; Super Admin all regions, Admin Wilayah own region. |
-| Region Management — N Titik Proyek (1=1, Dedicated Page) | FR-28/FR-29 | Core | Super Admin CRUD 24 Kabupaten/Kota + **N titik proyek per wilayah** (`MAX_SITES=20`, hapus last 422, tiap titik nama/lat/lng/Leaflet draggable+circle/radius 50–1000, **dedicated `GET /regions/{region}/sites/{site}`** (`super_admin|admin|wilayah.sites.show`)); Admin Wilayah tambah/edit N titik own region (Bendungan Bili-Bili 201/Jembatan Pampang) + **assign/pindah 1 karyawan=1 titik** (`office_location_id`) kandidat `NULL` saja. |
-| Employee Data Management | FR-24 | Core | Admin Wilayah CRUD Lengkap HR per region (read all, write own). |
-| Page Content Management | FR-12 | Core | WYSIWYG editor for static pages. |
-| Portfolio Management | FR-13 | Core | Full CRUD for projects. |
-| Team Management | FR-14 | Core | Full CRUD for team members. |
-| Blog Management | FR-15 | Core | Full CRUD for blog posts with categories/tags. |
-| Contact Submission Viewer | FR-17 | Core | View and archive contact form submissions. |
-| Media Library (AWS S3) | FR-18 | Core | Upload, delete, and browse media on S3. |
-| Global Settings | FR-21 | Core | Manage company name, logo, contact info, social links (Super Admin only). |
-| HTTPS & Security Basics | NFR-Security | Core | HTTPS, CSRF, rate limiting terpisah per guard (super-admin / wilayah / karyawan), region isolation middleware, tiga URL obfuscated pisah. |
-| Karyawan PWA - Auth & Profile (Per Titik) | FR-22/FR-23 | Core | **Email** login (`KARYAWAN_PATH`), view own profile + **titik assigned** (`office_location` card `Ditugaskan di: lat/lng•radius` or NULL warning), edit limited fields, **tanpa titik 422 disabled**, PWA installable. Guard `karyawan` terpisah + `_shared.js` `MOCK_KARYAWAN_ID=1` 201. |
-| Karyawan PWA - Absensi (Geofence Titik Assigned — 1=1) | FR-25 | Core | GPS+selfie check-in/out **hanya ke titik assigned** (`GeofenceService::isWithinAssignedSite`, `distance <= radius_m(assigned)` — bukan `isWithinAnySite`), **tanpa titik 422 + di luar assigned 422 ditolak**; S3 `/attendance/{region}/{emp}/{date}/` + `office_location_id==assigned`. |
-| Karyawan PWA - Cuti (Per Titik) | FR-26 | Core | Ajukan cuti + berjenjang approval (3 levels) **per-titik context** (`Titik Proyek` kolom/filter `__null` Link SiteDetail) with notifications. |
-| Karyawan PWA - Love (4 Hati, Assigned Only) | FR-31 | Core | **4 hati `#FCB833` dalam radius titik assigned saja** (`isWithinAssignedSite`, `sisa>0 && Dalam`), tanpa titik/diluar disabled, bulan sama, approve disabled `!inRadius‖sisa==0`. |
-| Karyawan PWA - Pengumuman + Rekap | FR-28 | Core | Inbox global+region with read status; **Rekap** header titik assigned + `Di luar {radius}m 422` calendar gold dot. |
-| PWA Infrastructure | FR-30 | Core | Manifest, service worker, offline cache, 44px touch, push ready. |
 
 ### P1: Should Have Within 1 Month Post-Launch
 
 These features enhance the admin experience and public engagement but are not blocking for launch.
 
-| Feature | Reference | Status | Notes |
 |:---|:---|:---|:---|
-| Testimonials Management | FR-16 | Enhancement | Full CRUD with approval status. |
-| Advanced SEO Management | FR-19 | Enhancement | Dedicated SEO editor for meta overrides. |
-| Content Versioning | FR-20 | Enhancement | Version history and rollback for critical pages. |
-| Google Analytics Integration | FR-11 | Enhancement | Embedded analytics widgets on admin dashboard. |
-| 2-Factor Authentication (2FA) | Security | Enhancement | Additional security layer for admin login. |
-| Performance Optimization | NFR-Performance | Enhancement | CDN integration, Redis caching, query optimization. |
 
 ### P2: Nice to Have for Future Releases
 
 These features are valuable but can be deferred to post-launch iterations.
 
-| Feature | Reference | Status | Notes |
 |:---|:---|:---|:---|
-| Multi-language Support | Out of Scope | Future | Not required for initial release. |
-| Email Newsletter System | Out of Scope | Future | Integrated email marketing. |
-| Advanced Analytics Dashboard | Enhancement | Future | Custom reports, conversion tracking. |
-| IP Whitelisting for Admin | Security | Future | Restrict admin access by IP address. |
-| Automated Backups | Infrastructure | Future | Automated database and S3 backups. |
-| API for Third-Party Integration | Enhancement | Future | RESTful API for external systems. |
 
 ---
 
 ## Milestones
 
-| Milestone | Phase | Target Date | Deliverables |
 |:---|:---|:---|:---|
-| **Project Setup & Architecture** | 1 | Week 1 | Laravel 13 + React 19 + Inertia v2 + Vite 7 + Tailwind v4, database schema (MySQL 8.4) with regions/employees, Git repo, workflow documented. |
-| **HR Core Foundation — 1=1 Titik** | 1 | Week 2–3 | Karyawan PWA core (**email** Login, **Dashboard per Titik** badge `Ditugaskan di:` + `MOCK_KARYAWAN_ID=1` 201 via `_shared.js`) with responsive 320px+. Tailwind v4 gold/navy tokens complete. |
-| **Admin RBAC & Dashboard** | 2 | Week 5 | Multi-guard Sanctum, Super Admin vs Admin Wilayah, region middleware, role-scoped dashboard. |
-| **Core Content Management** | 2 | Week 6–7 | WYSIWYG, Page/Blog/Portfolio/Team CRUD, Regions CRUD (Super Admin). |
-| **AWS S3 Integration & Media Library** | 3 | Week 8 | Media Library S3, transactional uploads, browsing. |
-| **SEO & Content Versioning** | 3 | Week 9 | Advanced SEO editor, version history with rollback. |
-| **HR Features Complete (Per Titik Strict)** | 4 | Week 10–11 | Absensi `isWithinAssignedSite only` (`NULL` 422), Cuti/Love/Attendances filter kolom `Titik Proyek` + `__null` + Link SiteDetail, Rekap calendar note, Pengumuman, Profil card titik. |
-| **Karyawan PWA Core (1=1)** | 5 | Week 12–13 | **email** login, profile **+ titik assigned** + Rekap `Di luar {radius}m 422`, **Absensi banner titik assigned + `jarak/radius Dalam/Di luar` + disabled `!inRadius‖tanpaTitik`**, **Love gate assigned** (`isWithinAssignedSite` bulan sama), cuti form per-titik. |
-| **Karyawan PWA Extended** | 5 | Week 14–15 | pengumuman inbox, **Dashboard/Love/Profil/Rekap per Titik sync `_shared.js` `DUMMY_EMPLOYEES`**, PWA manifest/SW/offline queue (server re-validasi assigned) + **SiteDetail dedicated Leaflet per titik**. |
-| **Testing & Security Audit** | 6 | Week 16 | Unit tests (>80% inc. region/own-data tests), integration, OWASP, geofence & rate limit tests, load test 1000+500. |
-| **Production Deployment** | 6 | Week 17 | VPS deploy, DNS, SSL, monitoring, PWA Lighthouse >90. |
-| **Post-Launch Stabilization** | 6 | Week 18 | Bug fixes, tuning, client training (Admin Wilayah + Karyawan PWA). |
 
 ---
 
@@ -95,49 +42,19 @@ These features are valuable but can be deferred to post-launch iterations.
 
 These are third-party services, accounts, and credentials required for the project to function.
 
-| Dependency | Purpose | Status | Notes |
 |:---|:---|:---|:---|
-| **AWS Account & S3 Bucket** | Cloud storage for all media assets. | Required | Client must provide AWS credentials. IAM policy must restrict access to the specific S3 bucket only. |
-| **AWS IAM User Credentials** | Programmatic access for the Laravel application. | Required | Create a dedicated IAM user with S3-only permissions. Store credentials securely in `.env`. |
-| **Google Analytics Account** | Analytics data for admin dashboard. | Required | Client must provide GA property ID and API credentials for dashboard integration. |
-| **SMTP Email Service** | Transactional emails (contact form notifications, admin alerts). | Required | Configure via Laravel Mail (e.g., Mailgun, SendGrid, or client's own SMTP server). |
-| **Domain Name & DNS** | Public website URL and email domain. | Required | Client must own and manage DNS records. Point to VPS IP address. |
-| **SSL Certificate** | HTTPS encryption for all pages. | Required | Use Let's Encrypt (free) or client-provided certificate. Auto-renewal recommended. |
-| **VPS Hosting** | Server infrastructure for Laravel application. | Required | Linode, DigitalOcean, AWS EC2, or equivalent. Minimum: 2GB RAM, 2 vCPU, 50GB SSD. |
 
 ### Internal Dependencies
 
 These are deliverables and artifacts that must be completed before or in parallel with development.
 
-| Dependency | Owner | Deadline | Notes |
 |:---|:---|:---|:---|
-| **Design Mockups & Wireframes** | Design/Client | Week 1 | High-fidelity mockups for all public pages and admin dashboard. Approved by client before development. |
-| **Content Audit & Initial Copy** | Client | Week 1 | All text content for Homepage, About Us, Services, Team bios, and sample blog posts. |
-| **Brand Assets** | Client | Week 1 | Logo (multiple formats), favicon, color palette, typography guidelines, sample images. |
-| **Database Schema Specification** | Backend Lead | Week 1 | Entity-relationship diagram (ERD) and table definitions. Reviewed and approved by team. |
-| **API Specification Document** | Backend Lead | Week 2 | Detailed API endpoints, request/response formats, error handling. Used by frontend team. |
-| **React Component Library Plan** | Frontend Lead | Week 2 | Component architecture, naming conventions, reusable component list. |
-| **SEO Strategy Document** | Client/Marketing | Week 2 | Target keywords, meta tag strategy, URL structure guidelines. |
-| **Security & Compliance Checklist** | DevOps/Backend Lead | Week 3 | OWASP Top 10 review, data protection requirements, compliance standards (GDPR if applicable). |
-| **Testing Plan & Test Cases** | QA Lead | Week 4 | Unit test coverage targets, integration test scenarios, manual test cases. |
-| **Deployment Runbook** | DevOps Lead | Week 11 | Step-by-step deployment procedure, rollback plan, monitoring setup. |
 
 ---
 
 ## Risks & Mitigation
 
-| Risk | Impact | Probability | Mitigation Strategy |
 |:---|:---|:---|:---|
-| **Admin Panel Unauthorized Access** | High | Medium | Enforce strong password policy (min 12 chars, complexity). Implement 2FA in Phase 1 post-launch. Use rate limiting on login endpoint (max 5 attempts/15 min). Consider IP whitelisting if client network is stable. Monitor admin activity logs. |
-| **AWS S3 Data Loss or Corruption** | High | Low | Enable versioning on S3 bucket. Implement transactional uploads with rollback on failure. Use restrictive IAM policy (least privilege). Perform monthly backup of bucket metadata to separate storage. Test restore procedure quarterly. |
-| **Performance Degradation Under Load** | Medium | Medium | Implement Redis caching for queries, page fragments, and config. Use CDN (CloudFront) for static assets. Optimize database queries with eager loading and indexing. Load test with 1,000 concurrent users in Phase 5. Monitor TTFB, LCP, and FCP continuously. |
-| **Scope Creep & Timeline Slippage** | Medium | High | Enforce strict change control process. Document all feature requests in a backlog. Prioritize using MoSCoW method (Must/Should/Could/Won't). Weekly sprint reviews with client. Communicate timeline impact of any scope changes immediately. |
-| **Third-Party Service Outage (AWS, Email)** | Medium | Low | Implement graceful degradation for S3 failures (queue uploads, retry logic). Use multiple SMTP providers or fallback email service. Monitor service health dashboards. Document incident response procedures. Maintain contact list for vendor support escalation. |
-| **Security Vulnerability in Dependencies** | High | Medium | Use `composer audit` and `npm audit` weekly to identify vulnerable packages. Subscribe to Laravel security advisories. Implement automated dependency updates with testing. Conduct security code review before Phase 5 deployment. Maintain a vulnerability disclosure policy. |
-| **Client Content Not Ready on Time** | Medium | Medium | Establish content deadline 2 weeks before Phase 1 completion. Create placeholder content for development/testing. Use staging environment for client review and feedback. Implement content management workflow with version control. |
-| **Inertia.js / React Compatibility Issues** | Low | Low | Use stable, well-tested versions (React 19+, Inertia 2.x). Follow official Inertia + Laravel 13 documentation. Conduct spike testing in Week 1 for complex interactions. Maintain active monitoring of package updates and breaking changes. |
-| **Database Performance Bottlenecks** | Medium | Medium | Design schema with proper indexing from the start. Use query profiling tools (Laravel Debugbar, MySQL EXPLAIN). Implement pagination for all list views. Monitor slow query logs in production. Plan for database optimization in Phase 5. |
-| **Admin User Forgets Login Credentials** | Low | Medium | Implement password reset via Admin (Admin Wilayah own region / Super Admin) (secure token-based). Provide admin with backup recovery codes during onboarding. Document password recovery procedure. Consider storing recovery codes in a secure location (client's password manager). |
 
 ---
 
@@ -177,7 +94,7 @@ These are deliverables and artifacts that must be completed before or in paralle
 
 **Week 6–7:**
   - **Regions CRUD + N Titik Proyek** (`MAX_SITES=20`, dedicated `GET /regions/{region}/sites/{site}` `Admin/SiteDetail` Leaflet draggable+circle per titik + anggota per titik + kandidat `NULL`) Super Admin all, Admin Wilayah own region + **Employees per Titik** (`office_location_id` 1=1, kolom/filter `Titik Proyek` Link SiteDetail + `__null` tanpa titik) + Admin Wilayah assignment 1 titik per karyawan
-  - Page content management with TinyMCE, Blog/Portfolio/Team CRUD
+  - Employee & attendance management (per-titik)
   - Employee Management (Lengkap HR) — Admin Wilayah CRUD own region (read all indicator) incl. `office_location_id` select, NIK/NIP validation, foto S3, pindah via SiteDetail `Pindah`
 - Form validation + **region + titik** isolation + own-data + **`isWithinAssignedSite` vs any-site** policy tests
 
@@ -323,14 +240,7 @@ These are deliverables and artifacts that must be completed before or in paralle
 
 ## Resource Allocation
 
-| Role | Allocation | Responsibilities |
 |:---|:---|:---|
-| **Backend Developer** | 100% | Laravel architecture, database design, API endpoints, AWS S3 integration, authentication, testing. |
-| **Frontend Developer** | 100% | React components, Inertia integration, Tailwind CSS styling, admin UI, responsive design. |
-| **DevOps/Infrastructure** | 30% | VPS setup, database configuration, SSL, monitoring, deployment automation. |
-| **QA/Tester** | 20% | Test planning, manual testing, bug reporting, performance testing. |
-| **Project Manager** | 50% | Timeline tracking, stakeholder communication, change management, risk mitigation. |
-| **Designer** | 40% | Mockups, wireframes, design system, brand guidelines, UI/UX review. |
 
 ---
 

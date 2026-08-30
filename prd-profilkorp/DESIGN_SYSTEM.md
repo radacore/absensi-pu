@@ -8,7 +8,7 @@ BBWS Pompengan Jeneberang is a corporate profile application designed to project
 
 1. **Effortless Content Discovery** — Public visitors should locate key company information (services, portfolio, team, contact) within 2 clicks from the homepage, with a target task completion rate of 95%.
 
-2. **Admin Efficiency & Speed** — The administrator should complete standard content updates (create/edit/publish a blog post or portfolio item) in under 5 minutes, with intuitive WYSIWYG editors and minimal form friction.
+2. **Admin Efficiency & Speed** — The administrator should complete standard content updates (create/edit/publish a blog post or portfolio item) in under 5 minutes, with intuitive forms and minimal friction.
 
 3. **Mobile-First Responsiveness** — All pages must deliver an optimal experience across mobile (320px+), tablet (768px+), and desktop (1024px+) viewports, with no horizontal scrolling and touch-friendly interactive elements (minimum 44px tap targets).
 
@@ -227,16 +227,7 @@ All spacing, padding, margins, and sizing should be multiples of 8px to maintain
 6. **Leave Requests (Berjenjang, Per Titik)** — Queue **filter `Titik Proyek` + `__null`**, kolom **Titik Proyek** Link SiteDetail, approve/reject with notes per level, timeline UI, region-scoped.
 7. **Love Claims (1 Level, Per Titik Assigned Only)** — Queue **filtered per Titik own region** (`office_location_id` + `__null`), kolom **Titik Proyek** Link, badge **`jarak/radius Dalam/Di luar` (assigned)**, Approve **disabled `sisaLove==0 || !hit`** (`isWithinAssignedSite` only, bukan `isWithinAnySite`), `tanpaTitik` tidak ada claim.
 8. **Announcement Management** — Create broadcast (global) or region-targeted, attachment S3, pinned handling.
-9. **Blog Management** — Create, edit, publish articles. Frequent content updates.
-10. **Portfolio Management** — Manage projects, upload media. Regular content maintenance.
-11. **Contact Submissions Viewer** — View and archive form submissions. Lead management.
-12. **Page Content Editor** — Edit About, Services, static pages. Periodic updates.
-13. **Team Management** — Add/edit team member profiles (public team display).
-14. **Testimonial Management** — Approve and manage testimonials. Periodic moderation.
-15. **Media Library** — Browse, upload, delete media from S3. Utility function.
-16. **SEO Management** — Override meta tags, manage Open Graph. Periodic optimization.
-17. **Global Settings (Super Admin Only)** — Company info, logo, contact details, social links + `global_settings.love_max_default` 1–10. Admin Wilayah read-only.
-18. **Content Versioning** — View and rollback page history. Emergency/audit function.
+9. **Global Settings (Super Admin Only)** — Company info, logo, contact details, social links + `global_settings.love_max_default` 1–10. Admin Wilayah read-only.
 
 ### Karyawan PWA Screens (Mobile-First, 320px+, Installable — Priority Order — 1 Karyawan=1 Titik)
 

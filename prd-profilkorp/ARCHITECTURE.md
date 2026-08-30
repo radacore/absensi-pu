@@ -101,9 +101,7 @@ Stores all application data with a relational schema optimized for the corporate
 - `users` — Admin accounts (Super Admin Makassar + Admin Wilayah/Wilayah) with `role` + `region_id` (nullable for Super Admin), hashed password.
   - `regions` — Kantor BBWS PJ (Kantor Pusat + Wilayah Kab/Kota se-Sulsel, 24 wilayah) — `name, slug, kantor_name, tipe (pusat/cabang), address, is_active` — **geofence config dipindah ke `office_locations` N titik per wilayah (N≤20, last delete 422)**.
   - `office_locations` — N titik proyek per wilayah (nama_titik ex Bendungan A/Jembatan B, lat/lng/radius_m 50–1000 per titik, address, is_active) — Leaflet picker per titik, minimal 1 per wilayah, dedicated page `GET /regions/{region}/sites/{site}` + anggota per titik.
- - `pages` — Static pages with meta tags.
-- `page_versions` — Historical versions for rollback.
-- `services`, `projects`, `team_members`, `blog_posts`, `blog_categories`, `blog_tags`, `testimonials`, `contact_submissions`, `media`, `settings` — as before.
+ - `settings` — global_settings (company info + jam kerja + love_max).
 
 **Karyawan/HR Tables (Region-Scoped):**
 - `employees` — Karyawan Lengkap HR (NIK UK, NIP UK, name, golongan, jabatan, unit_kerja, status, region_id FK, **office_location_id FK NULLABLE (1 karyawan = 1 titik; NULL=belum assign, tidak bisa absen 422)**, foto S3, kontak, dokumen) + auth password — `OfficeLocation.onDelete:SetNull`.
@@ -251,34 +249,6 @@ sequenceDiagram
     L->>K: Notifikasi: Love disetujui, late di-excuse (rekap jadi on_time); di luar assigned/tanpa titik tidak bisa approve
 ```
 
-### Public Contact Form Submission Flow
-
-```mermaid
-sequenceDiagram
-    participant Visitor as Public Visitor
-    participant Browser as Browser
-    participant Laravel as Laravel Server
-    participant DB as MySQL Database
-    participant Mail as Mail Service
-    
-    Visitor->>Browser: Navigate to /contact
-    Browser->>Laravel: GET /contact
-    Laravel->>Browser: Render Contact Page (React)
-    
-    Visitor->>Browser: Fill contact form
-    Browser->>Laravel: POST /api/contact (JSON)
-    Laravel->>Laravel: Validate input
-    Laravel->>DB: Insert contact_submissions record
-    DB-->>Laravel: Success
-    Laravel->>Mail: Queue email notification
-    Mail-->>Laravel: Queued
-    Laravel->>Browser: Return success response
-    Browser->>Visitor: Show success message
-    
-    Mail->>Mail: Send email to admin
-    Mail-->>Mail: Delivered
-```
-
 ## Deployment Strategy
 
 ### Application Server (VPS)
@@ -392,7 +362,7 @@ The domain is registered with a DNS provider and configured to point to the VPS'
 - **HTTPS Enforcement:** All traffic is encrypted in transit via TLS 1.2+.
 - **Input Validation:** All user inputs are validated server-side using Laravel's validation rules.
 - **SQL Injection Prevention:** Parameterized queries via Laravel's query builder prevent SQL injection.
-- **XSS Prevention:** React automatically escapes content; WYSIWYG editor output is sanitized server-side.
+- **XSS Prevention:** React automatically escapes content; HTML content (announcements) is sanitized server-side.
 - **File Upload Security:** Uploaded files are validated for type and size; stored outside the web root on S3.
 
 ### AWS S3 Security

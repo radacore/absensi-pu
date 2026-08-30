@@ -16,60 +16,6 @@ The system SHALL present a role-scoped dashboard: Super Admin sees global analyt
 *   Section for recent contact submissions + pending leave requests (for Admin Wilayah).
 *   Quick links MUST be role-filtered (e.g., Admin Wilayah sees "Kelola Karyawan Wilayah Saya").
 
-**FR-12: Page Content Management (WYSIWYG)**
-The system SHALL provide a WYSIWYG editor (e.g., TinyMCE) within the Admin Dashboard to manage the content of static pages such as "About Us" and "Services".
-*   The WYSIWYG editor MUST allow administrators to format text, insert images, and create links for page content.
-*   Content saved through the WYSIWYG editor MUST be accurately displayed on the corresponding public page.
-*   The editor SHOULD support common rich text functionalities like bold, italic, lists, and headings.
-
-**FR-13: Portfolio Project Management (CRUD)**
-The system SHALL provide a full CRUD (Create, Read, Update, Delete) interface for managing portfolio projects. This includes fields for title, description, client, date, and an interface to upload/manage associated images and videos.
-*   The administrator MUST be able to create new portfolio projects with all required details.
-*   Existing portfolio projects MUST be editable and deletable.
-*   The interface MUST allow uploading multiple images and videos for each project and associating them correctly.
-
-**FR-14: Team Member Management (CRUD)**
-The system SHALL provide a full CRUD interface for managing team member profiles.
-*   The administrator MUST be able to add, edit, and delete team member profiles.
-*   Each team member profile MUST include fields for name, title, photo, and a brief biography.
-*   Changes made to team member profiles SHALL be reflected on the public team page.
-
-**FR-15: Blog Post Management (CRUD)**
-The system SHALL provide a full CRUD interface for managing blog posts, including managing categories, tags, author, and publication status (Draft, Published).
-*   The administrator MUST be able to create, edit, and delete blog posts.
-*   Each blog post MUST support assignment to one or more categories and tags.
-*   The administrator SHALL be able to set a blog post's status to "Draft" or "Published", controlling its visibility on the public site.
-
-**FR-16: Testimonial Management (CRUD)**
-The system SHALL provide a full CRUD interface for managing testimonials, including an "approved" status to control visibility on the public site.
-*   The administrator MUST be able to add, edit, and delete client testimonials.
-*   Each testimonial MUST have a toggle or checkbox to set its "approved" status.
-*   Only testimonials marked as "approved" SHALL be displayed on the public website.
-
-**FR-17: Contact Submission Viewer**
-The system SHALL provide a view within the Admin Dashboard to list, read, and archive all messages submitted through the public contact form.
-*   The administrator MUST be able to view a list of all contact form submissions.
-*   Clicking on a submission from the list SHALL display its full details (Name, Email, Subject, Message, Submission Date).
-*   The administrator SHALL be able to mark submissions as "archived" to remove them from the active list.
-
-**FR-18: Centralized Media Library**
-The system SHALL provide a centralized interface for managing all uploaded media. All files MUST be stored on and served from AWS S3. The library MUST support image uploads, deletions, and browsing.
-*   The administrator MUST be able to upload images and other media files through the interface.
-*   Uploaded files MUST be stored in the configured AWS S3 bucket.
-*   The media library MUST display a browsable list of all uploaded media, allowing for selection and deletion.
-
-**FR-19: Advanced SEO Management**
-The system SHALL provide a dedicated section within each page/post editor to manually override meta titles, meta descriptions, and Open Graph tags.
-*   For each editable content item (e.g., page, blog post, service), the administrator MUST have fields to input custom meta title, meta description, and Open Graph properties.
-*   Custom SEO values entered SHALL override any dynamically generated values for that specific content item.
-*   The system SHALL validate the length of meta titles and descriptions to adhere to common SEO best practices.
-
-**FR-20: Content Versioning**
-For critical pages (e.g., About Us, Service details), the system MUST save a history of content changes. The administrator MUST be able to view past versions and rollback to a previous version.
-*   The system SHALL automatically create a new version record whenever critical page content is saved.
-*   The administrator MUST be able to view a list of historical versions for a given page, including the date and user who made the change.
-*   The administrator SHALL be able to select a previous version and restore it as the current active content.
-
 **FR-21: Global Settings Management + Jam Kerja Global**
 The system SHALL provide an interface to manage site-wide information: Company Name, Logo, Favicon, Contact Email, Phone Number, Address, Social Media Profile links, **and Global Working Hours**.
 *   Only Super Admin (Kantor Pusat) MUST be able to update global settings + jam kerja; Admin Wilayah read-only.
@@ -112,7 +58,7 @@ The system SHALL support leave requests with berjenjang approval: Karyawan → A
 
 **FR-27: Pengumuman (Broadcast + Wilayah Targeted)**
 The system SHALL support announcements: Super Admin broadcast to all regions, Admin Wilayah targeted to own region.
-*   Fields: title, content (HTML WYSIWYG), attachment (optional S3), `scope` (global/region), `region_id` (if region), `published_at`, `is_pinned`.
+*   Fields: title, content (HTML), attachment (optional S3), `scope` (global/region), `region_id` (if region), `published_at`, `is_pinned`.
 *   Karyawan MUST see inbox: combined global + own region announcements, sorted newest, with read/unread status (`announcement_reads` pivot).
 *   Admin Wilayah can CRUD only own region announcements (read all). Super Admin CRUD all. Push notification ready (PWA).
 

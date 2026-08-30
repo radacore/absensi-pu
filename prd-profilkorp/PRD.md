@@ -32,15 +32,7 @@ The system is composed of two primary components: a regional admin dashboard mul
 ### Admin Dashboard (Super Admin & Admin Wilayah — Pisah URL)
 *   **FR-10: Secure Authentication (Super Admin & Admin Wilayah — Opsi B Pisah URL):** Dedicated login **terpisah URL**: **Super Admin Pusat** via `SUPER_ADMIN_PATH` (contoh `/super-admin-<hash>`, dev: `/super-admin`) dan **Admin Wilayah** via `WILAYAH_PATH` (contoh `/wilayah-<hash>`, dev: `/wilayah`). Keduanya email+password via Laravel Sanctum 4.x dengan role & region scoping. URL tidak saling tukar — Super Admin tidak login via `/wilayah`, Admin Wilayah tidak via `/super-admin`. Karyawan tetap via `KARYAWAN_PATH` (contoh `/karyawan-<hash>`). Ketiga URL di-obfuscate di production via env.
 *   **FR-11: Main Dashboard:** Overview with analytics, recent contact submissions, quick links. Super Admin sees all regions; Admin Wilayah sees filtered stats for own region + read-only global stats.
-*   **FR-12: Page Content Management:** WYSIWYG (TinyMCE) for static pages.
-*   **FR-13: Portfolio Management:** Full CRUD for portfolio projects.
-*   **FR-14: Team Management:** Full CRUD for team member profiles (public team display).
-*   **FR-15: Blog Management:** Full CRUD for blog posts with categories/tags/status.
-*   **FR-16: Testimonial Management:** Full CRUD with approved status.
-*   **FR-17: Contact Submission Viewer:** List, read, archive contact submissions (scoped view for Admin Wilayah if needed).
-*   **FR-18: Media Library:** Centralized S3 media management.
-*   **FR-19: Advanced SEO Management:** Override meta/OG tags per page/post.
-*   **FR-20: Content Versioning:** History & rollback for critical pages.
+
 *   **FR-21: Global Settings Management:** Site-wide settings termasuk **Jam Kerja Global** (jam_masuk, jam_pulang, toleransi_late_menit, hari_kerja Senin-Jumat). Only Super Admin Pusat (Makassar) can edit; Admin Wilayah read-only.
 
 ### Karyawan Mobile PWA (Employee Self-Service)
@@ -85,7 +77,7 @@ The system is composed of two primary components: a regional admin dashboard mul
 
 | Metric | KPI | Target |
 |:---|:---|:---|
-| User Engagement | Average Time on Page | > 90 seconds on key pages (Services, Portfolio). |
+| User Engagement | Average Time on Page | > 90 seconds on key pages (Dashboard, Pengumuman). |
 | Lead Generation | Contact Form Submissions | ≥ 10 valid submissions per month after launch. |
 | Admin Efficiency | Content Update Time | < 5 minutes for a standard content update (e.g., new blog post). |
 | Technical Performance | Google PageSpeed Insights | Score > 90 for Mobile on the homepage. |

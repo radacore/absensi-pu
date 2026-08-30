@@ -687,10 +687,10 @@ sudo systemctl enable fail2ban
 1. **Database Query Optimization**
    ```php
    // Use eager loading
-   $services = Service::with('images', 'testimonials')->get();
+   $attendances = Attendance::with('employee','officeLocation')->where('region_id', $regionId)->get();
    
    // Use select() to fetch only needed columns
-   $posts = BlogPost::select('id', 'title', 'slug', 'created_at')->get();
+   $emps = Employee::select('id','name','nik','region_id')->where('region_id', $regionId)->get();
    ```
 
 2. **API Response Caching**
