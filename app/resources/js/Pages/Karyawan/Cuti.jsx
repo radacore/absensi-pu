@@ -58,7 +58,7 @@ export default function Cuti() {
                                 <span className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${r.tone === 'emerald' ? 'bg-[#ECFDF5] text-[#065F46]' : r.tone === 'amber' ? 'bg-[#FFFBEB] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{r.status}</span>
                             </div>
                             <div className="mt-4 flex items-center gap-1.5">
-                                {['Atasan', 'Admin Gowa', 'Pusat Makassar'].map((s, i) => (
+                                {['Atasan', 'Admin Gowa', 'Kantor Pusat'].map((s, i) => (
                                     <div key={s} className="flex items-center gap-1.5">
                                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${i < r.step ? 'bg-[#0F172A] text-white' : i === r.step ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#F1F5F9] text-[#64748B]'}`}>{s}</span>
                                         {i < 2 && <span className="text-[#CBD5E1]">—</span>}

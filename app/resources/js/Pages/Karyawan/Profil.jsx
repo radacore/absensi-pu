@@ -49,7 +49,7 @@ export default function Profil() {
                     <h2 className="font-semibold text-[16px] text-[#0F172A] mt-3">Andi Saputra</h2>
                     <p className="text-sm text-[#64748B]">Staff Teknik • Bidang Jalan</p>
                     <p className="text-xs text-[#94A3B8] mt-1">PNS • Gol. III/a • NIK 7371 • NIP 1985</p>
-                    <span className="inline-block mt-3 text-xs font-medium bg-[#F1F5F9] text-[#334155] px-3 py-1 rounded-full">Kantor BBWS PJ Cab. Gowa</span>
+                    <span className="inline-block mt-3 text-xs font-medium bg-[#F1F5F9] text-[#334155] px-3 py-1 rounded-full">Kantor Wilayah Gowa</span>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
@@ -100,8 +100,11 @@ export default function Profil() {
                         </div>
                         <button type="submit" className="w-full rounded-xl bg-[#0F172A] text-white py-2.5 text-sm font-semibold hover:bg-[#1E3A8A] transition">Simpan kata sandi</button>
                     </form>
-                    {msg && !msg.text.includes('Data pribadi') && <p className={`text-xs px-3 py-2 rounded-xl ${msg.type === 'success' ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{msg.text}</p>}
+                    {msg && !msg.text.includes('Data pribadi') && !msg.text.includes('Keluar') && <p className={`text-xs px-3 py-2 rounded-xl ${msg.type === 'success' ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{msg.text}</p>}
                 </div>
+
+                <button type="button" onClick={() => setMsg({ type: 'success', text: 'Keluar — sesi dihapus (frontend only)' })} className="w-full rounded-xl bg-[#FEF2F2] text-[#991B1B] py-3 text-sm font-semibold">Keluar</button>
+                {msg && msg.text.includes('Keluar') && <p className="text-xs text-center bg-[#FEF2F2] text-[#991B1B] rounded-xl py-2">{msg.text}</p>}
             </div>
         </KaryawanLayout>
     );

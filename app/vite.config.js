@@ -33,7 +33,7 @@ export default defineConfig({
             manifest: {
                 name: 'BBWS Pompengan Jeneberang - Karyawan',
                 short_name: 'BBWS PJ',
-                description: 'PWA Karyawan BBWS Pompengan Jeneberang - Pusat Makassar',
+                description: 'PWA Karyawan BBWS Pompengan Jeneberang - Kantor Pusat',
                 theme_color: '#1E3A8A',
                 background_color: '#ffffff',
                 display: 'standalone',

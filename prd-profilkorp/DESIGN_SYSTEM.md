@@ -216,7 +216,7 @@ All spacing, padding, margins, and sizing should be multiples of 8px to maintain
 4. **Karyawan Management (Lengkap HR)** — List filtered own region (toggle read all), Create/Edit with NIK/NIP/golongan/jabatan/unit/status, foto S3, region auto-scoped.
 5. **Attendance Viewer** — List per region with date/status filter, detail with selfie + map + distance.
 6. **Leave Requests (Berjenjang)** — Queue per level, approve/reject with notes, timeline UI, region-scoped.
-7. **Love Claims (1 Level)** — Queue pending Love Claims own region (late dalam radius + dokumen/alasan), Approve/Reject 1 level Admin Cabang, notifikasi karyawan, update love_sisa & attendance excused_love.
+7. **Love Claims (1 Level)** — Queue pending Love Claims own region (late dalam radius + dokumen/alasan), Approve/Reject 1 level Admin Wilayah, notifikasi karyawan, update love_sisa & attendance excused_love.
 7. **Announcement Management** — Create broadcast (global) or region-targeted, attachment S3, pinned handling.
 9. **Blog Management** — Create, edit, publish articles. Frequent content updates.
 10. **Portfolio Management** — Manage projects, upload media. Regular content maintenance.

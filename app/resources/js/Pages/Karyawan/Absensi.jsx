@@ -14,7 +14,7 @@ export default function Absensi() {
             <div className="space-y-5">
                 <div>
                     <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Absensi</h2>
-                    <p className="text-sm text-[#64748B] mt-1">Kantor BBWS PJ Cab. Gowa • Radius 200 m</p>
+                    <p className="text-sm text-[#64748B] mt-1">Kantor Wilayah Gowa • Radius 200 m</p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">

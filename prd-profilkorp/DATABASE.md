@@ -26,6 +26,7 @@ erDiagram
     REGION ||--o{ ADMIN : "has many"
     REGION ||--o{ EMPLOYEE : "has many"
     REGION ||--o{ ATTENDANCE : "has many"
+    REGION ||--o{ OFFICE_LOCATION : "has many"
     REGION ||--o{ ANNOUNCEMENT : "has many"
     EMPLOYEE ||--o{ ATTENDANCE : "has many"
     EMPLOYEE ||--o{ LEAVE_REQUEST : "has many"
@@ -127,6 +128,16 @@ erDiagram
         int announcement_id FK
         int employee_id FK
         timestamp read_at
+    }
+
+    OFFICE_LOCATION {
+        int id PK
+        int region_id FK
+        string nama_lokasi
+        decimal lat
+        decimal lng
+        int radius_m
+        string address
     }
 
     LOVE_BALANCE {
@@ -324,7 +335,7 @@ Stores administrator accounts with role & region scoping (Super Admin vs Admin W
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
 
 ### REGION
-Stores Kantor BBWS PJ per wilayah — **Pusat Makassar + Cabang Kabupaten/Kota se-Sulsel** (24 wilayah). Tiap kantor punya lokasi + radius absen yang di-input admin untuk validasi geofence karyawan.
+Stores Kantor BBWS PJ per wilayah — **24 Wilayah** (Kota Makassar pusat + 23 Wilayah). Tiap wilayah bisa punya **1–3 Lokasi Kantor** (office_locations) dengan radius fleksibel per lokasi.
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|
@@ -341,7 +352,23 @@ Stores Kantor BBWS PJ per wilayah — **Pusat Makassar + Cabang Kabupaten/Kota s
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
 
-**Catatan domain Sulsel:** Seed awal 24 wilayah: Pusat Makassar + 21 Kabupaten (Bantaeng, Barru, Bone, Bulukumba, Enrekang, Gowa, Jeneponto, Kepulauan Selayar, Luwu, Luwu Timur, Luwu Utara, Maros, Pangkajene dan Kepulauan, Pinrang, Sinjai, Soppeng, Takalar, Toraja Utara, Tana Toraja, Wajo) + 2 Kota selain Makassar (Parepare, Palopo) — atau 3 Kota total termasuk Makassar sebagai pusat. Super Admin di Makassar CRUD ini; Admin Cabang dapat edit lat/lng/radius kantornya sendiri.
+### OFFICE_LOCATION
+Stores 1–3 lokasi kantor per wilayah — fleksibel radius per lokasi, di-input Super Admin/Admin Wilayah.
+
+| Column | Type | Constraints | Description |
+|:---|:---|:---|:---|
+| id | INT | PK, AUTO_INCREMENT | Unique identifier |
+| region_id | INT | FK (REGION.id) | Wilayah induk (1 wilayah → 1–3 lokasi) |
+| nama_lokasi | VARCHAR(255) | NOT NULL | Nama lokasi (e.g., "Gedung A", "Pos Jaga 2") |
+| lat | DECIMAL(10,8) | NOT NULL | Latitude lokasi |
+| lng | DECIMAL(11,8) | NOT NULL | Longitude lokasi |
+| radius_m | INT | DEFAULT 200 | Radius absen per lokasi (50–1000m, fleksibel) |
+| address | TEXT | NULLABLE | Alamat detail lokasi |
+| is_active | BOOLEAN | DEFAULT 1 | Active flag |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
+
+**Catatan domain Sulsel:** Seed awal 24 wilayah: Kantor Pusat (Kota Makassar) + 21 Kabupaten (Bantaeng, Barru, Bone, Bulukumba, Enrekang, Gowa, Jeneponto, Kepulauan Selayar, Luwu, Luwu Timur, Luwu Utara, Maros, Pangkajene dan Kepulauan, Pinrang, Sinjai, Sidenreng Rappang (Sidrap), Soppeng, Takalar, Tana Toraja, Toraja Utara, Wajo) + 2 Kota selain Makassar (Parepare, Palopo) — total 24. Seeder: `database/seeders/RegionSeeder.php`. Super Admin di Makassar CRUD ini; Admin Wilayah dapat edit lat/lng/radius kantornya sendiri.
 
 ### EMPLOYEE
 Stores karyawan Lengkap HR data, linked to region, auth via NIK + password. Own-data-only policy.
@@ -349,7 +376,7 @@ Stores karyawan Lengkap HR data, linked to region, auth via NIK + password. Own-
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|
 | id | INT | PK, AUTO_INCREMENT | Unique identifier |
-| nik | VARCHAR(16) | UK, NOT NULL | 16-digit NIK (login) |
+| nik | VARCHAR(16) | UK, NOT NULL | 16-digit NIK (data, bukan login — login pakai email) |
 | nip | VARCHAR(255) | UK, NULLABLE | NIP (optional unique) |
 | name | VARCHAR(255) | NOT NULL | Full name |
 | golongan | VARCHAR(50) | NULLABLE | Rank/group (e.g., III/a) |
@@ -359,7 +386,7 @@ Stores karyawan Lengkap HR data, linked to region, auth via NIK + password. Own-
 | region_id | INT | FK (REGION.id), NOT NULL | Assigned region |
 | password | VARCHAR(255) | NOT NULL | Hashed password (bcrypt) |
 | foto_url | VARCHAR(255) | NULLABLE | S3 URL of photo |
-| email | VARCHAR(255) | NULLABLE | Contact email |
+| email | VARCHAR(255) | UK, NOT NULL | Login email (unique, untuk semua role) |
 | phone | VARCHAR(20) | NULLABLE | Contact phone |
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
@@ -430,7 +457,7 @@ Pivot for read/unread status per karyawan.
 | read_at | TIMESTAMP | NOT NULL | Read timestamp |
 
 ### LOVE_BALANCE
-Stores per-employee per-month Love balance, reset bulanan, fleksibel total love.
+Stores per-employee per-month Love balance, reset bulanan (1st 00:00 WITA), fleksibel total love, berlaku sebulan (hari beda boleh).
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|
@@ -444,7 +471,7 @@ Stores per-employee per-month Love balance, reset bulanan, fleksibel total love.
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
 
 ### LOVE_CLAIM
-Stores Love Claim for late dalam radius, 1 level Admin Cabang approval, hari yang sama.
+Stores Love Claim for late dalam radius, 1 level Admin Wilayah approval, hari yang sama.
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|
@@ -454,8 +481,8 @@ Stores Love Claim for late dalam radius, 1 level Admin Cabang approval, hari yan
 | region_id | INT | FK (REGION.id) | Region (for scoping) |
 | alasan | TEXT | NOT NULL | Reason (max 500) |
 | dokumen_url | VARCHAR(255) | NULLABLE | S3 PDF/image dokumen |
-| status | ENUM('pending','approved','rejected') | DEFAULT 'pending' | Approval status (1 level Admin Cabang) |
-| reviewed_by | INT | FK (ADMIN.id) NULLABLE | Admin Cabang reviewer |
+| status | ENUM('pending','approved','rejected') | DEFAULT 'pending' | Approval status (1 level Admin Wilayah) |
+| reviewed_by | INT | FK (ADMIN.id) NULLABLE | Admin Wilayah reviewer |
 | reviewed_at | TIMESTAMP | NULLABLE | Review time |
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Claim time (must be same day (00:00–23:59 WITA) of attendance) |
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
@@ -534,7 +561,7 @@ Stores team member profiles with photos and contact information.
 | title | VARCHAR(255) | NOT NULL | Job title/position |
 | bio | TEXT | NULLABLE | Brief biography |
 | media_id | INT | FK (MEDIA.id), NULLABLE | Profile photo |
-| email | VARCHAR(255) | NULLABLE | Contact email |
+| email | VARCHAR(255) | UK, NOT NULL | Login email (unique, untuk semua role) |
 | phone | VARCHAR(20) | NULLABLE | Contact phone |
 | linkedin_url | VARCHAR(255) | NULLABLE | LinkedIn profile URL |
 | display_order | INT | DEFAULT 0 | Sort order on team page |
@@ -721,6 +748,7 @@ model Region {
   attendances       Attendance[]
   announcements     Announcement[]
   loveClaims        LoveClaim[]
+  officeLocations   OfficeLocation[]
 
   @@map("region")
 }
@@ -822,6 +850,23 @@ model AnnouncementRead {
 
   @@unique([announcementId, employeeId])
   @@map("announcement_read")
+}
+
+model OfficeLocation {
+  id                Int       @id @default(autoincrement())
+  regionId          Int       @map("region_id")
+  namaLokasi        String    @map("nama_lokasi")
+  lat               Decimal   @db.Decimal(10,8)
+  lng               Decimal   @db.Decimal(11,8)
+  radiusM           Int       @default(200) @map("radius_m")
+  address           String?   @db.Text
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  region            Region    @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@map("office_location")
 }
 
 model LoveBalance {
@@ -1103,7 +1148,7 @@ To optimize query performance, the following indexes are recommended beyond prim
 | announcement_read | announcement_id, employee_id | Unique Composite | Read status dedup |
 | love_balance | employee_id, period | Unique | Per-employee per-month balance |
 | love_claim | attendance_id | Unique | One claim per late attendance |
-| love_claim | region_id, status | Composite | Admin Cabang pending queue |
+| love_claim | region_id, status | Composite | Admin Wilayah pending queue |
 | attendance_setting | id | Single | Global jam kerja lookup (single row, cached Redis) |
 
 ## Data Integrity & Constraints

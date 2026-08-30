@@ -1,6 +1,6 @@
 # BBWS Pompengan Jeneberang — Absensi PU
 
-Aplikasi profil **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pusat di **Makassar** + 24 Kantor Cabang Kabupaten/Kota se-Sulawesi Selatan — dengan portal HR multi-tenant dan **PWA Karyawan** (NIK login, absensi GPS+selfie radius, love system, cuti berjenjang, lembur/dinas luar, rekap, pengumuman).
+Aplikasi profil **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pusat di **Makassar** + 24 Kantor Cabang Kabupaten/Kota se-Sulawesi Selatan — dengan portal HR multi-tenant dan **PWA Karyawan** (email login, absensi GPS+selfie radius, love system, cuti berjenjang, rekap, pengumuman).
 
 ![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
@@ -22,15 +22,14 @@ Aplikasi profil **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pusat di
 - **Admin Cabang (per Kabupaten/Kota)**: CRUD karyawan Lengkap HR own region (NIK 16, NIP, golongan, jabatan, unit, status PNS/PPPK/Kontrak/Honorer, foto S3) — read all, write own; edit lokasi & radius kantornya sendiri; approve cuti level 2 + **approve Love 1 level**; kirim pengumuman wilayah.
 
 ### Karyawan — PWA Mobile-First (320px+, #FCB833)
-1. **Login NIK** — 16 digit + password, rate limit 5/15 menit per NIK+IP, Sanctum karyawan guard.
-2. **Dashboard** — foto overlap (Unsplash), sapaan dinamis pagi/siang/malam + live `Jumat, 28 Agu 2026 • 14:23:45 WITA`, 4 Love gold `#FCB833` (tanpa angka), stats hadir/lembur/info, rekap & lembur cards.
-3. **Absensi GPS+Selfie** — dalam radius kantor (di luar radius **ditolak 422**, tidak tercatat), selfie S3 `/attendance/...`, status `on_time/late/early_leave`, tombol terkunci di luar radius.
-4. **Love — 4 Hati/Bulan** — reset `1st 00:00 WITA`, total fleksibel Super Admin (1–10, default 4), **pakai 1 Love untuk 1 late dalam radius** + dokumen/alasan → approval 1 level Admin Cabang, hanya **hari yang sama** (00:00–23:59 WITA), sisa `3/4` dot gold.
+1. **Login Email** — email + password, rate limit 5/15 menit per email+IP, Sanctum multi-guard.
+2. **Dashboard** — foto overlap (Unsplash), sapaan dinamis pagi/siang/malam + live `Jumat, 28 Agu 2026 • 14:23:45 WITA`, 4 Love gold `#FCB833` (tanpa angka), stats hadir/info, rekap card.
+3. **Absensi GPS+Selfie** — dalam radius kantor (di luar radius **ditolak 422**, tidak tercatat, tidak bisa pakai Love), selfie S3 `/attendance/...`, status `on_time/late/early_leave`, tombol terkunci di luar radius (1–3 lokasi per wilayah, radius fleksibel).
+4. **Love — 4 Hati/Bulan** — reset `1st 00:00 WITA`, total fleksibel Super Admin (1–10, default 4), **pakai 1 Love untuk 1 late dalam radius** + dokumen/alasan → approval 1 level Admin Wilayah, hanya **bulan yang sama** (hari beda boleh), sisa `3/4` dot gold.
 5. **Rekap Bulanan** — kalender 30 hari (gold hadir), ringkasan hadir/terlambat/cuti, 90% kehadiran.
-6. **Lembur & Dinas Luar** — ajukan lembur/dinas luar (lokasi luar radius), history.
-7. **Cuti Berjenjang** — ajukan (jenis, tgl, alasan, dokumen) → Atasan → Admin Cabang → Pusat Makassar.
-8. **Pengumuman** — inbox global (Pusat) + region (Cabang), pinned, unread dot, mark read.
-9. **Profil** — view Lengkap HR, upload foto (preview), ganti kata sandi — frontend only.
+6. **Cuti Berjenjang** — ajukan (jenis, tgl, alasan, dokumen) → Atasan → Admin Wilayah → Pusat Makassar.
+7. **Pengumuman** — inbox global (Pusat) + region (Wilayah), pinned, unread dot, mark read.
+8. **Profil** — view Lengkap HR, upload foto (preview), ganti kata sandi — frontend only.
 
 Tanpa **slip gaji** (dihapus) dan tanpa `out_of_range` (di luar radius ditolak).
 
@@ -62,7 +61,6 @@ Tanpa **slip gaji** (dihapus) dan tanpa `out_of_range` (di luar radius ditolak).
 | Absensi | ![Absensi](./app/public/screenshots/karyawan-absensi.png) |
 | Rekap | ![Rekap](./app/public/screenshots/karyawan-rekap.png) |
 | Cuti | ![Cuti](./app/public/screenshots/karyawan-cuti.png) |
-| Lembur | ![Lembur](./app/public/screenshots/karyawan-lembur.png) |
 | Love | ![Love](./app/public/screenshots/karyawan-love.png) |
 | Pengumuman | ![Pengumuman](./app/public/screenshots/karyawan-pengumuman.png) |
 | Profil | ![Profil](./app/public/screenshots/karyawan-profil.png) |
@@ -118,13 +116,13 @@ Seed 24 Kantor (Makassar pusat + 21 Kab + 2 Kota) + geofence via `database/seede
 ```
 sul proyek/
 ├── prd-profilkorp/        # 9 dokumen PRD (PRD, REQUIREMENTS, ARCHITECTURE, DATABASE, API, DESIGN_SYSTEM, ROADMAP, USER_FLOW, DEPLOYMENT)
-│   └── BBWS Pompengan Jeneberang — FR-01 s/d FR-31 (tanpa slip gaji, Love 4/bulan)
+│   └── BBWS Pompengan Jeneberang — FR-22 s/d FR-32 (tanpa publik & slip gaji, Love 4/bulan sebulan)
 └── app/                   # Laravel 13 + React 19 PWA
-    ├── resources/js/Pages/Karyawan/  # Login, Dashboard, Absensi, Rekap, Cuti, Lembur, Love, Pengumuman, Profil
-    ├── resources/js/Layouts/KaryawanLayout.jsx  # Header BBWS + bottom nav 6 tab (Love gold)
+    ├── resources/js/Pages/Karyawan/  # Login, Dashboard, Absensi, Rekap, Cuti, Love, Pengumuman, Profil
+    ├── resources/js/Layouts/KaryawanLayout.jsx  # Header BBWS + bottom nav 5 tab (Love gold)
     ├── vite.config.js     # Tailwind v4 + React + PWA (gold #FCB833)
     ├── public/logo.png    # Logo kotak rounded navy/gold
-    └── public/screenshots/ # Playwright screenshots
+    └── public/screenshots/ # Playwright screenshots (8 halaman)
 ```
 
 ---

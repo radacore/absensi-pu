@@ -59,14 +59,14 @@ export default function Love() {
                             <span key={i} className={`flex-1 h-2.5 rounded-full ${i <= sisa ? 'bg-[#FCB833]' : 'bg-[#F1F5F9]'}`}></span>
                         ))}
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3">Pakai 1 Love untuk 1 keterlambatan <span className="font-medium text-[#0F172A]">dalam radius</span> + dokumen (hari yang sama) → approval 1 level Admin Cabang Gowa</p>
+                    <p className="text-xs text-[#94A3B8] mt-3">Pakai 1 Love untuk 1 keterlambatan <span className="font-medium text-[#0F172A]">dalam radius</span> + dokumen (bulan yang sama — hari beda boleh) → approval 1 level Admin Wilayah Gowa</p>
                     {sisa === 0 && <p className="text-xs font-medium text-[#EF4444] mt-2">Sisa 0 — keterlambatan berikutnya tidak bisa di-excuse</p>}
                 </div>
 
                 {/* Eligible late — functional */}
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <h3 className="font-medium text-sm text-[#0F172A]">Terlambat yang bisa pakai Love</h3>
-                    <p className="text-xs text-[#94A3B8] mt-1">Hanya late hari ini dalam radius • Di luar radius ditolak</p>
+                    <p className="text-xs text-[#94A3B8] mt-1">Hanya late bulan yang sama (hari beda boleh) & dalam radius • Di luar radius ditolak</p>
                     <div className="mt-4 space-y-3">
                         {lateList.length === 0 ? (
                             <p className="text-sm text-[#64748B] text-center py-4">Tidak ada keterlambatan yang bisa pakai Love</p>
@@ -96,8 +96,8 @@ export default function Love() {
                                 <input id="dok" type="file" onChange={(e) => setDokumen(e.target.files?.[0] || null)} className="mt-1.5 w-full text-xs text-[#64748B] file:mr-3 file:rounded-lg file:border-0 file:bg-[#0F172A] file:text-white file:px-3 file:py-1.5 file:text-xs file:font-medium" />
                                 {dokumen && <p className="text-xs text-[#10B981] mt-1">Terpilih: {dokumen.name}</p>}
                             </div>
-                            <button type="button" onClick={handleClaim} disabled={!alasan.trim() || sisa <= 0} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 Love — Kirim ke Admin Cabang</button>
-                            <p className="text-xs text-[#94A3B8] text-center">Butuh approval Admin Cabang Gowa (1 level) • hanya hari yang sama</p>
+                            <button type="button" onClick={handleClaim} disabled={!alasan.trim() || sisa <= 0} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 Love — Kirim ke Admin Wilayah</button>
+                            <p className="text-xs text-[#94A3B8] text-center">Butuh approval Admin Wilayah Gowa (1 level) • hanya bulan yang sama (hari beda boleh)</p>
                         </div>
                     )}
                 </div>

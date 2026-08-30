@@ -16,7 +16,7 @@ export default function Rekap() {
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Rekap kehadiran</h2>
-                        <p className="text-sm text-[#64748B]">Agustus 2026 • Kantor BBWS PJ Cab. Gowa • Love 3/4</p>
+                        <p className="text-sm text-[#64748B]">Agustus 2026 • Kantor Wilayah Gowa • Love 3/4</p>
                     </div>
                     <span className="bg-[#FCB833] text-[#0F172A] text-xs font-semibold px-3 py-1.5 rounded-full">4 Love</span>
                 </div>
@@ -76,7 +76,7 @@ export default function Rekap() {
 
                 <div className="flex gap-2">
                     <Link href="/karyawan/absensi" className="flex-1 bg-white rounded-xl py-3 text-sm font-medium text-[#334155] text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]">Lihat absensi</Link>
-                    <button type="button" className="flex-1 bg-[#FCB833] text-[#0F172A] rounded-xl py-3 text-sm font-semibold">Unduh rekap PDF</button>
+                    <button type="button" onClick={() => alert('Unduh rekap PDF — frontend only (akan generate S3 /rekap/... saat backend ready)')} className="flex-1 bg-[#FCB833] text-[#0F172A] rounded-xl py-3 text-sm font-semibold">Unduh rekap PDF</button>
                 </div>
             </div>
         </KaryawanLayout>

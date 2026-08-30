@@ -2,7 +2,7 @@
 
 ## System Overview
 
-BBWS Pompengan Jeneberang — **BBWS Pompengan Jeneberang** is a monolithic Laravel 13 application (PHP 8.4+) with a React 19 frontend via Inertia.js v2. Pusat di **Makassar**, cabang di **Kabupaten/Kota se-Sulsel** (24 wilayah). Each Kantor Cabang has **lokasi kantor (lat/lng via map picker) + radius absen (meter)** di-input admin untuk geofence validasi absensi GPS+selfie karyawan cabangnya. Architecture SSR + Inertia reactive, no separate API. Styling Tailwind v4, Vite 7, assets (media, selfie) on AWS S3, MySQL 8.4 LTS / 9.x region-scoped per kantor cabang, VPS Ubuntu 24.04 LTS. Roles: Super Admin Pusat (Makassar, CRUD all kantor + lokasi/radius, atur Love max & jam global), Admin Wilayah/Cabang (edit lokasi/radius kantornya sendiri, approve Love 1 level, write own region), Karyawan (NIK login, own-data-only, absensi cek jarak ke kantor cabangnya — di luar radius ditolak, Love 4/bulan reset, ajukan dokumen untuk excuse late dalam radius, PWA).
+BBWS Pompengan Jeneberang — **BBWS Pompengan Jeneberang** is a monolithic Laravel 13 application (PHP 8.4+) with a React 19 frontend via Inertia.js v2. Pusat di **Makassar**, cabang di **Kabupaten/Kota se-Sulsel** (24 wilayah). Each Kantor Wilayah has **lokasi kantor (lat/lng via map picker) + radius absen (meter)** di-input admin untuk geofence validasi absensi GPS+selfie karyawan cabangnya. Architecture SSR + Inertia reactive, no separate API. Styling Tailwind v4, Vite 7, assets (media, selfie) on AWS S3, MySQL 8.4 LTS / 9.x region-scoped per kantor cabang, VPS Ubuntu 24.04 LTS. Roles: Super Admin Pusat (Makassar, CRUD all kantor + lokasi/radius, atur Love max & jam global), Admin Wilayah/Wilayah (edit lokasi/radius kantornya sendiri, approve Love 1 level, write own region), Karyawan (NIK login, own-data-only, absensi cek jarak ke kantor cabangnya — di luar radius ditolak, Love 4/bulan reset, ajukan dokumen untuk excuse late dalam radius, PWA).
 
 ## High-Level Architecture Diagram
 
@@ -26,7 +26,7 @@ graph TD
     
     L["Public Routes<br/>(Deprecated)"]
     M["Admin Routes<br/>(Dashboard, CRUD, Regions)"]
-    M2["Karyawan PWA Routes<br/>(Absensi, Cuti, Love, Pengumuman, Rekap, Lembur)"]
+    M2["Karyawan PWA Routes<br/>(Absensi, Cuti, Love, Pengumuman, Rekap)"]
     N["API Routes<br/>(Contact, Media, Employee APIs)"]
     O["PWA Service Worker<br/>(Offline Cache)"]
     
@@ -86,8 +86,8 @@ Inertia.js v2 bridges Laravel 13 and React 19, enabling server-side routing with
 
 React 19 components are organized into three sections, all using Tailwind CSS v4 and React 19 features (Actions, useOptimistic).
 
-- **Admin Components:** Dashboard (role-scoped + love stats), Regions CRUD (Super Admin), Employee management (region-scoped), Attendance/Leave/Love Claims (1 level Admin Cabang approve)/Announcement management, media library, SEO editor, Global Settings (jam kerja + love_max).
-- **Karyawan PWA Components (Mobile-first, 320px+):** Login (NIK+password), Bottom nav, Profile view/edit, Absensi (GPS+camera capture + geofence distance UI — di luar radius ditolak 422, tombol terkunci), Love (4 dot gold #FCB833, sisa 3/4, ajukan dokumen pakai Love untuk late dalam radius, history), Cuti form & status timeline (berjenjang), Pengumuman inbox (read/unread), Rekap Kalender, Lembur/Dinas Luar, Offline banner + queue indicator. PWA install prompt + service worker cache.
+- **Admin Components:** Dashboard (role-scoped + love stats), Regions CRUD (Super Admin), Employee management (region-scoped), Attendance/Leave/Love Claims (1 level Admin Wilayah approve)/Announcement management, media library, SEO editor, Global Settings (jam kerja + love_max).
+- **Karyawan PWA Components (Mobile-first, 320px+):** Login (NIK+password), Bottom nav, Profile view/edit, Absensi (GPS+camera capture + geofence distance UI — di luar radius ditolak 422, tombol terkunci), Love (4 dot gold #FCB833, sisa 3/4, ajukan dokumen pakai Love untuk late dalam radius, history), Cuti form & status timeline (berjenjang), Pengumuman inbox (read/unread), Rekap Kalender, Offline banner + queue indicator. PWA install prompt + service worker cache.
 - **Shared Components:** Navigation, footer, modals, form inputs, pagination, loading skeletons, permission gates.
 
 ### MySQL 8.4 LTS / 9.x Database
@@ -95,8 +95,8 @@ React 19 components are organized into three sections, all using Tailwind CSS v4
 Stores all application data with a relational schema optimized for the corporate profile use case. MySQL 8.4 LTS is the recommended production target (long-term support); MySQL 9.x innovation release also supported by Laravel 13.
 
 **Core Tables (Public + Admin):**
-- `users` — Admin accounts (Super Admin Makassar + Admin Wilayah/Cabang) with `role` + `region_id` (nullable for Super Admin), hashed password.
-- `regions` — Kantor BBWS PJ (Pusat Makassar + Cabang Kab/Kota se-Sulsel, 24 wilayah) — `name, slug, kantor_name, tipe (pusat/cabang), lat, lng, radius_m (50–1000m, input admin via map picker), address, is_active` + geofence config per kantor.
+- `users` — Admin accounts (Super Admin Makassar + Admin Wilayah/Wilayah) with `role` + `region_id` (nullable for Super Admin), hashed password.
+- `regions` — Kantor BBWS PJ (Kantor Pusat + Wilayah Kab/Kota se-Sulsel, 24 wilayah) — `name, slug, kantor_name, tipe (pusat/cabang), lat, lng, radius_m (50–1000m, input admin via map picker), address, is_active` + geofence config per kantor.
 - `pages` — Static pages with meta tags.
 - `page_versions` — Historical versions for rollback.
 - `services`, `projects`, `team_members`, `blog_posts`, `blog_categories`, `blog_tags`, `testimonials`, `contact_submissions`, `media`, `settings` — as before.
@@ -107,7 +107,7 @@ Stores all application data with a relational schema optimized for the corporate
 - `leave_requests` — Cuti berjenjang (employee_id, region_id, jenis, tgl mulai/selesai, alasan, dokumen S3, status enum pending/approved_level1/approved_level2/approved/rejected, approved_by/at per level).
 - `announcements` — Pengumuman (title, content HTML, attachment S3, scope global/region, region_id nullable, published_at, is_pinned, created_by).
 - `love_balances` — Love per karyawan per bulan (employee_id, period YYYY-MM, love_sisa, love_max, reset_at) — reset 1st 00:00 WITA, fleksibel max.
-- `love_claims` — Love Claim (employee_id, attendance_id UK, region_id, alasan, dokumen_url S3, status pending/approved/rejected, reviewed_by/at) — 1 level Admin Cabang, hari yang sama, hanya dalam radius.
+- `love_claims` — Love Claim (employee_id, attendance_id UK, region_id, alasan, dokumen_url S3, status pending/approved/rejected, reviewed_by/at) — 1 level Admin Wilayah, hari yang sama, hanya dalam radius.
 - `announcement_reads` — Pivot (announcement_id, employee_id, read_at) for read/unread.
 
 ### AWS S3 Media Storage
@@ -193,7 +193,7 @@ sequenceDiagram
     Laravel->>Browser: Render Blog List (React)
 ```
 
-### Karyawan Absensi GPS + Selfie Flow (PWA, Validasi Kantor Cabang)
+### Karyawan Absensi GPS + Selfie Flow (PWA, Validasi Kantor Wilayah)
 
 ```mermaid
 sequenceDiagram
@@ -207,10 +207,10 @@ sequenceDiagram
     PWA->>K: Request GPS + Camera permission
     K->>K: Capture GPS lat/lng + selfie + preview jarak ke kantor
     K->>L: POST /api/karyawan/attendances (lat,lng,selfie, timestamp)
-    L->>DB: Fetch kantor cabang karyawan: regions lat/lng/radius_m by employee.region_id
+    L->>DB: Fetch 1–3 lokasi kantor di wilayah karyawan: office_locations by region_id
     DB-->>L: Kantor lat/lng/radius_m
-    L->>L: Haversine distance + Validate geofence (distance <= radius_m)
-    L->>L: Check distance vs radius_m — if out_of_radius → return 422 rejected (tidak simpan)
+    L->>L: Haversine ke lokasi terdekat + Validate geofence (distance <= radius_m lokasi terdekat)
+    L->>L: Check distance ke semua lokasi di wilayah — if semua > radius_m → return 422 rejected (tidak simpan)
     L->>L: Check status on_time/late/early_leave + fake GPS heuristic
     L->>S3: Upload selfie to /attendance/{region}/{employee}/{date}/
     S3-->>L: S3 URL
@@ -220,7 +220,7 @@ sequenceDiagram
     K->>PWA: Cache attendance history offline
 ```
 
-### Love Claim Flow (4 Hati — Dalam Radius, 1 Level Admin Cabang)
+### Love Claim Flow (4 Hati — Dalam Radius, 1 Level Admin Wilayah)
 
 ```mermaid
 sequenceDiagram
@@ -238,7 +238,7 @@ sequenceDiagram
     DB-->>L: Success
     L->>K: Return pending + love_sisa
 
-    Note over L: Admin Cabang (Gowa) di dashboard melihat pending queue
+    Note over L: Admin Wilayah (Gowa) di dashboard melihat pending queue
     K->>L: (Admin) POST /api/admin/love-claims/{id}/approve
     L->>DB: Update love_claims approved, love_balances love_sisa-1, attendances status=excused_love
     DB-->>L: Success
@@ -342,7 +342,7 @@ The domain is registered with a DNS provider and configured to point to the VPS'
 
 ### Admin Wilayah Employee Input Flow (Region-Scoped)
 
-1. Admin Wilayah/Cabang logs in via `ADMIN_PATH` with email+password.
+1. Admin Wilayah/Wilayah logs in via `ADMIN_PATH` with email+password.
 2. Sanctum validates, creates session with `region_id` (kantor cabangnya).
 3. Admin navigates to "Kelola Karyawan" → list filtered to own cabang, toggle "Lihat cabang lain (read-only)" available.
 4. Clicks "Tambah Karyawan" → form Lengkap HR (NIK, NIP, golongan, jabatan, unit, status, foto, kontak).
@@ -350,9 +350,9 @@ The domain is registered with a DNS provider and configured to point to the VPS'
 
 ### Kantor Location & Radius Input Flow (Geofence Config)
 
-1. Super Admin (Makassar) navigates "Kelola Kantor/Cabang" → list 24 kantor (Pusat Makassar + 23 cabang se-Sulsel).
+1. Super Admin (Makassar) navigates "Kelola Kantor/Wilayah" → list 24 kantor (Kantor Pusat + 23 cabang se-Sulsel).
 2. For each kantor: form input **lokasi kantor** (lat, lng via map picker — Leaflet/Mapbox) + **radius absen (meter, 50–1000, default 200)** + alamat + kantor_name + tipe pusat/cabang.
-3. Admin Cabang navigates "Kantor Saya" → can **edit lokasi & radius kantornya sendiri** (own region) + view other kantor read-only.
+3. Admin Wilayah navigates "Kantor Saya" → can **edit lokasi & radius kantornya sendiri** (own region) + view other kantor read-only.
 4. On save → validates lat/lng range, radius 50–1000, updates `regions` table. Invalidate geofence cache.
 5. Karyawan absensi later validates against this kantor's lat/lng/radius_m — shows distance_m + "Dalam radius" / "Di luar radius" badge.
 
@@ -376,7 +376,7 @@ The domain is registered with a DNS provider and configured to point to the VPS'
 
 - **Three Roles:** Super Admin Pusat (all access, manages regions & admin wilayah), Admin Wilayah (CRUD own region employees, read all), Karyawan (own-data-only, NIK login, PWA).
 - **Multi-Guard:** `admin` guard (email) and `karyawan` guard (NIK) via Sanctum 4.x, separate session handling.
-- **Credentials:** Bcrypt hash in `users` (admin) and `employees` (karyawan password). NIK is UK, 16 digits.
+- **Credentials:** Bcrypt hash in `users` (admin) and `employees` (karyawan password). email is UK, unique.
 - **Session-Based Auth:** HTTP-only cookies, CSRF token required.
 - **Region Isolation:** Policies + global query scopes enforce `region_id` on all region-scoped models. Admin Wilayah writes blocked if `region_id` mismatch (403). Karyawan blocked from other employee_id.
 - **Rate Limiting:** Admin login, karyawan NIK login (5/15min per IP + per NIK), contact form, absensi spam throttled.

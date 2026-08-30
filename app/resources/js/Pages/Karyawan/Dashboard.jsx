@@ -54,15 +54,10 @@ export default function Dashboard() {
                 </div>
 
                 {/* Stats — with gold accent */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     <Link href="/karyawan/rekap" className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition">
                         <p className="text-xl font-semibold tracking-tight text-[#0F172A]">18</p>
                         <p className="text-xs text-[#64748B] mt-0.5">Hadir</p>
-                        <span className="mt-1.5 inline-block w-6 h-1 rounded-full bg-[#FCB833]"></span>
-                    </Link>
-                    <Link href="/karyawan/lembur" className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition">
-                        <p className="text-xl font-semibold tracking-tight text-[#0F172A]">6,5</p>
-                        <p className="text-xs text-[#64748B] mt-0.5">Jam lembur</p>
                         <span className="mt-1.5 inline-block w-6 h-1 rounded-full bg-[#FCB833]"></span>
                     </Link>
                     <Link href="/karyawan/pengumuman" className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center">
@@ -70,26 +65,15 @@ export default function Dashboard() {
                         <p className="text-xs text-[#64748B] mt-0.5">Info baru</p>
                     </Link>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                    <Link href="/karyawan/rekap" className="bg-[#FFF7E6] rounded-2xl p-4 flex items-center gap-3 hover:bg-[#FFEDCC] transition">
-                        <span className="w-9 h-9 rounded-xl bg-[#FCB833] flex items-center justify-center shrink-0">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
-                        </span>
-                        <div>
-                            <p className="font-semibold text-sm text-[#0F172A] leading-tight">Rekap bulanan</p>
-                            <p className="text-xs text-[#92400E]">Kalender • 90% hadir</p>
-                        </div>
-                    </Link>
-                    <Link href="/karyawan/lembur" className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
-                        <span className="w-9 h-9 rounded-xl bg-[#F1F5F9] flex items-center justify-center shrink-0">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                        </span>
-                        <div>
-                            <p className="font-semibold text-sm text-[#0F172A] leading-tight">Lembur</p>
-                            <p className="text-xs text-[#64748B]">6,5 jam • Dinas luar</p>
-                        </div>
-                    </Link>
-                </div>
+                <Link href="/karyawan/rekap" className="bg-[#FFF7E6] rounded-2xl p-4 flex items-center gap-3 hover:bg-[#FFEDCC] transition flex">
+                    <span className="w-9 h-9 rounded-xl bg-[#FCB833] flex items-center justify-center shrink-0">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+                    </span>
+                    <div>
+                        <p className="font-semibold text-sm text-[#0F172A] leading-tight">Rekap bulanan</p>
+                        <p className="text-xs text-[#92400E]">Kalender • 90% hadir</p>
+                    </div>
+                </Link>
 
 
             </div>

@@ -80,7 +80,7 @@ These features are valuable but can be deferred to post-launch iterations.
 | **Core Content Management** | 2 | Week 6–7 | WYSIWYG, Page/Blog/Portfolio/Team CRUD, Regions CRUD (Super Admin). |
 | **AWS S3 Integration & Media Library** | 3 | Week 8 | Media Library S3, transactional uploads, browsing. |
 | **SEO & Content Versioning** | 3 | Week 9 | Advanced SEO editor, version history with rollback. |
-| **HR Features Complete** | 4 | Week 10–11 | Absensi, Cuti, Rekap, Lembur, Pengumuman, Profil, Love. |
+| **HR Features Complete** | 4 | Week 10–11 | Absensi, Cuti, Rekap, Pengumuman, Profil, Love. |
 | **Karyawan PWA Core** | 5 | Week 12–13 | NIK login, profile own-data, absensi GPS+selfie + geofence, cuti form. |
 | **Karyawan PWA Extended** | 5 | Week 14–15 | pengumuman inbox, PWA manifest/SW/offline queue. |
 | **Testing & Security Audit** | 6 | Week 16 | Unit tests (>80% inc. region/own-data tests), integration, OWASP, geofence & rate limit tests, load test 1000+500. |
@@ -137,7 +137,7 @@ These are deliverables and artifacts that must be completed before or in paralle
 | **Client Content Not Ready on Time** | Medium | Medium | Establish content deadline 2 weeks before Phase 1 completion. Create placeholder content for development/testing. Use staging environment for client review and feedback. Implement content management workflow with version control. |
 | **Inertia.js / React Compatibility Issues** | Low | Low | Use stable, well-tested versions (React 19+, Inertia 2.x). Follow official Inertia + Laravel 13 documentation. Conduct spike testing in Week 1 for complex interactions. Maintain active monitoring of package updates and breaking changes. |
 | **Database Performance Bottlenecks** | Medium | Medium | Design schema with proper indexing from the start. Use query profiling tools (Laravel Debugbar, MySQL EXPLAIN). Implement pagination for all list views. Monitor slow query logs in production. Plan for database optimization in Phase 5. |
-| **Admin User Forgets Login Credentials** | Low | Medium | Implement password reset via email link (secure token-based). Provide admin with backup recovery codes during onboarding. Document password recovery procedure. Consider storing recovery codes in a secure location (client's password manager). |
+| **Admin User Forgets Login Credentials** | Low | Medium | Implement password reset via Admin (Admin Wilayah own region / Super Admin) (secure token-based). Provide admin with backup recovery codes during onboarding. Document password recovery procedure. Consider storing recovery codes in a secure location (client's password manager). |
 
 ---
 

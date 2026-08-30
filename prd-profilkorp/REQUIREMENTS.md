@@ -72,17 +72,17 @@ For critical pages (e.g., About Us, Service details), the system MUST save a his
 
 **FR-21: Global Settings Management + Jam Kerja Global**
 The system SHALL provide an interface to manage site-wide information: Company Name, Logo, Favicon, Contact Email, Phone Number, Address, Social Media Profile links, **and Global Working Hours**.
-*   Only Super Admin (Pusat Makassar) MUST be able to update global settings + jam kerja; Admin Wilayah read-only.
+*   Only Super Admin (Kantor Pusat) MUST be able to update global settings + jam kerja; Admin Wilayah read-only.
 *   Jam Kerja Global fields REQUIRED: `jam_masuk` (default 07:30 WITA), `jam_pulang` (default 16:00 WITA), `toleransi_late_menit` (default 15), `hari_kerja` (Senin-Jumat, default 5 hari). Stored in `global_settings` (keys: `jam_masuk`, `jam_pulang`, etc.) or `attendance_settings` table, cached with Redis. Timezone `Asia/Makassar` (WITA).
 *   Changes SHALL be immediately reflected: absensi next day uses new jam; PWA shows jam kerja di dashboard home.
 
 ### 1.3. Karyawan Mobile PWA (Employee Self-Service) — NEW
 
-**FR-22: Karyawan Authentication (NIK + Password, PWA)**
-The system SHALL provide dedicated mobile PWA login for Karyawan via NIK + password, using Laravel Sanctum with `employee` guard, region-scoped.
-*   Karyawan MUST log in via NIK (unique) + password (min 8) on mobile PWA (`/karyawan/login`, obfuscated not `/admin`).
+**FR-22: Karyawan & Admin Authentication (Email + Password, PWA)**
+The system SHALL provide dedicated login via **email + password untuk semua role** (Super Admin, Admin Wilayah, Karyawan) — bukan NIK. Menggunakan Laravel Sanctum dengan guard sesuai role, region-scoped untuk Admin Wilayah/Karyawan.
+*   Semua role MUST log in via email (unique) + password (min 8) (`/login` obfuscated per role).
 *   Invalid login SHALL return generic error + rate limit 5 failed /15min per IP + per NIK throttling.
-*   Session MUST contain `employee_id` + `region_id`; all queries auto-scoped to own employee_id. PWA manifest + service worker installable.
+*   Session MUST contain `user_id`/`employee_id` + `region_id`; all queries auto-scoped. PWA manifest + service worker installable. **Tidak ada self-service reset mandiri** — karyawan & Admin Wilayah password direset oleh admin di Admin Management; karyawan tidak dapat reset sendiri via email link.
 
 **FR-23: Karyawan Profile (View & Limited Edit, Own-Data-Only)**
 The system SHALL allow karyawan to view own Lengkap HR profile and edit limited fields.
@@ -96,12 +96,12 @@ The system SHALL allow Admin Wilayah to input/manage employee data for own Kabup
 *   Admin Wilayah MUST be able to Create/Read/Update/Delete employees **only where region_id == own region**. Can VIEW (read-only) employees of other regions with indicator "Read Only".
 *   Super Admin can CRUD all regions + manage Admin Wilayah accounts (assign region). All writes MUST be transactional + audited (admin_id, timestamp).
 
-**FR-25: Absensi GPS + Selfie + Jam Kerja Global (Mobile PWA, Geofenced)**
-The system SHALL provide check-in/out via mobile PWA with GPS + selfie + **global jam kerja** validation.
-*   Karyawan MUST be able to tap "Absen Masuk/Pulang" → browser requests GPS + camera → system validates **(1) lokasi**: lat/lng within `regions` kantor radius_m, **(2) waktu**: timestamp vs Global Jam Kerja (jam_masuk + toleransi → on_time/late, sebelum jam_pulang for out → early_leave) in WITA.
+**FR-25: Absensi GPS + Selfie + Jam Kerja Global (Mobile PWA, Geofenced Multi-Lokasi)**
+The system SHALL provide check-in/out via mobile PWA dengan validasi **1–3 lokasi kantor per wilayah** (tiap lokasi lat/lng + radius_m fleksibel).
+*   Karyawan MUST be able to tap "Absen Masuk/Pulang" → browser requests GPS + camera → system validates **(1) lokasi**: lat/lng within **salah satu** lokasi kantor di wilayahnya (distance ≤ radius_m lokasi terdekat), **(2) waktu**: timestamp vs Global Jam Kerja (jam_masuk + toleransi → on_time/late) in WITA.
 *   Selfie photo MUST be uploaded to S3 (`/attendance/{region_id}/{employee_id}/{date}/`), stored with timestamp, lat, lng, device info. Max 5MB, image only.
 *   Records: `employee_id`, `region_id`, `type` (in/out), `timestamp` (Asia/Makassar), `lat`, `lng`, `selfie_url`, `status` (on_time/late/early_leave), `distance_m`, `is_fake_gps` flag. Tidak ada out_of_range — di luar radius ditolak (422) tidak tercatat.
-*   Global jam: default `jam_masuk 07:30`, `jam_pulang 16:00`, `toleransi 15 menit`, `hari_kerja Senin-Jumat`. Super Admin editable via FR-21; all cabang share same jam. Non-hari_kerja absensi ditolak or flagged.
+*   Global jam: default `jam_masuk 07:30`, `jam_pulang 16:00`, `toleransi 15 menit`, `hari_kerja Senin-Jumat`. Super Admin editable via FR-21; all wilayah share same jam. Non-hari_kerja ditolak. **Mesti di dalam radius salah satu lokasi** — di luar semua radius ditolak 422.
 *   Admin Wilayah views attendance list for own region; Super Admin views all. Employee views own history paginated. Offline queue: store locally and sync when online — server validates waktu on sync (use server timestamp).
 
 **FR-26: Cuti Berjenjang (Multi-Level Approval)**
@@ -116,11 +116,10 @@ The system SHALL support announcements: Super Admin broadcast to all regions, Ad
 *   Karyawan MUST see inbox: combined global + own region announcements, sorted newest, with read/unread status (`announcement_reads` pivot).
 *   Admin Wilayah can CRUD only own region announcements (read all). Super Admin CRUD all. Push notification ready (PWA).
 
-**FR-28: Region/Cabang Management (Kantor BBWS PJ se-Sulsel + Geofence)**
-The system SHALL allow Super Admin to CRUD Kantor (Pusat Makassar + Cabang Kab/Kota se-Sulsel) with geofence config.
+**FR-28: Region/Wilayah Management (Kantor BBWS PJ se-Sulsel + Geofence)**
+The system SHALL allow Super Admin to CRUD Kantor (Kantor Pusat + Wilayah Kab/Kota se-Sulsel) with geofence config.
 *   Fields: name, slug (UK), kantor_name, tipe (pusat/cabang), lat, lng, radius_m (default 200m, 50–1000 range), address, is_active. Input via map picker.
-*   Super Admin CRUD all; Admin Wilayah can edit lat/lng/radius_m of own kantor only (own region_id), view others read-only. Karyawan linked to one region.
-*   Geofence config MUST be used server-side with global jam kerja to validate absensi; PWA shows distance + jam kerja. Di luar radius ditolak (tidak ada out_of_range).
+*   Super Admin CRUD all wilayah + lokasi (1–3 per wilayah); Admin Wilayah can edit lokasi & radius di wilayahnya sendiri (own region), view others read-only. Karyawan linked to one region, validasi terhadap lokasi terdekat di wilayahnya. Geofence per lokasi, di luar semua radius ditolak.
 
 **FR-29: PWA Mobile Experience (Installable, Offline-Capable)**
 The system SHALL deliver karyawan PWA that is installable, responsive 320px+, offline-capable.
@@ -128,17 +127,22 @@ The system SHALL deliver karyawan PWA that is installable, responsive 320px+, of
 *   App MUST be responsive mobile-first (320–767 default), touch 44px min, handle GPS/camera permission UX gracefully, display global jam kerja (07:30–16:00) + countdown to jam masuk/pulang.
 *   Lighthouse PWA score >90, install prompt, push notification infrastructure ready (VAPID keys in .env).
 
+**FR-32: Reset Password via Admin (Tanpa Self-Service)
+The system SHALL allow password reset hanya via Admin Management — tidak ada fitur lupa/reset mandiri untuk karyawan/Admin Wilayah.
+*   Karyawan: password direset oleh Admin Wilayah (own region) atau Super Admin — di tabel Karyawan → action Reset Password → generate token/link atau set password baru, kirim email ke karyawan. Audit log. Karyawan tidak dapat kirim link sendiri.
+*   Admin Wilayah: password direset oleh Super Admin — di tabel Admin Wilayah → Reset Password → email link ke admin_wilayah.
+
 **FR-30: Jam Kerja Global (Global, Super Admin Only)**
 The system SHALL have ONE global working hours config for all kantor cabang BBWS Pompengan Jeneberang.
 *   Fields: `jam_masuk` (TIME, default 07:30), `jam_pulang` (TIME, default 16:00), `toleransi_late_menit` (INT, default 15), `hari_kerja` (JSON array, default ["Senin","Selasa","Rabu","Kamis","Jumat"]), `timezone` (default Asia/Makassar WITA). Stored as `global_settings` keys or `attendance_settings` table, cached Redis, versioned.
 *   Only Super Admin Pusat (Makassar) can edit via Global Settings UI; Admin Wilayah/Karyawan read-only. Change affects absensi validation next day.
 *   Absensi logic: `check-in <= jam_masuk + toleransi → on_time`, `> jam_masuk+toleransi → late`, `check-out < jam_pulang → early_leave` (optional flag), `non-hari_kerja → rejected or flagged`. Time comparison in WITA, server-side. Di luar radius ditolak, tidak bisa pakai Love.
 
-**FR-31: Love System — 4 Hati / Bulan, Fleksibel, Dalam Radius, 1 Level Admin Cabang**
+**FR-31: Love System — 4 Hati / Bulan, Fleksibel, Dalam Radius, 1 Level Admin Wilayah**
 The system SHALL provide Love (4 hearts/month) as buffer untuk late dalam radius.
 *   Global config: `love_max_default` (INT 1–10, default 4) di `global_settings`/`attendance_settings`, diatur Super Admin, berlaku bulan depan, log, cached Redis. Reset bulanan `1st 00:00 WITA` via scheduled job: `love_sisa = love_max` per karyawan per bulan, track di `employee_love_balances` (employee_id, period YYYY-MM, love_sisa, love_max_at_period).
 *   Trigger: `attendances.status=late` DAN `distance_m <= radius_m` (dalam radius, selfie valid) → karyawan dapat ajukan **1 Love Claim** di hari yang sama dengan late (00:00–23:59 WITA) via PWA: `POST /api/karyawan/love-claims {attendance_id, alasan, dokumen}` (dokumen PDF/image max 5MB, alasan max 500).
-*   Approval 1 level: `Admin Cabang` (admin wilayah own region) `POST /api/admin/love-claims/{id}/approve` / `reject`. Approve → `love_sisa-1`, `attendances.status → excused_love` (di rekap dianggap on_time, tidak hitung late), `love_claims.status=approved`. Reject → tetap `late`. Di luar radius tidak ada claim (absen ditolak 422).
+*   Approval 1 level: `Admin Wilayah` (admin wilayah own region) `POST /api/admin/love-claims/{id}/approve` / `reject`. Approve → `love_sisa-1`, `attendances.status → excused_love` (di rekap dianggap on_time, tidak hitung late), `love_claims.status=approved`. Reject → tetap `late`. Di luar radius tidak ada claim (absen ditolak 422).
 *   Jika `love_sisa=0` → late tidak bisa di-excuse (tombol Gunakan Love disabled), tetap late + notifikasi Admin. Love tidak bisa minus, tidak bisa carry-over (reset tiap bulan).
 *   UI: Dashboard 4 dot gold #FCB833 (terisi/abu #E2E8F0), text "Sisa toleransi: 3/4", tombol "Gunakan Love" pada late pending claim, history Love Claims di Rekap.
 

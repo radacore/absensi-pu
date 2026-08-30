@@ -12,7 +12,7 @@ X-CSRF-TOKEN: <token>
 
 **Authorization Levels:**
 - **Admin:** Requires `auth:admin` session. Roles: `super_admin` (all regions) and `admin_wilayah` (scoped to `region_id`, write own region only, read all).
-- **Karyawan:** Requires `auth:karyawan` session via NIK + password. Own-data-only: can only access own employee_id data. Rate-limited per NIK + IP.
+- **Karyawan:** Requires `auth:karyawan` session via email + password. Own-data-only: can only access own employee_id data. Rate-limited per email + IP.
 
 ## Standard Response & Pagination Formats
 
@@ -129,10 +129,10 @@ X-CSRF-TOKEN: <token>
 ```
 - **Status Codes:** 200 (OK), 401 (Unauthorized), 500 (Server Error)
 
-#### List Regions / Kantor Cabang (BBWS Pompengan Jeneberang)
+#### List Regions / Kantor Wilayah (BBWS Pompengan Jeneberang)
 - **Method:** `GET`
 - **Path:** `/api/admin/regions`
-- **Description:** Retrieve all kantor (Pusat Makassar + Cabang Kab/Kota se-Sulsel) with lokasi & radius. Admin Wilayah can view all, but edit only own.
+- **Description:** Retrieve all kantor (Kantor Pusat + Wilayah Kab/Kota se-Sulsel) with lokasi & radius. Admin Wilayah can view all, but edit only own.
 - **Auth Level:** Admin
 - **Request Body:** None
 - **Response Body:**
@@ -158,10 +158,10 @@ X-CSRF-TOKEN: <token>
 ```
 - **Status Codes:** 200 (OK), 401/403, 500
 
-#### Create Kantor/Cabang (Super Admin Only)
+#### Create Kantor/Wilayah (Super Admin Only)
 - **Method:** `POST`
 - **Path:** `/api/admin/regions`
-- **Description:** Create kantor cabang baru. Only Super Admin Pusat (Makassar). Input lokasi via map picker + radius.
+- **Description:** Create wilayah / lokasi kantor baru (1–3 per wilayah). Only Super Admin. Input tiap lokasi via map picker + radius fleksibel.
 - **Auth Level:** Admin (super_admin)
 - **Request Body:**
 ```json
@@ -1623,7 +1623,7 @@ X-CSRF-TOKEN: <token>
 #### Create Employee (Region-Scoped)
 - **Method:** `POST`
 - **Path:** `/api/admin/employees`
-- **Description:** Create employee. Admin Wilayah auto-sets region_id to own region; Super Admin must specify region_id. NIK 16 digits unique, NIP unique if provided.
+- **Description:** Create employee. Admin Wilayah auto-sets region_id to own region; Super Admin must specify region_id. emails unique, NIP unique if provided.
 - **Auth Level:** Admin
 - **Request Body:**
 ```json
@@ -1707,12 +1707,12 @@ X-CSRF-TOKEN: <token>
 - **Response Body (Rejected - Out of Radius):** `422` with `error: out_of_radius`, `message: "Di luar radius kantor, tidak dapat absen"` — tidak ada status out_of_range, langsung ditolak.
 - **Status Codes:** 201 (Created), 422 (validation/geofence - di luar radius ditolak), 429, 500
 
-### Love Claim Management (4 Hati — Dalam Radius, 1 Level Admin Cabang)
+### Love Claim Management (4 Hati — Dalam Radius, 1 Level Admin Wilayah)
 
 #### List Love Claims (Admin — Own Region)
 - **Method:** `GET`
 - **Path:** `/api/admin/love-claims`
-- **Description:** List Love Claims pending. Admin Cabang sees own region only (distance cek: hanya late dalam radius yang bisa claim, out_of_radius tidak ada claim). Super Admin sees all.
+- **Description:** List Love Claims pending. Admin Wilayah sees own region only (distance cek: hanya late dalam radius yang bisa claim, out_of_radius tidak ada claim). Super Admin sees all.
 - **Auth Level:** Admin
 - **Query Parameters:** `page=1`, `per_page=15`, `status=null` (pending|approved|rejected), `region_id=null`
 - **Status Codes:** 200, 401/403, 500
@@ -1759,17 +1759,17 @@ X-CSRF-TOKEN: <token>
 {
   "success": true,
   "data": { "id": "integer", "status": "pending", "love_sisa": "integer" },
-  "message": "Love claim diajukan, menunggu approval Admin Cabang"
+  "message": "Love claim diajukan, menunggu approval Admin Wilayah"
 }
 ```
 - **Response Body (Rejected — Di Luar Radius):** `422` `{ "success": false, "error": "out_of_radius", "message": "Absen di luar radius tidak dapat pakai Love" }`
 - **Response Body (No Love):** `422` `{ "error": "no_love", "message": "Sisa Love 0, tidak dapat ajukan" }`
 - **Status Codes:** 201 (Created), 422 (validation/out_of_radius/no_love/duplicate/window), 429, 500
 
-#### Approve/Reject Love Claim (Admin Cabang — 1 Level)
+#### Approve/Reject Love Claim (Admin Wilayah — 1 Level)
 - **Method:** `POST`
 - **Path:** `/api/admin/love-claims/{id}/approve` and `/api/admin/love-claims/{id}/reject`
-- **Description:** 1 level approval by Admin Cabang own region. Checks: claim.region_id == admin.region_id, claim.status=pending, attendance still late. On approve: love_sisa-1, attendance.status → excused_love, claim.status=approved. On reject: claim.status=rejected, love not deducted. Notifications to karyawan.
+- **Description:** 1 level approval by Admin Wilayah own region. Checks: claim.region_id == admin.region_id, claim.status=pending, attendance still late. On approve: love_sisa-1, attendance.status → excused_love, claim.status=approved. On reject: claim.status=rejected, love not deducted. Notifications to karyawan.
 - **Auth Level:** Admin (admin_wilayah own region; super_admin can also approve any but primary is admin cabang)
 - **Request Body (optional):** `{ "notes": "string (optional, max 500)" }`
 - **Status Codes:** 200, 403 (wrong region), 404, 409 (already processed), 500
@@ -1823,6 +1823,20 @@ X-CSRF-TOKEN: <token>
 - **Description:** Detail with approval timeline. Karyawan can only view own.
 - **Auth Level:** Admin (region check) | Karyawan (own)
 - **Status Codes:** 200, 403, 404, 500
+
+#### Reset Password Admin Wilayah (Super Admin)
+- **Method:** `POST`
+- **Path:** `/api/admin/admin-users/{id}/reset-password`
+- **Description:** Reset password Admin Wilayah — hanya Super Admin.
+- **Auth Level:** Admin (super_admin)
+- **Status Codes:** 200, 403, 404, 500
+
+#### Forgot Password Karyawan (Email)
+- **Method:** `POST`
+- **Path:** `/api/karyawan/forgot-password`
+- **Description:** Karyawan request reset via email.
+- **Auth Level:** Public
+- **Status Codes:** 200, 422, 500
 
 ### Announcement Management (Pengumuman)
 
@@ -1894,16 +1908,16 @@ X-CSRF-TOKEN: <token>
 
 ### Karyawan PWA Auth & Profile
 
-#### Karyawan Login (NIK + Password)
+#### Karyawan Login (Email + Password)
 - **Method:** `POST`
 - **Path:** `/api/karyawan/login`
-- **Description:** Login karyawan via NIK. Rate-limited per NIK + IP. Returns session cookie (Sanctum karyawan guard) + karyawan data.
+- **Description:** Login via email untuk semua role. Rate-limited per email + IP. Returns session cookie (Sanctum karyawan guard) + karyawan data.
 - **Auth Level:** Public
-- **Rate Limit:** 5 failed attempts per 15 minutes per IP + per NIK
+- **Rate Limit:** 5 failed attempts per 15 minutes per IP + per email
 - **Request Body:**
 ```json
 {
-  "nik": "string (required, 16 digits)",
+  "email": "string (required, valid email)",
   "password": "string (required, min 8)"
 }
 ```
@@ -2010,7 +2024,7 @@ The following endpoints are rate-limited to prevent abuse:
 | Endpoint | Limit | Window |
 |:---|:---|:---|
 | `POST /api/admin/login` | 5 failed attempts | 15 minutes per IP |
-| `POST /api/karyawan/login` | 5 failed attempts | 15 minutes per IP + per NIK |
+| `POST /api/karyawan/login` | 5 failed attempts | 15 minutes per IP + per email |
 | `POST /api/karyawan/attendances` | 10 requests | 1 hour per employee |
 | `POST /api/karyawan/love-claims` | 4 requests | 1 month per employee (max love) |
 | `POST /api/public/contact` | 5 requests | 1 hour per IP |

@@ -330,7 +330,7 @@ The administrator navigates to the Page Content Management section and edits a s
 | No | Actor | Action | System Response |
 |:---|:---|:---|:---|
 | 1 | Karyawan | Buka `/karyawan/login` (PWA, obfuscated) | Render login NIK+password (React PWA, 320px+) |
-| 2 | Karyawan | Input NIK 16 digit + password, tap Login | POST `/api/karyawan/login` with CSRF, rate limit 5/15min per NIK+IP |
+| 2 | Karyawan | Input email + password, tap Login | POST `/api/karyawan/login` with CSRF, rate limit 5/15min per NIK+IP |
 | 3 | System | Validate NIK exists, bcrypt check, create Sanctum karyawan session with region_id | Set HttpOnly cookie, return employee + region |
 | 4 | System | Redirect to `/karyawan` dashboard (PWA) | Show bottom nav: Home, Absensi, Cuti, Pengumuman, Profil |
 
@@ -365,9 +365,9 @@ The administrator navigates to the Page Content Management section and edits a s
 | No | Actor | Action | System Response |
 |:---|:---|:---|:---|
 | 1 | Karyawan | Late 07:52 (12m dalam radius, status=late), lihat badge late di Rekap | PWA tampilkan 4 dot gold 3/4 sisa, tombol "Gunakan Love" aktif (karena dalam radius) |
-| 2 | Karyawan | Tap "Gunakan Love" → isi alasan + upload dokumen, submit | POST /api/karyawan/love-claims (attendance_id, alasan, dokumen) — validasi hari yang sama, love_sisa>0, belum ada claim |
+| 2 | Karyawan | Tap "Gunakan Love" → isi alasan + upload dokumen (hari beda boleh, bulan sama), submit | POST /api/karyawan/love-claims (attendance_id, alasan, dokumen) — validasi hari yang sama, love_sisa>0, belum ada claim |
 | 3 | System | Validate & upload dokumen S3 /love-claims/... + insert pending | Return pending, love_sisa masih 3 (belum deduct) |
-| 4 | Admin Cabang | Lihat queue Love Claims pending own region, review dokumen | Tap Approve → love_sisa 3→2, attendance status late→excused_love, claim approved |
+| 4 | Admin Wilayah | Lihat queue Love Claims pending own region, review dokumen | Tap Approve → love_sisa 3→2, attendance status late→excused_love, claim approved |
 | 5 | System | Notifikasi ke karyawan: Love disetujui, rekap late jadi excused | PWA update dot tetap 2/4 sisa, history claim approved |
 
 > Di luar radius: tombol Gunakan Love disabled, tidak ada claim, absen ditolak 422.

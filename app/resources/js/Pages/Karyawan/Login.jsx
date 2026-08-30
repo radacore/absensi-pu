@@ -21,13 +21,13 @@ export default function Login() {
 
                     <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                         <div>
-                            <label htmlFor="nik" className="text-xs font-medium text-[#334155]">NIK</label>
+                            <label htmlFor="email" className="text-xs font-medium text-[#334155]">Email</label>
                             <input
-                                id="nik"
-                                inputMode="numeric"
+                                id="email"
+                                type="email"
                                 value={nik}
-                                onChange={(e) => setNik(e.target.value.replace(/\D/g, '').slice(0, 16))}
-                                placeholder="7371 00 • • • • • • • • • • • •"
+                                onChange={(e) => setNik(e.target.value)}
+                                placeholder="nama@bbws-pj.go.id"
                                 className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
                             />
                         </div>
@@ -49,6 +49,7 @@ export default function Login() {
                         <Link href="/karyawan" className="block w-full text-center bg-[#0F172A] text-white rounded-xl py-3.5 text-sm font-semibold hover:bg-[#1E3A8A] transition">
                             Masuk
                         </Link>
+                        <p className="text-center text-xs text-[#94A3B8]">Lupa kata sandi? Hubungi Admin Wilayah atau Super Admin untuk reset.</p>
                         <p className="text-center text-xs text-[#94A3B8]">Akses khusus karyawan BBWS Pompengan Jeneberang</p>
                     </form>
                 </div>
