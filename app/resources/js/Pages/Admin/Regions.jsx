@@ -1,5 +1,5 @@
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadRegions, loadEmployees, saveRegions, getBase, OWN_REGION, MAX_SITES } from './_shared';
 
@@ -23,6 +23,7 @@ export default function Regions() {
     // tambah titik per 1 — dedicated single-site flow with maps
     const [addSiteFor, setAddSiteFor] = useState(null); // region id
     const [siteForm, setSiteForm] = useState(emptySite);
+    const [confirmDeleteSite, setConfirmDeleteSite] = useState(null);
     const siteMapRef = useRef(null);
     const siteLeafletRef = useRef(null);
 
@@ -151,15 +152,18 @@ export default function Regions() {
         const lat = Number(siteForm.lat), lng = Number(siteForm.lng), radius = Number(siteForm.radius);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) { showToast('Pilih titik di peta / isi lat lng'); return; }
         if (radius < 50 || radius > 1000) { showToast('Radius 50–1000m'); return; }
+        const newId = Date.now();
+        const regionId = addSiteFor.id;
         setRegions((prev) => {
-            const next = prev.map((r) => r.id !== addSiteFor.id ? r : {
+            const next = prev.map((r) => r.id !== regionId ? r : {
                 ...r,
-                locations: [...r.locations, { id: Date.now(), nama_lokasi: siteForm.nama_lokasi.trim(), lat, lng, radius, address: siteForm.address.trim() }]
+                locations: [...r.locations, { id: newId, nama_lokasi: siteForm.nama_lokasi.trim(), lat, lng, radius, address: siteForm.address.trim() }]
             });
             saveRegions(next); return next;
         });
         closeAddSite();
-        showToast('Titik ditambah — kelola anggota di halaman titik');
+        showToast('Titik ditambah — membuka halaman titik untuk tambah anggota...');
+        setTimeout(() => router.visit(`${base}/regions/${regionId}/sites/${newId}`), 400);
     };
 
     const handleDeleteSite = (regionId, siteId) => {
@@ -167,6 +171,13 @@ export default function Regions() {
         if (!region) return;
         if (isWilayah && region.name !== OWN_REGION) { showToast('Hanya own region'); return; }
         if (region.locations.length <= 1) { showToast('Minimal 1 titik per wilayah'); return; }
+        const nAnggota = employees.filter((e) => e.office_location_id === siteId).length;
+        const siteName = region.locations.find((s) => s.id === siteId)?.nama_lokasi || 'titik ini';
+        setConfirmDeleteSite({ regionId, siteId, siteName, nAnggota, regionName: region.name });
+    };
+    const confirmDeleteSiteAction = () => {
+        if (!confirmDeleteSite) return;
+        const { regionId, siteId } = confirmDeleteSite;
         setRegions((prev) => {
             const next = prev.map((r) => r.id !== regionId ? r : { ...r, locations: r.locations.filter((s) => s.id !== siteId) });
             saveRegions(next); return next;
@@ -176,7 +187,8 @@ export default function Regions() {
             const nextEmps = emps.map((e) => e.office_location_id === siteId ? { ...e, office_location_id: null } : e);
             se(nextEmps); setEmployees(nextEmps);
         });
-        showToast('Titik dihapus — anggota titik tersebut di-unassign');
+        showToast(confirmDeleteSite.nAnggota > 0 ? `Titik ${confirmDeleteSite.siteName} dihapus — ${confirmDeleteSite.nAnggota} anggota jadi Tanpa titik (tidak bisa absen)` : `Titik ${confirmDeleteSite.siteName} dihapus`);
+        setConfirmDeleteSite(null);
     };
 
     const countForSite = (siteId) => employees.filter((e) => e.office_location_id === siteId).length;
@@ -223,7 +235,7 @@ export default function Regions() {
                                                                 </Link>
                                                                 <div className="flex items-center gap-1 shrink-0">
                                                                     <Link href={`${base}/regions/${r.id}/sites/${s.id}`} className="text-xs font-medium text-[#1E3A8A] bg-[#EFF6FF] px-2.5 py-1 rounded-lg">Kelola</Link>
-                                                                    {canEditRegion && <button type="button" onClick={() => handleDeleteSite(r.id, s.id)} className="text-xs text-[#991B1B] bg-[#FEF2F2] px-2 py-1 rounded-lg">Hapus</button>}
+                                                                    {canEditRegion && <button type="button" onClick={() => handleDeleteSite(r.id, s.id)} title={`Hapus ${s.nama_lokasi}${countForSite(s.id) > 0 ? ` — ${countForSite(s.id)} anggota akan jadi Tanpa titik` : ''}`} className="text-xs text-[#991B1B] bg-[#FEF2F2] px-2 py-1 rounded-lg">Hapus</button>}
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -329,6 +341,21 @@ export default function Regions() {
                                     <button type="button" onClick={handleSaveSite} className="flex-1 rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Simpan Titik</button>
                                 </div>
                                 <p className="text-xs text-[#94A3B8] text-center">Setelah simpan, buka Kelola → halaman titik untuk atur anggota (karyawan per titik saja).</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {confirmDeleteSite && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDeleteSite(null)}>
+                        <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="px-6 py-4">
+                                <h3 className="font-semibold text-[#0F172A]">Hapus {confirmDeleteSite.siteName}?</h3>
+                                <p className="text-sm text-[#64748B] mt-2">{confirmDeleteSite.regionName} • {confirmDeleteSite.nAnggota > 0 ? <span className="font-semibold text-[#991B1B]">{confirmDeleteSite.nAnggota} anggota akan jadi Tanpa titik — tidak bisa absen (422)</span> : 'Tidak ada anggota di titik ini.'}</p>
+                            </div>
+                            <div className="px-6 pb-5 flex gap-2">
+                                <button type="button" onClick={() => setConfirmDeleteSite(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
+                                <button type="button" onClick={confirmDeleteSiteAction} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus titik</button>
                             </div>
                         </div>
                     </div>

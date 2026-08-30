@@ -36,7 +36,19 @@ export default function CutiAdmin() {
         document.addEventListener('visibilitychange', onVis);
         return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); };
     }, []);
-    useEffect(() => { setSiteFilter('Semua'); }, [wilayah]);
+    useEffect(() => {
+        if (siteFilter === 'Semua' || siteFilter === '__null') return;
+        const validIds = (() => {
+            if (isWilayah) {
+                const r = regionsData.find((x) => x.name === OWN_REGION);
+                return new Set((r?.locations || []).map((s) => String(s.id)));
+            }
+            if (wilayah === 'Semua') return new Set();
+            const r = regionsData.find((x) => x.name === wilayah);
+            return new Set((r?.locations || []).map((s) => String(s.id)));
+        })();
+        if (!validIds.has(String(siteFilter))) setSiteFilter('Semua');
+    }, [wilayah, siteFilter, regionsData, isWilayah]);
     const sitesForWilayah = useMemo(() => {
         if (isWilayah) { const r = regionsData.find((x) => x.name === OWN_REGION); return r ? r.locations : []; }
         if (wilayah === 'Semua') return [];
@@ -85,9 +97,9 @@ export default function CutiAdmin() {
                     )}
                     <select value={siteFilter} onChange={(e)=>setSiteFilter(e.target.value)} className="rounded-xl bg-[#FFF7E6] border border-[#FCB833]/20 px-3 py-2 text-sm outline-none min-w-[160px]">
                         <option value="Semua">Semua titik</option>
-                        <option value="__null">Tanpa titik</option>
+                        <option value="__null">Tanpa titik {isWilayah ? '' : '(semua wilayah)'} </option>
                         {sitesForWilayah.map((s)=><option key={s.id} value={String(s.id)}>{s.nama_lokasi} • {s.radius}m</option>)}
-                        {!isWilayah && wilayah==='Semua' && <option disabled>— pilih wilayah untuk titik</option>}
+                        {!isWilayah && wilayah==='Semua' && <option disabled>— pilih wilayah untuk titik spesifik</option>}
                     </select>
                     <select value={status} onChange={(e)=>setStatus(e.target.value)} className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none">
                         <option value="Semua">Semua status</option>

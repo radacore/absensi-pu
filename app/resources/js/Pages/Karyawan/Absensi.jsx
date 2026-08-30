@@ -85,16 +85,16 @@ export default function Absensi() {
                                 <p className="text-xs text-[#94A3B8] mt-1">07:42 WITA • {assigned.region.name} • {assigned.site.nama_lokasi}</p>
                                 <div className="flex gap-2 justify-center mt-4">
                                     <button type="button" onClick={() => setCaptured(false)} className="rounded-xl bg-white shadow-sm px-4 py-2 text-sm font-medium text-[#334155]">Ulangi</button>
-                                    <button type="button" disabled={!inRadius} className={`rounded-xl px-5 py-2 text-sm font-semibold ${inRadius ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}>Kirim absen masuk</button>
+                                    <button type="button" disabled={!inRadius} title={!inRadius ? `${demoJarak} m / ${assigned.site.radius} m — di luar radius titik assigned, geser dalam radius untuk absen` : ''} className={`rounded-xl px-5 py-2 text-sm font-semibold ${inRadius ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}>Kirim absen masuk</button>
                                 </div>
                             </div>
                         )}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button type="button" disabled={tanpaTitik} className={`rounded-xl py-3 text-sm font-medium ${tanpaTitik ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#F8FAFC] text-[#334155]'}`}>Absen pulang</button>
-                        <button type="button" disabled={tanpaTitik || (captured && !inRadius)} className={`rounded-xl py-3 text-sm font-semibold ${tanpaTitik || (captured && !inRadius) ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
+                        <button type="button" disabled={tanpaTitik} title={tanpaTitik ? 'Tanpa titik — hubungi Admin untuk assign titik (422)' : ''} className={`rounded-xl py-3 text-sm font-medium ${tanpaTitik ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#F8FAFC] text-[#334155]'}`}>Absen pulang</button>
+                        <button type="button" disabled={tanpaTitik || (captured && !inRadius)} title={tanpaTitik ? 'Tanpa titik — tidak bisa absen (422)' : captured && !inRadius ? `${demoJarak} m / ${assigned.site.radius} m — di luar radius, geser dalam radius` : ''} className={`rounded-xl py-3 text-sm font-semibold ${tanpaTitik || (captured && !inRadius) ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{tanpaTitik ? 'Tanpa titik tidak dapat absen (422)' : `Di luar radius ${assigned.site.radius} m titik assigned tidak dapat absen — tombol terkunci otomatis`}</p>
+                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{tanpaTitik ? 'Tanpa titik tidak dapat absen (422) — minta Admin assign di halaman titik' : captured && !inRadius ? `${demoJarak} m / ${assigned.site.radius} m — di luar radius ${assigned.site.nama_lokasi}, tidak dapat absen` : `Di luar radius ${assigned.site.radius} m titik assigned tidak dapat absen — tombol terkunci otomatis`}</p>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">

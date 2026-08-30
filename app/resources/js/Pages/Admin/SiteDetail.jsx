@@ -18,6 +18,8 @@ export default function SiteDetail({ regionId, siteId }) {
     const [moveOpen, setMoveOpen] = useState(null); // employee to move
     const [addOpen, setAddOpen] = useState(false);
     const [addQ, setAddQ] = useState('');
+    const [selectedIds, setSelectedIds] = useState(() => new Set());
+    const [confirmRemove, setConfirmRemove] = useState(null);
     const mapRef = useRef(null);
     const leafletRef = useRef(null);
 
@@ -110,18 +112,44 @@ export default function SiteDetail({ regionId, siteId }) {
             const next = prev.map((e) => e.id === empId ? { ...e, office_location_id: null } : e);
             saveEmployees(next); return next;
         });
-        showToast('Karyawan dikeluarkan dari titik');
+        setConfirmRemove(null);
+        showToast('Karyawan dikeluarkan dari titik — jadi Tanpa titik (tidak bisa absen)');
     };
 
     const handleAssign = (empId) => {
         if (!canEdit) return;
-        // 1 karyawan = 1 titik: jika sudah ada titik, replace ke titik ini (pindah). Untuk tambah dari pool null, langsung assign.
         setEmployees((prev) => {
             const next = prev.map((e) => e.id === empId ? { ...e, office_location_id: site.id } : e);
             saveEmployees(next); return next;
         });
-        setAddOpen(false); setAddQ('');
+        setSelectedIds((prev) => { const n = new Set(prev); n.delete(empId); return n; });
         showToast('Karyawan ditambahkan ke titik');
+    };
+
+    const toggleSelect = (id) => {
+        setSelectedIds((prev) => {
+            const n = new Set(prev);
+            if (n.has(id)) n.delete(id); else n.add(id);
+            return n;
+        });
+    };
+    const toggleSelectAll = () => {
+        if (selectedIds.size === kandidatTambah.length) setSelectedIds(new Set());
+        else setSelectedIds(new Set(kandidatTambah.map((e) => e.id)));
+    };
+    const handleBulkAssign = () => {
+        if (!canEdit || selectedIds.size === 0) return;
+        setEmployees((prev) => {
+            const next = prev.map((e) => selectedIds.has(e.id) ? { ...e, office_location_id: site.id } : e);
+            saveEmployees(next); return next;
+        });
+        const n = selectedIds.size;
+        setSelectedIds(new Set());
+        setAddOpen(false); setAddQ('');
+        showToast(`${n} karyawan ditambahkan ke titik`);
+    };
+    const handleConfirmRemove = () => {
+        if (confirmRemove) handleRemoveFromSite(confirmRemove.id);
     };
 
     const handleMove = (targetSiteId) => {
@@ -230,7 +258,7 @@ export default function SiteDetail({ regionId, siteId }) {
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex gap-1 justify-end">
                                                 <button type="button" onClick={() => setMoveOpen(e)} className="text-xs font-medium text-[#1E3A8A] bg-[#EFF6FF] px-3 py-1.5 rounded-lg">Pindah</button>
-                                                <button type="button" onClick={() => handleRemoveFromSite(e.id)} className="text-xs font-medium text-[#991B1B] bg-[#FEF2F2] px-3 py-1.5 rounded-lg">Keluarkan</button>
+                                                <button type="button" onClick={() => setConfirmRemove(e)} title="Keluarkan → jadi Tanpa titik (tidak bisa absen)" className="text-xs font-medium text-[#991B1B] bg-[#FEF2F2] px-3 py-1.5 rounded-lg">Keluarkan</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -286,29 +314,60 @@ export default function SiteDetail({ regionId, siteId }) {
                 )}
 
                 {addOpen && (
-                    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setAddOpen(false)}>
+                    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setAddOpen(false); setSelectedIds(new Set()); }}>
                         <div className="bg-white rounded-2xl w-full max-w-[520px] max-h-[80vh] overflow-hidden shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4 border-b shrink-0">
                                 <h3 className="font-semibold text-[#0F172A]">Tambah Anggota ke {site.nama_lokasi}</h3>
-                                <p className="text-xs text-[#64748B]">Hanya karyawan own region tanpa titik ({region.name}) — 1 karyawan = 1 titik.</p>
+                                <p className="text-xs text-[#64748B]">Hanya karyawan own region tanpa titik ({region.name}) — 1 karyawan = 1 titik. Pilih beberapa sekaligus.</p>
                                 <input value={addQ} onChange={(e) => setAddQ(e.target.value)} placeholder="Cari nama / email / NIK..." className="mt-3 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                                {kandidatTambah.length > 0 && (
+                                    <div className="mt-3 flex items-center justify-between">
+                                        <label className="flex items-center gap-2 text-xs font-medium text-[#334155] cursor-pointer">
+                                            <input type="checkbox" checked={selectedIds.size === kandidatTambah.length && kandidatTambah.length > 0} onChange={toggleSelectAll} className="rounded border-[#CBD5E1]" /> Pilih semua ({kandidatTambah.length})
+                                        </label>
+                                        <span className="text-xs text-[#64748B]">{selectedIds.size} dipilih</span>
+                                    </div>
+                                )}
                             </div>
                             <div className="overflow-y-auto flex-1 divide-y divide-[#F1F5F9]">
                                 {kandidatTambah.map((e) => (
-                                    <div key={e.id} className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-[#F8FAFC]">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <img src={e.foto} alt={e.nama} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium text-[#0F172A] truncate">{e.nama}</p>
-                                                <p className="text-xs text-[#64748B] truncate">{e.email} • {e.jabatan}</p>
-                                            </div>
+                                    <label key={e.id} className="px-4 py-3 flex items-center gap-3 hover:bg-[#F8FAFC] cursor-pointer">
+                                        <input type="checkbox" checked={selectedIds.has(e.id)} onChange={() => toggleSelect(e.id)} className="rounded border-[#CBD5E1] shrink-0" />
+                                        <img src={e.foto} alt={e.nama} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium text-[#0F172A] truncate">{e.nama}</p>
+                                            <p className="text-xs text-[#64748B] truncate">{e.email} • {e.jabatan}</p>
                                         </div>
-                                        <button type="button" onClick={() => handleAssign(e.id)} className="shrink-0 text-xs font-semibold bg-[#0F172A] text-white px-3 py-1.5 rounded-lg">Tambah</button>
-                                    </div>
+                                        <button type="button" onClick={(ev) => { ev.preventDefault(); handleAssign(e.id); }} className="shrink-0 text-xs font-semibold bg-white border border-[#E2E8F0] text-[#0F172A] px-3 py-1.5 rounded-lg hover:bg-[#F8FAFC]">+1</button>
+                                    </label>
                                 ))}
-                                {kandidatTambah.length === 0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada kandidat — semua karyawan {region.name} sudah punya titik, atau filter tidak cocok.</p>}
+                                {kandidatTambah.length === 0 && (
+                                    <div className="py-8 px-6 text-center">
+                                        <p className="text-sm text-[#94A3B8]">Tidak ada kandidat — semua karyawan {region.name} sudah punya titik, atau filter tidak cocok.</p>
+                                        <Link href={`${base}/employees`} className="mt-3 inline-block text-xs font-semibold bg-[#0F172A] text-white px-4 py-2 rounded-xl">+ Buat karyawan baru di {region.name} →</Link>
+                                    </div>
+                                )}
                             </div>
-                            <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">Sudah punya titik? Gunakan tombol Pindah di tabel anggota.</div>
+                            <div className="px-4 py-3 flex items-center justify-between gap-2 border-t bg-white shrink-0">
+                                <p className="text-xs text-[#64748B]">{selectedIds.size === 0 ? 'Centang beberapa, atau +1 per baris' : `${selectedIds.size} akan ditambah ke ${site.nama_lokasi}`}</p>
+                                <button type="button" onClick={handleBulkAssign} disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? 'Pilih minimal 1 karyawan' : `Tambah ${selectedIds.size} ke titik`} className={`text-sm font-semibold px-4 py-2 rounded-xl shrink-0 ${selectedIds.size === 0 ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Tambah ({selectedIds.size})</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {confirmRemove && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmRemove(null)}>
+                        <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="px-6 py-4">
+                                <h3 className="font-semibold text-[#0F172A]">Keluarkan {confirmRemove.nama}?</h3>
+                                <p className="text-sm text-[#64748B] mt-2">Akan jadi <span className="font-semibold text-[#991B1B]">Tanpa titik</span> — tidak bisa absen (422) & Love ditolak sampai di-assign lagi ke titik di {region.name}.</p>
+                                <p className="text-xs text-[#94A3B8] mt-2">Dari: {site.nama_lokasi} • {site.radius} m</p>
+                            </div>
+                            <div className="px-6 pb-5 flex gap-2">
+                                <button type="button" onClick={() => setConfirmRemove(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
+                                <button type="button" onClick={handleConfirmRemove} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, keluarkan</button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -331,7 +390,7 @@ export default function SiteDetail({ regionId, siteId }) {
                                         <span className="text-xs font-semibold text-[#1E3A8A]">Pindah →</span>
                                     </button>
                                 ))}
-                                <button type="button" onClick={() => handleRemoveFromSite(moveOpen.id)} className="w-full mt-2 rounded-xl bg-[#FEF2F2] text-[#991B1B] py-2.5 text-sm font-semibold">Keluarkan (tanpa titik)</button>
+                                <button type="button" onClick={() => { setMoveOpen(null); setConfirmRemove(moveOpen); }} className="w-full mt-2 rounded-xl bg-[#FEF2F2] text-[#991B1B] py-2.5 text-sm font-semibold">Keluarkan (tanpa titik)</button>
                             </div>
                         </div>
                     </div>

@@ -105,7 +105,7 @@ export default function Love() {
                                             <p className="text-sm font-medium text-[#0F172A]">{l.tgl} • {l.jam}</p>
                                             <p className={`text-xs ${ok ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{l.jarak} m / {assigned.site.radius} m • {assigned.site.nama_lokasi} • {ok ? 'dalam radius' : 'di luar radius — tidak bisa'}</p>
                                         </div>
-                                        <button type="button" onClick={() => ok && setSelected(l)} disabled={!ok} className={`rounded-xl px-3 py-2 text-xs font-semibold shrink-0 ${!ok ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : selected?.id === l.id ? 'bg-[#0F172A] text-white' : 'bg-[#FCB833] text-[#0F172A]'}`}>
+                                        <button type="button" onClick={() => ok && setSelected(l)} disabled={!ok} title={!ok ? `${l.jarak} m / ${assigned.site.radius} m — di luar radius titik assigned, tidak bisa pakai Love` : ''} className={`rounded-xl px-3 py-2 text-xs font-semibold shrink-0 ${!ok ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : selected?.id === l.id ? 'bg-[#0F172A] text-white' : 'bg-[#FCB833] text-[#0F172A]'}`}>
                                             {!ok ? 'Di luar' : selected?.id === l.id ? 'Dipilih' : 'Pilih'}
                                         </button>
                                     </div>
@@ -125,7 +125,7 @@ export default function Love() {
                                 <input id="dok" type="file" onChange={(e) => setDokumen(e.target.files?.[0] || null)} className="mt-1.5 w-full text-xs text-[#64748B] file:mr-3 file:rounded-lg file:border-0 file:bg-[#0F172A] file:text-white file:px-3 file:py-1.5 file:text-xs file:font-medium" />
                                 {dokumen && <p className="text-xs text-[#10B981] mt-1">Terpilih: {dokumen.name}</p>}
                             </div>
-                            <button type="button" onClick={handleClaim} disabled={!alasan.trim() || sisa <= 0 || !assigned || selected.jarak > assigned.site.radius} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 Love — Kirim ke {assigned ? `Admin ${assigned.region.name}` : 'Admin Wilayah'}</button>
+                            <button type="button" onClick={handleClaim} disabled={!alasan.trim() || sisa <= 0 || !assigned || selected.jarak > assigned.site.radius} title={!alasan.trim() ? 'Isi alasan dulu' : sisa <= 0 ? 'Sisa Love 0 — reset 1 bulan depan' : !assigned ? 'Tanpa titik — tidak bisa claim' : selected.jarak > assigned.site.radius ? `${selected.jarak} m / ${assigned.site.radius} m — di luar radius` : ''} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 Love — Kirim ke {assigned ? `Admin ${assigned.region.name}` : 'Admin Wilayah'}</button>
                             <p className="text-xs text-[#94A3B8] text-center">Butuh approval {assigned ? `Admin ${assigned.region.name}` : 'Admin Wilayah'} (1 level) • hanya bulan yang sama (hari beda boleh) • dalam radius {assigned ? `${assigned.site.radius} m` : ''}</p>
                         </div>
                     )}

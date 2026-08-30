@@ -38,7 +38,19 @@ export default function LoveAdmin() {
         document.addEventListener('visibilitychange', onVis);
         return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); };
     }, []);
-    useEffect(() => { setSiteFilter('Semua'); }, [wilayah]);
+    useEffect(() => {
+        if (siteFilter === 'Semua' || siteFilter === '__null') return;
+        const validIds = (() => {
+            if (isWilayah) {
+                const r = regionsData.find((x) => x.name === OWN_REGION);
+                return new Set((r?.locations || []).map((s) => String(s.id)));
+            }
+            if (wilayah === 'Semua') return new Set();
+            const r = regionsData.find((x) => x.name === wilayah);
+            return new Set((r?.locations || []).map((s) => String(s.id)));
+        })();
+        if (!validIds.has(String(siteFilter))) setSiteFilter('Semua');
+    }, [wilayah, siteFilter, regionsData, isWilayah]);
     const sitesForWilayah = useMemo(() => {
         if (isWilayah) { const r = regionsData.find((x) => x.name === OWN_REGION); return r ? r.locations : []; }
         if (wilayah === 'Semua') return [];
@@ -94,9 +106,9 @@ export default function LoveAdmin() {
                     )}
                     <select value={siteFilter} onChange={(e)=>setSiteFilter(e.target.value)} className="rounded-xl bg-[#FFF7E6] border border-[#FCB833]/20 px-3 py-2 text-sm outline-none min-w-[160px]">
                         <option value="Semua">Semua titik</option>
-                        <option value="__null">Tanpa titik</option>
+                        <option value="__null">Tanpa titik {isWilayah ? '' : '(semua wilayah)'} </option>
                         {sitesForWilayah.map((s)=><option key={s.id} value={String(s.id)}>{s.nama_lokasi} • {s.radius}m</option>)}
-                        {!isWilayah && wilayah==='Semua' && <option disabled>— pilih wilayah untuk titik</option>}
+                        {!isWilayah && wilayah==='Semua' && <option disabled>— pilih wilayah untuk titik spesifik</option>}
                     </select>
                     <select value={status} onChange={(e)=>setStatus(e.target.value)} className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none">
                         <option value="Semua">Semua status</option>
@@ -120,7 +132,7 @@ export default function LoveAdmin() {
                                         <tr key={c.id} className="hover:bg-[#F8FAFC]/50">
                                             <td className="px-4 py-3"><p className="font-medium text-[#0F172A]">{c.nama}</p><p className="text-xs text-[#64748B]">{c.wilayah} • {c.kantor}</p></td>
                                             <td className="px-4 py-3 text-xs">{hit ? <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className={`px-2 py-1 rounded-full font-medium ${inRadius ? 'bg-[#EFF6FF] text-[#1E3A8A]' : 'bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA]'} hover:opacity-80`}>{hit.site.nama_lokasi} • {hit.site.radius}m</Link> : <span className="bg-[#FEF2F2] text-[#991B1B] px-2 py-1 rounded-full border">Tanpa titik</span>}</td>
-                                            <td className="px-4 py-3 text-xs"><span className={inRadius ? 'text-[#065F46]' : hit ? 'text-[#991B1B]' : 'text-[#94A3B8]'}>{c.jam} • {c.jarak} m{c.radius ? `/${c.radius}m` : ''} {hit ? (inRadius ? '• Dalam' : '• Di luar') : ''}{!hit ? '• Tanpa titik' : ''}</span></td>
+                                            <td className="px-4 py-3 text-xs"><span title={hit ? `${c.jarak} m / ${c.radius} m • ${hit.site.nama_lokasi} • ${inRadius ? 'Dalam — bisa excuse' : 'Di luar — tidak bisa excuse'}` : 'Tanpa titik — tidak bisa excuse'} className={inRadius ? 'text-[#065F46]' : hit ? 'text-[#991B1B]' : 'text-[#991B1B]'}>{c.jam} • {c.jarak} m{c.radius ? `/${c.radius}m` : ''} {hit ? (inRadius ? '• Dalam' : '• Di luar') : ''}{!hit ? '• Tanpa titik' : ''}</span></td>
                                             <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-1 rounded-full ${c.sisaLove.startsWith('0') ? 'bg-[#FEF2F2] text-[#991B1B]' : 'bg-[#FFF7E6] text-[#92400E]'}`}>{c.sisaLove}</span></td>
                                             <td className="px-4 py-3 text-xs max-w-[160px] truncate" title={c.alasan}>{c.alasan}{c.note ? ` — ${c.note}` : ''}</td>
                                             <td className="px-4 py-3"><button type="button" onClick={() => setPreviewDoc(c)} className="text-xs font-medium text-[#1E3A8A] bg-[#EFF6FF] px-2 py-1 rounded-lg hover:bg-[#DBEAFE] inline-flex items-center gap-1">📄 {c.dokumen}</button></td>
@@ -128,7 +140,7 @@ export default function LoveAdmin() {
                                             <td className="px-4 py-3 text-right">
                                                 {c.status === 'pending' ? (
                                                     <div className="flex gap-1 justify-end">
-                                                        <button type="button" onClick={() => handle(c.id, 'approved')} disabled={c.sisaLove.startsWith('0') || !hit} title={c.sisaLove.startsWith('0') ? 'Sisa 0 — tidak bisa excuse' : !hit ? 'Tanpa titik — tidak bisa approve' : ''} className={`text-xs font-medium px-3 py-1.5 rounded-lg ${c.sisaLove.startsWith('0') || !hit ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#10B981] text-white hover:bg-[#059669]'}`}>Approve</button>
+                                                        <button type="button" onClick={() => handle(c.id, 'approved')} disabled={c.sisaLove.startsWith('0') || !hit || !inRadius} title={c.sisaLove.startsWith('0') ? 'Sisa Love 0 — tidak bisa excuse, reset bulan depan' : !hit ? 'Tanpa titik — tidak bisa approve (assign dulu)' : !inRadius ? `${c.jarak} m / ${c.radius} m — di luar radius titik assigned, tidak bisa excuse` : ''} className={`text-xs font-medium px-3 py-1.5 rounded-lg ${c.sisaLove.startsWith('0') || !hit || !inRadius ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#10B981] text-white hover:bg-[#059669]'}`}>Approve</button>
                                                         {rejectNote.id === c.id ? (
                                                             <div className="flex gap-1">
                                                                 <input value={rejectNote.text} onChange={(e)=>setRejectNote({ id: c.id, text: e.target.value })} placeholder="Alasan reject..." className="w-28 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] px-2 py-1 text-xs outline-none" />

@@ -74,10 +74,10 @@ export default function Employees() {
     const openAdd = () => {
         const defaultRegion = isWilayah ? OWN_REGION : regionsList[1];
         const r = regionsData.find((x) => x.name === defaultRegion);
+        const firstSiteId = r?.locations?.[0]?.id ?? null;
         setEditing(null);
-        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', region: defaultRegion, office_location_id: null });
+        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', region: defaultRegion, office_location_id: firstSiteId });
         setPhoto(null); setPreview(null); setOpen(true);
-        // auto-pick first site? keep null so admin consciously assigns via titik or here
     };
     const openEdit = (e) => {
         setEditing(e);
@@ -118,7 +118,7 @@ export default function Employees() {
                 region:form.region, regionId: rid, office_location_id: form.office_location_id == null || form.office_location_id === '' ? null : Number(form.office_location_id),
                 kantor:form.region.replace('Kab. ','').replace('Kota ',''), foto: preview || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face&auto=format'
             };
-            const nextList = [...list, next]; setList(nextList); saveEmployees(nextList); showToast(next.office_location_id == null ? 'Karyawan ditambah — belum punya titik (assign di halaman titik)' : 'Karyawan ditambah');
+            const nextList = [...list, next]; setList(nextList); saveEmployees(nextList); showToast(next.office_location_id == null ? 'Karyawan ditambah — tanpa titik, tidak bisa absen. Assign via Kelola titik.' : 'Karyawan ditambah — siap absen di titik assigned');
         }
         setOpen(false);
     };
@@ -160,9 +160,9 @@ export default function Employees() {
                     <label className="text-xs font-medium text-[#334155]">Titik Proyek
                         <select value={filterSite} onChange={(e)=>setFilterSite(e.target.value)} className="mt-1 block rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none min-w-[180px]">
                             <option value="Semua">Semua titik</option>
-                            <option value="__null">Tanpa titik</option>
+                            <option value="__null">Tanpa titik {isWilayah ? '' : '(semua wilayah)'} </option>
                             {(isWilayah ? regionsData.find((r)=>r.name===OWN_REGION)?.locations||[] : sitesForFilterRegion).map((s)=><option key={s.id} value={String(s.id)}>{s.nama_lokasi} • {s.radius}m</option>)}
-                            {filterRegion==='Semua' && !isWilayah && <option disabled>— pilih wilayah dulu untuk filter titik</option>}
+                            {filterRegion==='Semua' && !isWilayah && <option disabled>— pilih wilayah untuk titik spesifik</option>}
                         </select>
                     </label>
                     <label className="text-xs font-medium text-[#334155]">Status
@@ -291,12 +291,17 @@ export default function Employees() {
                                         )}
                                     </div>
                                     <div className="col-span-2">
-                                        <label className="text-xs font-medium text-[#334155]">Titik Proyek (office_location_id) — 1 karyawan = 1 titik</label>
+                                        <label className="text-xs font-medium text-[#334155]">Titik Proyek — 1 karyawan = 1 titik</label>
                                         <select value={form.office_location_id ?? ''} onChange={(e)=>setForm({...form, office_location_id: e.target.value === '' ? null : Number(e.target.value)})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
                                             <option value="">— Tanpa titik (tidak bisa absen) — assign nanti di halaman titik</option>
                                             {sitesForFormRegion.map((s)=><option key={s.id} value={String(s.id)}>{s.nama_lokasi} • {s.radius}m • {s.lat.toFixed(3)},{s.lng.toFixed(3)}</option>)}
                                         </select>
-                                        <p className="text-xs text-[#94A3B8] mt-1">Tanpa titik = tidak bisa absen (422). Lebih disarankan assign lewat halaman titik Kelola → Tambah Anggota.</p>
+                                        <p className="text-xs mt-1">
+                                            {form.office_location_id == null
+                                                ? <span className="text-[#991B1B]">⚠ Tanpa titik — karyawan tidak bisa absen (422). Pilih titik di atas atau assign nanti via Kelola titik.</span>
+                                                : <span className="text-[#065F46]">✓ Akan absen di {sitesForFormRegion.find((s)=>s.id===Number(form.office_location_id))?.nama_lokasi || 'titik terpilih'} — dalam radius baru valid.</span>}
+                                        </p>
+                                        {form.office_location_id == null && sitesForFormRegion.length > 0 && <p className="text-xs mt-1"><button type="button" onClick={()=>setForm({...form, office_location_id: sitesForFormRegion[0].id})} className="text-[#1E3A8A] font-medium underline">Pilih {sitesForFormRegion[0].nama_lokasi} (saran)</button></p>}
                                     </div>
                                 </div>
                                 <div className="flex gap-2 pt-2">
