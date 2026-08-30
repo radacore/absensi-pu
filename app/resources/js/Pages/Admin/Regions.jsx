@@ -1,7 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { loadRegions, loadEmployees, saveRegions, getBase, OWN_REGION, MAX_SITES } from './_shared';
+import { loadRegions, loadEmployees, saveRegions, saveEmployees, getBase, OWN_REGION, MAX_SITES } from './_shared';
 
 const emptyWilayah = { name: '', kantor: '', tipe: 'cabang', address: '' };
 const emptySite = { nama_lokasi: '', lat: '', lng: '', radius: 200, address: '' };
@@ -182,11 +182,9 @@ export default function Regions() {
             const next = prev.map((r) => r.id !== regionId ? r : { ...r, locations: r.locations.filter((s) => s.id !== siteId) });
             saveRegions(next); return next;
         });
-        import('./_shared').then(({ loadEmployees: le, saveEmployees: se }) => {
-            const emps = le();
-            const nextEmps = emps.map((e) => e.office_location_id === siteId ? { ...e, office_location_id: null } : e);
-            se(nextEmps); setEmployees(nextEmps);
-        });
+        const emps = loadEmployees();
+        const nextEmps = emps.map((e) => e.office_location_id === siteId ? { ...e, office_location_id: null } : e);
+        saveEmployees(nextEmps); setEmployees(nextEmps);
         showToast(confirmDeleteSite.nAnggota > 0 ? `Titik ${confirmDeleteSite.siteName} dihapus — ${confirmDeleteSite.nAnggota} anggota jadi Tanpa titik (tidak bisa absen)` : `Titik ${confirmDeleteSite.siteName} dihapus`);
         setConfirmDeleteSite(null);
     };

@@ -1,9 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { getBase, loadRegions, loadEmployees, OWN_REGION } from './_shared';
-
-const wilayahList = ['Semua','Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
+import { getBase, loadRegions, loadEmployees, OWN_REGION, WILAYAH_LIST as wilayahList, getSitesForWilayah, getValidSiteIds, siteById } from './_shared';
 
 const initial = [
     { id: 1, nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', wilayah: 'Kab. Gowa', office_location_id: 201, jenis: 'Tahunan', tgl: '28–30 Agu', alasan: 'Acara keluarga', status: 'Menunggu', level: 2 },
@@ -12,12 +10,6 @@ const initial = [
     { id: 4, nama: 'Budi Santoso', email: 'budi@bbws-pj.go.id', wilayah: 'Kab. Gowa', office_location_id: 202, jenis: 'Tahunan', tgl: '25–26 Agu', alasan: 'Keperluan pribadi', status: 'Ditolak', level: 1 },
     { id: 5, nama: 'Rina Wati', email: 'rina@bbws-pj.go.id', wilayah: 'Kab. Gowa', office_location_id: null, jenis: 'Melahirkan', tgl: '15 Agu–15 Nov', alasan: 'Cuti melahirkan', status: 'Menunggu', level: 2 },
 ];
-
-function siteById(siteId, regionsData) {
-    if (siteId == null) return null;
-    for (const r of regionsData) { const s = r.locations.find((x) => x.id === Number(siteId)); if (s) return { site: s, region: r }; }
-    return null;
-}
 
 export default function CutiAdmin() {
     const { url } = usePage();
@@ -38,22 +30,9 @@ export default function CutiAdmin() {
     }, []);
     useEffect(() => {
         if (siteFilter === 'Semua' || siteFilter === '__null') return;
-        const validIds = (() => {
-            if (isWilayah) {
-                const r = regionsData.find((x) => x.name === OWN_REGION);
-                return new Set((r?.locations || []).map((s) => String(s.id)));
-            }
-            if (wilayah === 'Semua') return new Set();
-            const r = regionsData.find((x) => x.name === wilayah);
-            return new Set((r?.locations || []).map((s) => String(s.id)));
-        })();
-        if (!validIds.has(String(siteFilter))) setSiteFilter('Semua');
+        if (!getValidSiteIds(regionsData, wilayah, isWilayah).has(String(siteFilter))) setSiteFilter('Semua');
     }, [wilayah, siteFilter, regionsData, isWilayah]);
-    const sitesForWilayah = useMemo(() => {
-        if (isWilayah) { const r = regionsData.find((x) => x.name === OWN_REGION); return r ? r.locations : []; }
-        if (wilayah === 'Semua') return [];
-        const r = regionsData.find((x) => x.name === wilayah); return r ? r.locations : [];
-    }, [regionsData, wilayah, isWilayah]);
+    const sitesForWilayah = useMemo(() => getSitesForWilayah(regionsData, wilayah, isWilayah), [regionsData, wilayah, isWilayah]);
 
     const baseList = isWilayah ? initial.filter((c) => c.wilayah === OWN_REGION) : initial;
     const filtered = useMemo(() => baseList.filter((c) => {

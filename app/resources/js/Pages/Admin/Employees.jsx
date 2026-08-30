@@ -1,21 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { loadRegions, loadEmployees, saveEmployees, getBase, OWN_REGION } from './_shared';
-
-const regionsList = ['Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
-
-function regionIdByName(name, regionsData) {
-    const f = regionsData.find((r) => r.name === name);
-    return f ? f.id : null;
-}
-function siteById(siteId, regionsData) {
-    for (const r of regionsData) {
-        const s = r.locations.find((x) => x.id === siteId);
-        if (s) return { site: s, region: r };
-    }
-    return null;
-}
+import { loadRegions, loadEmployees, saveEmployees, getBase, OWN_REGION, REGION_LIST as regionsList, siteById } from './_shared';
 
 export default function Employees() {
     const { url } = usePage();

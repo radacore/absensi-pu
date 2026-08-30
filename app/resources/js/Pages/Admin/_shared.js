@@ -4,6 +4,23 @@
 export const OWN_REGION = 'Kab. Gowa';
 export const MAX_SITES = 20;
 
+export const WILAYAH_LIST = ['Semua','Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
+export const REGION_LIST = WILAYAH_LIST.slice(1);
+
+export function getSitesForWilayah(regionsData, wilayah, isWilayah) {
+    if (isWilayah) return regionsData.find((x) => x.name === OWN_REGION)?.locations || [];
+    if (wilayah === 'Semua') return [];
+    return regionsData.find((x) => x.name === wilayah)?.locations || [];
+}
+export function getValidSiteIds(regionsData, wilayah, isWilayah) {
+    return new Set(getSitesForWilayah(regionsData, wilayah, isWilayah).map((s) => String(s.id)));
+}
+export function siteById(siteId, regionsData) {
+    if (siteId == null) return null;
+    for (const r of regionsData) { const s = r.locations.find((x) => x.id === Number(siteId)); if (s) return { site: s, region: r }; }
+    return null;
+}
+
 export const DUMMY_REGIONS = [
     { id: 1, name: 'Kota Makassar', kantor: 'Kantor Pusat', tipe: 'pusat', locations: [{ id: 101, nama_lokasi: 'Bendungan Tallo — Makassar', lat: -5.1477, lng: 119.4327, radius: 300, address: 'Jl. AP Pettarani No.1' }, { id: 102, nama_lokasi: 'Jembatan Pettarani', lat: -5.156, lng: 119.44, radius: 200, address: 'Jl. Pettarani' }], address: 'Jl. AP Pettarani No.1 — Makassar' },
     { id: 2, name: 'Kab. Gowa', kantor: 'Kantor Wilayah Gowa', tipe: 'cabang', locations: [{ id: 201, nama_lokasi: 'Bendungan Bili-Bili', lat: -5.3114, lng: 119.42, radius: 200, address: 'Jl. Poros Malino' }, { id: 202, nama_lokasi: 'Jembatan Pampang', lat: -5.32, lng: 119.45, radius: 150, address: 'Jl. Pampang' }], address: 'Jl. Poros Malino — Gowa' },
