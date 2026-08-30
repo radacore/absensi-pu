@@ -5,7 +5,7 @@
 | Phase | Duration | Goals | Key Deliverables |
 |:---|:---|:---|:---|
 | **Phase 1: Foundation & HR Core** | 4 weeks | Establish project infrastructure, database schema (including regions), and core public pages. | Laravel 13 + React 19 + Inertia v2 setup, Regions scaffolding, Homepage, About Us, Services pages, Tailwind v4 styling. |
-| **Phase 2: Admin Dashboard & Content Management** | 4 weeks | Build RBAC auth (Super Admin vs Admin Wilayah) and core CRUD. | Multi-guard Sanctum, role+region middleware, Admin login, Dashboard role-scoped, Page/Blog/Portfolio/Team CRUD, Regions CRUD (Super Admin), WYSIWYG. |
+| **Phase 2: Admin Dashboard & Content Management** | 4 weeks | Build RBAC auth (Super Admin vs Admin Wilayah) and core CRUD (N titik proyek). | Multi-guard Sanctum, role+region middleware, Admin login, Dashboard role-scoped, Page/Blog/Portfolio/Team CRUD, Regions CRUD **+ N Titik Proyek per wilayah** (Super Admin all, Admin Wilayah own region), WYSIWYG. |
 | **Phase 3: Advanced Features & Media Handling** | 3 weeks | Implement AWS S3 integration, SEO management, content versioning. | Media Library S3, Advanced SEO, Content versioning, Global Settings (Super Admin only). |
 | **Phase 4: HR Features & Polish** | 3 weeks | Complete remaining public pages, contact form, testimonials. | Portfolio/Projects, Team, Blog listing, Contact form with notifications, Testimonials. |
 | **Phase 5: Karyawan Mobile PWA (HR Self-Service)** | 4 weeks | Build employee PWA: auth NIK, profile, absensi, cuti, pengumuman. | Karyawan login (NIK+password), Profile own-data, Absensi GPS+selfie (geofence), Cuti berjenjang (3 levels), Pengumuman inbox, PWA manifest+SW + offline queue, S3 paths. |
@@ -25,7 +25,7 @@ These features are **critical** for the initial release. Without them, the appli
 |:---|:---|:---|:---|
 | RBAC Authentication (Admin+Karyawan — Opsi B Pisah URL) | FR-10/FR-22 | Core | Super Admin (`SUPER_ADMIN_PATH` /super-admin + guard super_admin) + Admin Wilayah (`WILAYAH_PATH` /wilayah + guard wilayah) + Karyawan (`KARYAWAN_PATH` /karyawan) — email login semua role, Sanctum multi-guard terpisah tidak cross-login, rate limiting per guard. |
 | Admin Dashboard (Role-Scoped) | FR-11 | Core | Overview scoped by region; Super Admin all regions, Admin Wilayah own region. |
-| Region Management | FR-29 | Core | Super Admin CRUD Kabupaten/Kota + geofence config. |
+| Region Management — N Titik Proyek | FR-28/FR-29 | Core | Super Admin CRUD Kabupaten/Kota + **N titik proyek per wilayah** (tiap titik nama/lat/lng/radius 50–1000); Admin Wilayah tambah/edit N titik own region (Bendungan A, Jembatan B). |
 | Employee Data Management | FR-24 | Core | Admin Wilayah CRUD Lengkap HR per region (read all, write own). |
 | Page Content Management | FR-12 | Core | WYSIWYG editor for static pages. |
 | Portfolio Management | FR-13 | Core | Full CRUD for projects. |
@@ -36,7 +36,7 @@ These features are **critical** for the initial release. Without them, the appli
 | Global Settings | FR-21 | Core | Manage company name, logo, contact info, social links (Super Admin only). |
 | HTTPS & Security Basics | NFR-Security | Core | HTTPS, CSRF, rate limiting terpisah per guard (super-admin / wilayah / karyawan), region isolation middleware, tiga URL obfuscated pisah. |
 | Karyawan PWA - Auth & Profile | FR-22/FR-23 | Core | Email login (`KARYAWAN_PATH`), view own profile, edit limited fields, PWA installable. Guard terpisah dari super-admin/wilayah. |
-| Karyawan PWA - Absensi | FR-25 | Core | GPS+selfie check-in/out with geofence validation, S3 selfie. |
+| Karyawan PWA - Absensi (Geofence N Titik) | FR-25 | Core | GPS+selfie check-in/out with **geofence ke titik proyek terdekat** (N titik per wilayah, Haversine), S3 selfie + `office_location_id`. |
 | Karyawan PWA - Cuti | FR-26 | Core | Ajukan cuti + berjenjang approval (3 levels) with notifications. |
 | 
 | Karyawan PWA - Pengumuman | FR-28 | Core | Inbox global+region with read status. |
@@ -176,9 +176,9 @@ These are deliverables and artifacts that must be completed before or in paralle
 - Session management + logout per guard + rate limiting
 
 **Week 6–7:**
-- Regions CRUD (Super Admin only) + Admin Wilayah assignment
-- Page content management with TinyMCE, Blog/Portfolio/Team CRUD
-- Employee Management (Lengkap HR) — Admin Wilayah CRUD own region (read all indicator), NIK/NIP validation, foto S3
+ - Regions CRUD **+ N Titik Proyek per wilayah** (Super Admin all, Admin Wilayah own region — Leaflet picker per titik) + Admin Wilayah assignment
+ - Page content management with TinyMCE, Blog/Portfolio/Team CRUD
+ - Employee Management (Lengkap HR) — Admin Wilayah CRUD own region (read all indicator), NIK/NIP validation, foto S3
 - Form validation + region isolation + own-data policy tests
 
 **Week 8:**
@@ -235,7 +235,7 @@ These are deliverables and artifacts that must be completed before or in paralle
 
 **Week 12–13:**
 - Karyawan PWA: NIK login, bottom nav, profile view/edit (limited fields), foto upload S3
-- Absensi: GPS+selfie capture, geofence validation server-side, S3 selfie, status on_time/late/early_leave (tidak ada out_of_range — di luar radius ditolak 422), distance UI, offline queue
+ - Absensi: GPS+selfie capture, **geofence N titik proyek** Haversine ke titik terdekat server-side, S3 selfie, status on_time/late/early_leave (di luar semua titik ditolak 422), distance + nama titik UI, offline queue
 - Cuti: form ajukan, list status, detail timeline, berjenjang approval UI per level
 
 **Week 14–15:**

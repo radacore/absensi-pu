@@ -4,7 +4,7 @@
 
 This document details the primary user flows for BBWS Pompengan Jeneberang, a corporate profile application with a public-facing website, a regional admin dashboard (Super Admin + Admin Wilayah per Kabupaten/Kota), and a mobile PWA for employees. The flows are organized by actor (Public User, Admin Wilayah, Super Admin, Karyawan) and focus on the most critical journeys: public content consumption, regional employee data management, and karyawan HR self-service (absensi GPS+selfie — di luar radius ditolak, Love 4/bulan pakai dokumen dalam radius, cuti berjenjang, pengumuman).  # Public site removed — fokus HR PWA
 
-All flows are built on Laravel 13 (PHP 8.4+) with React 19 and Inertia.js v2 (Vite 7, Tailwind v4, MySQL 8.4 LTS, PWA), ensuring a seamless, modern user experience across public, admin, and karyawan PWA interfaces. Region isolation: Admin Wilayah write own region only (read all), Karyawan own-data-only.
+All flows are built on Laravel 13 (PHP 8.4+) with React 19 and Inertia.js v2 (Vite 7, Tailwind v4, MySQL 8.4 LTS, PWA), ensuring a seamless, modern user experience across admin and karyawan PWA interfaces. Region isolation: Admin Wilayah write own region only (read all) — termasuk **N titik proyek per wilayah** (write own, read all); Karyawan own-data-only, absen valid ke titik proyek terdekat di wilayahnya.
 
 ---
 
@@ -334,24 +334,38 @@ The administrator navigates to the Page Content Management section and edits a s
 | 3 | System | Validate NIK exists, bcrypt check, create Sanctum karyawan session with region_id | Set HttpOnly cookie, return employee + region |
 | 4 | System | Redirect to `/karyawan` dashboard (PWA) | Show bottom nav: Home, Absensi, Cuti, Pengumuman, Profil |
 
-## Flow 14: Karyawan – Absensi GPS + Selfie
+## Flow 14: Karyawan – Absensi GPS + Selfie (Geofence N Titik Proyek)
 
 | No | Actor | Action | System Response |
 |:---|:---|:---|:---|
 | 1 | Karyawan | Tap "Absen Masuk" di PWA | Request GPS + Camera permission (explain UX) |
-| 2 | Karyawan | GPS captured + selfie taken | Preview with distance to kantor (computed client-side) |
+| 2 | Karyawan | GPS captured + selfie taken | Preview with distance to **titik proyek terdekat** (ex Bendungan A 48m — Dalam radius), list N titik jika ada |
 | 3 | Karyawan | Tap "Kirim Absensi" | POST `/api/karyawan/attendances` multipart (lat,lng,selfie) |
-| 4 | System | Validate geofence vs regions (lat/lng/radius_m) server-side, check duplicate in/out per day | Upload selfie to S3 `/attendance/{region}/{employee}/{date}/`, insert attendances with status on_time/late/early_leave (tidak ada out_of_range — di luar radius ditolak 422) |
-| 5 | System | Return status + distance_m | PWA shows toast + updates history, caches offline queue if offline |
+| 4 | System | Validate geofence vs **N titik proyek di wilayahnya** (tiap titik lat/lng/radius_m) server-side — Haversine ke tiap titik, ambil min distance, lulus jika `min <= radius_m(titikTerTerdekat)`; check duplicate in/out per day | Upload selfie to S3 `/attendance/{region}/{employee}/{date}/`, insert attendances with `office_location_id=terdekat`, status on_time/late/early_leave, `distance_m`; di luar semua titik ditolak 422 (di luar radius ditolak) |
+| 5 | System | Return status + distance_m + titik terdekat (Bendungan A) | PWA shows toast + updates history, caches offline queue if offline |
 
 ## Flow 15: Admin Wilayah – Input Karyawan Lengkap HR (Region-Scoped)
 
 | No | Actor | Action | System Response |
 |:---|:---|:---|:---|
-| 1 | Admin Wilayah | Login via ADMIN_PATH, navigate "Kelola Karyawan" | List filtered to own region, toggle "Lihat semua (read-only)" available |
+| 1 | Admin Wilayah | Login via WILAYAH_PATH (`/wilayah/login`), navigate "Kelola Karyawan" | List filtered to own region, toggle "Lihat semua (read-only)" available |
 | 2 | Admin | Tap "Tambah Karyawan" | Render form Lengkap HR: NIK, NIP, nama, golongan, jabatan, unit_kerja, status, foto, kontak |
-| 3 | Admin | Submit | POST `/api/admin/employees` — middleware injects own region_id, validates NIK unique, uploads foto S3 |
+| 3 | Admin | Submit | POST `/api/wilayah/employees` — middleware injects own region_id, validates NIK unique, uploads foto S3 |
 | 4 | System | Insert employees with region_id, audit log | Return 201, PWA/admin list refresh, invalidate cache |
+
+## Flow 15b: Admin Wilayah – Kelola N Titik Proyek per Wilayah (Bendungan A, Jembatan B)
+
+| No | Actor | Action | System Response |
+|:---|:---|:---|:---|
+| 1 | Admin Wilayah (Kab. Gowa) | Login via `WILAYAH_PATH/login` (`/wilayah/login`), navigasi "Kantor / Titik Proyek" | List 24 wilayah; card **Kab. Gowa** expand N titik (Bendungan Bili-Bili 200m, ...), wilayah lain collapsed badge "Read-only" |
+| 2 | Admin Wilayah | Tap "Tambah Titik Proyek" di wilayahnya | Form: **nama titik** (ex Jembatan Pampang), **lat/lng via Leaflet map picker**, **radius 50–1000m slider**, alamat opsional |
+| 3 | Admin Wilayah | Isi: nama=Jembatan Pampang, lat/lng pick di peta, radius=150m, submit | `POST /api/wilayah/regions/{gowaId}/office-locations` — guard wilayah, region scope check, validasi radius 50–1000 |
+| 4 | System | Validasi: own region, lat/lng range, radius range, minimal 1 titik terpenuhi | Insert `office_locations` (region_id=gowa, nama_lokasi=Jembatan Pampang, lat/lng/radius), return 201 |
+| 5 | System | Invalidate geofence cache `region:{id}:sites`, refresh list | UI tampil 2 titik di Kab. Gowa (Bendungan + Jembatan); toast "Titik Jembatan Pampang ditambahkan" |
+| 6 | Admin Wilayah | Edit titik: tap Bendungan Bili-Bili → ubah radius 200→300 | `PUT /api/wilayah/regions/{gowaId}/office-locations/{id}` — update radius, invalidate cache |
+| 7 | Admin Wilayah | Coba hapus titik terakhir (hanya 1 tersisa) | `DELETE` → 422 "Minimal 1 titik per wilayah" |
+| 8 | Super Admin | Login `/super-admin/login` → "Kelola Kantor/Wilayah" → lihat 24 wilayah + semua N titik | Dapat tambah/edit/hapus titik di wilayah manapun; Admin Wilayah view wilayah lain: read-only |
+| 9 | Karyawan Gowa | Absen: GPS dekat Jembatan Pampang 45m | System Haversine ke tiap titik, nearest=Jembatan Pampang 45m <=150m → on_time/late valid, simpan `office_location_id`=Jembatan id + `distance_m=45` |
 
 ## Flow 16–18: Karyawan – Cuti Berjenjang / Pengumuman
 
@@ -379,12 +393,13 @@ The administrator navigates to the Page Content Management section and edits a s
 BBWS Pompengan Jeneberang supports four primary actor types:
 
 ### Super Admin Pusat Flows
-- **Manage Regions & Admin Wilayah:** CRUD Kabupaten/Kota + geofence, CRUD admin wilayah accounts, assign region.
+ - **Manage Regions & N Titik Proyek:** CRUD Kabupaten/Kota + **N titik proyek per wilayah** (nama/lat/lng/radius per titik) + geofence, CRUD admin wilayah accounts, assign region.
 - **Global Content & Broadcast:** All content + global pengumuman + all region data + final cuti approval.
 
 ### Admin Wilayah (Kabupaten/Kota) Flows
 - **Employee Data (Lengkap HR):** CRUD own region employees (read all, write own), foto S3, NIK validation, audit.
-- **HR Operations:** View own region attendances, approve cuti level2, kirim pengumuman wilayah.
+ - **Titik Proyek:** **Tambah/edit/hapus N titik proyek di wilayah sendiri** (Bendungan A, Jembatan B — lat/lng Leaflet + radius 50–1000), view wilayah lain read-only.
+ - **HR Operations:** View own region attendances (label titik terdekat), approve cuti level2, kirim pengumuman wilayah.
 - **Content:** As per role, manage public content (if allowed).
 
 ### Karyawan (Mobile PWA) Flows

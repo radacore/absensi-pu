@@ -212,7 +212,7 @@ All spacing, padding, margins, and sizing should be multiples of 8px to maintain
 
 1. **Admin Login (Opsi B Pisah URL)** — **Super Admin** `SUPER_ADMIN_PATH/login` vs **Admin Wilayah** `WILAYAH_PATH/login` (dev `/super-admin/login` / `/wilayah/login`), email+password, guard terpisah tidak cross-login, obfuscated + rate-limited per guard.
 2. **Dashboard Overview (Role-Scoped)** — Super Admin: all regions stats; Admin Wilayah: own region (employee count, attendance today, pending cuti) + read-only global.
-3. **Region Management (Super Admin Only)** — CRUD Kabupaten/Kota + geofence (lat/lng/radius) + assign admin wilayah.
+3. **Region Management + N Titik Proyek (Super Admin / Admin Wilayah own)** — CRUD Kabupaten/Kota + **N titik proyek per wilayah** (tiap titik: nama titik ex Bendungan A/Jembatan B, lat/lng Leaflet, radius 50–1000) — Super Admin all wilayah, Admin Wilayah tambah/edit N titik di wilayahnya sendiri (read-only wilayah lain) + assign admin wilayah.
 4. **Karyawan Management (Lengkap HR)** — List filtered own region (toggle read all), Create/Edit with NIK/NIP/golongan/jabatan/unit/status, foto S3, region auto-scoped.
 5. **Attendance Viewer** — List per region with date/status filter, detail with selfie + map + distance.
 6. **Leave Requests (Berjenjang)** — Queue per level, approve/reject with notes, timeline UI, region-scoped.
@@ -233,7 +233,7 @@ All spacing, padding, margins, and sizing should be multiples of 8px to maintain
 
 1. **Karyawan Login (Email + Password, KARYAWAN_PATH)** — Mobile-first 320px, `KARYAWAN_PATH/login` (dev `/karyawan/login`, obfuscated di prod), email input, show/hide password, rate-limit error UX, PWA install banner. Tidak cross-login dengan `/super-admin` / `/wilayah`.
 2. **Dashboard Home** — Greeting + today attendance status (on_time/late/belum absen), pending cuti count, unread pengumuman count, quick actions (Absen, Ajukan Cuti).
-3. **Absensi (GPS + Selfie)** — Big "Absen Masuk/Pulang" button 44px+, GPS permission UX, camera capture, preview selfie + distance to kantor, status badge (on_time/late — tidak ada out_of_range, di luar radius ditolak), history list (paginated), offline queue indicator.
+3. **Absensi (GPS + Selfie — N Titik Proyek)** — Big "Absen Masuk/Pulang" button 44px+, GPS permission UX, camera capture, preview selfie + **"Titik terdekat: Bendungan A • 48m • Dalam radius"** badge, status on_time/late (di luar semua titik ditolak 422), history list with titik label, offline queue indicator.
 4. **Cuti (Berjenjang)** — Form ajukan (jenis, tgl mulai/selesai, alasan, dokumen), list own requests with status timeline (pending → level1 → level2 → approved/rejected), detail with approver notes.
 5. **Pengumuman Inbox** — Combined global+region, pinned first, unread dot, tap to read (marks read), attachment download, pull-to-refresh.
 6. **Love (4 Hati)** — 4 dot gold #FCB833 (terisi) / #E2E8F0 (kosong), text "Sisa toleransi: 3/4", gold CTA "Gunakan Love" saat late dalam radius, history claim (pending/approved/rejected), reset info "Reset 1 Agu".

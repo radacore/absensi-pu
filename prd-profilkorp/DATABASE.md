@@ -27,6 +27,7 @@ erDiagram
     REGION ||--o{ EMPLOYEE : "has many"
     REGION ||--o{ ATTENDANCE : "has many"
     REGION ||--o{ OFFICE_LOCATION : "has many"
+    OFFICE_LOCATION ||--o{ ATTENDANCE : "has many"
     REGION ||--o{ ANNOUNCEMENT : "has many"
     EMPLOYEE ||--o{ ATTENDANCE : "has many"
     EMPLOYEE ||--o{ LEAVE_REQUEST : "has many"
@@ -53,9 +54,6 @@ erDiagram
         string slug
         string kantor_name
         string tipe
-        decimal lat
-        decimal lng
-        int radius_m
         string address
         boolean is_active
         timestamp created_at
@@ -84,12 +82,14 @@ erDiagram
         int id PK
         int employee_id FK
         int region_id FK
+        int office_location_id FK
         string type
         timestamp timestamp
         decimal lat
         decimal lng
         string selfie_url
         string status
+        int distance_m
         string device_info
         timestamp created_at
     }
@@ -138,6 +138,8 @@ erDiagram
         decimal lng
         int radius_m
         string address
+        boolean is_active
+        string tipe_titik
     }
 
     LOVE_BALANCE {
@@ -335,40 +337,41 @@ Stores administrator accounts with role & region scoping (Super Admin vs Admin W
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
 
 ### REGION
-Stores Kantor BBWS PJ per wilayah — **24 Wilayah** (Kota Makassar pusat + 23 Wilayah). Tiap wilayah bisa punya **1–3 Lokasi Kantor** (office_locations) dengan radius fleksibel per lokasi.
+Stores Kantor BBWS PJ per wilayah — **24 Wilayah** (Kota Makassar pusat + 23 Wilayah). Tiap wilayah punya **N titik proyek** (`office_locations` / `project_sites`), masing-masing dengan radius fleksibel — di-input admin.
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|
 | id | INT | PK, AUTO_INCREMENT | Unique identifier |
 | name | VARCHAR(255) | NOT NULL | Nama wilayah (e.g., "Kabupaten Gowa", "Kota Makassar (Pusat)") |
 | slug | VARCHAR(255) | UK, NOT NULL | URL-friendly identifier (e.g., "gowa", "makassar-pusat") |
-| kantor_name | VARCHAR(255) | NOT NULL | Nama kantor (e.g., "Kantor BBWS PJ Kab. Gowa", "Kantor Pusat BBWS Pompengan Jeneberang - Makassar") |
+| kantor_name | VARCHAR(255) | NOT NULL | Nama kantor induk wilayah (e.g., "Kantor BBWS PJ Kab. Gowa", "Kantor Pusat BBWS Pompengan Jeneberang - Makassar") |
 | tipe | ENUM('pusat','cabang') | DEFAULT 'cabang' | Tipe kantor: pusat (hanya Makassar) vs cabang |
-| lat | DECIMAL(10,8) | NOT NULL | Lokasi kantor latitude — di-input admin via map picker |
-| lng | DECIMAL(11,8) | NOT NULL | Lokasi kantor longitude — di-input admin via map picker |
-| radius_m | INT | DEFAULT 200 | Radius absen dalam meter (50–1000, input admin, default 200m). Geofence untuk validasi GPS karyawan cabang tersebut |
-| address | TEXT | NULLABLE | Alamat lengkap kantor |
+| address | TEXT | NULLABLE | Alamat lengkap kantor induk |
 | is_active | BOOLEAN | DEFAULT 1 | Active flag |
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
 
-### OFFICE_LOCATION
-Stores 1–3 lokasi kantor per wilayah — fleksibel radius per lokasi, di-input Super Admin/Admin Wilayah.
+> **Catatan:** `lat/lng/radius_m` **tidak lagi di `regions`** — dipindah ke **per titik proyek** (`office_locations`). Region hanya sebagai wadah N titik.
+
+### OFFICE_LOCATION / PROJECT_SITE — N Titik Proyek per Wilayah
+Stores **N titik proyek per wilayah** — contoh **Bendungan A, Jembatan B, Embung C, Irigasi D** — fleksibel radius per titik, di-input Super Admin / Admin Wilayah (own region) via Leaflet map picker + radius slider. Karyawan absen valid jika `distance <= radius_m` ke **salah satu** titik di wilayahnya.
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|
 | id | INT | PK, AUTO_INCREMENT | Unique identifier |
-| region_id | INT | FK (REGION.id) | Wilayah induk (1 wilayah → 1–3 lokasi) |
-| nama_lokasi | VARCHAR(255) | NOT NULL | Nama lokasi (e.g., "Gedung A", "Pos Jaga 2") |
-| lat | DECIMAL(10,8) | NOT NULL | Latitude lokasi |
-| lng | DECIMAL(11,8) | NOT NULL | Longitude lokasi |
-| radius_m | INT | DEFAULT 200 | Radius absen per lokasi (50–1000m, fleksibel) |
-| address | TEXT | NULLABLE | Alamat detail lokasi |
+| region_id | INT | FK (REGION.id) | Wilayah induk (1 wilayah → N titik proyek, ideal 1–20) |
+| nama_lokasi | VARCHAR(255) | NOT NULL | Nama titik proyek (e.g., "Bendungan Bili-Bili — Gowa", "Jembatan Pampang") |
+| lat | DECIMAL(10,8) | NOT NULL | Latitude titik |
+| lng | DECIMAL(11,8) | NOT NULL | Longitude titik |
+| radius_m | INT | DEFAULT 200 | Radius absen per titik (50–1000m, fleksibel) |
+| address | TEXT | NULLABLE | Alamat detail titik |
 | is_active | BOOLEAN | DEFAULT 1 | Active flag |
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
 
-**Catatan domain Sulsel:** Seed awal 24 wilayah: Kantor Pusat (Kota Makassar) + 21 Kabupaten (Bantaeng, Barru, Bone, Bulukumba, Enrekang, Gowa, Jeneponto, Kepulauan Selayar, Luwu, Luwu Timur, Luwu Utara, Maros, Pangkajene dan Kepulauan, Pinrang, Sinjai, Sidenreng Rappang (Sidrap), Soppeng, Takalar, Tana Toraja, Toraja Utara, Wajo) + 2 Kota selain Makassar (Parepare, Palopo) — total 24. Seeder: `database/seeders/RegionSeeder.php`. Super Admin di Makassar CRUD ini; Admin Wilayah dapat edit lat/lng/radius kantornya sendiri.
+**Aturan:** Minimal 1 titik per wilayah (validasi saat create wilayah). Admin Wilayah dapat menambah titik baru di wilayahnya (mis. awalnya Bendungan A saja, lalu tambah Jembatan B) tanpa batas ketat selain validasi radius 50–1000 per titik. Geofence: `Haversine(karyawan, tiap titik) → minDistance; lulus jika minDistance <= radius_m(titik_terdekat)`.
+
+**Catatan domain Sulsel:** Seed awal 24 wilayah: Kantor Pusat (Kota Makassar) + 21 Kabupaten (Bantaeng, Barru, Bone, Bulukumba, Enrekang, Gowa, Jeneponto, Kepulauan Selayar, Luwu, Luwu Timur, Luwu Utara, Maros, Pangkajene dan Kepulauan, Pinrang, Sinjai, Sidenreng Rappang (Sidrap), Soppeng, Takalar, Tana Toraja, Toraja Utara, Wajo) + 2 Kota selain Makassar (Parepare, Palopo) — total 24. Seeder: `database/seeders/RegionSeeder.php` + `OfficeLocationSeeder.php` (tiap wilayah seed 1–2 titik contoh seperti Bendungan/Jembatan). Super Admin CRUD semua wilayah + N titik; **Admin Wilayah dapat tambah/edit/hapus N titik proyek di wilayahnya sendiri** (contoh tambah Bendungan A lalu Jembatan B) dan view wilayah lain read-only.
 
 ### EMPLOYEE
 Stores karyawan Lengkap HR data, linked to region, auth via NIK + password. Own-data-only policy.
@@ -392,19 +395,21 @@ Stores karyawan Lengkap HR data, linked to region, auth via NIK + password. Own-
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
 
 ### ATTENDANCE
-Stores GPS+selfie absensi records, region-scoped.
+Stores GPS+selfie absensi records, region-scoped + linked to nearest project site (N titik).
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|
 | id | INT | PK, AUTO_INCREMENT | Unique identifier |
 | employee_id | INT | FK (EMPLOYEE.id) | Employee |
 | region_id | INT | FK (REGION.id) | Region (denormalized for query) |
+| office_location_id | INT | FK (OFFICE_LOCATION.id) NULLABLE | Nearest titik proyek saat absen (Bendungan A / Jembatan B) |
 | type | ENUM('in','out') | NOT NULL | Check-in/out |
 | timestamp | TIMESTAMP | NOT NULL | Attendance time |
 | lat | DECIMAL(10,8) | NOT NULL | GPS lat |
 | lng | DECIMAL(11,8) | NOT NULL | GPS lng |
 | selfie_url | VARCHAR(255) | NOT NULL | S3 URL of selfie |
-| status | ENUM('on_time','late','early_leave','excused_love') | NOT NULL | Validation status (tidak ada out_of_range — di luar radius ditolak 422, tidak tercatat) |
+| status | ENUM('on_time','late','early_leave','excused_love') | NOT NULL | Validation status (di luar semua titik ditolak 422, tidak tercatat) |
+| distance_m | INT | NULLABLE | Distance to nearest titik (meter) |
 | device_info | VARCHAR(255) | NULLABLE | Device metadata |
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
 
@@ -733,12 +738,9 @@ model Region {
   id                Int       @id @default(autoincrement())
   name              String    // e.g., Kabupaten Gowa
   slug              String    @unique // gowa
-  kantorName        String    @map("kantor_name") // Kantor BBWS PJ Kab. Gowa
+  kantorName        String    @map("kantor_name") // Kantor BBWS PJ Kab. Gowa — wadah N titik
   tipe              String    @default("cabang") // pusat | cabang — pusat hanya Makassar
-  lat               Decimal   @db.Decimal(10,8) // lokasi kantor, input admin via map picker
-  lng               Decimal   @db.Decimal(11,8)
-  radiusM           Int       @default(200) @map("radius_m") // 50–1000m, radius absen
-  address           String?   @db.Text
+  address           String?   @db.Text // alamat kantor induk
   isActive          Boolean   @default(true) @map("is_active")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
@@ -748,7 +750,7 @@ model Region {
   attendances       Attendance[]
   announcements     Announcement[]
   loveClaims        LoveClaim[]
-  officeLocations   OfficeLocation[]
+  officeLocations   OfficeLocation[] // N titik proyek: Bendungan A, Jembatan B, ...
 
   @@map("region")
 }
@@ -784,17 +786,20 @@ model Attendance {
   id                Int       @id @default(autoincrement())
   employeeId        Int       @map("employee_id")
   regionId          Int       @map("region_id")
+  officeLocationId  Int?      @map("office_location_id") // titik terdekat saat absen
   type              String    // in | out
   timestamp         DateTime
   lat               Decimal   @db.Decimal(10,8)
   lng               Decimal   @db.Decimal(11,8)
   selfieUrl         String    @map("selfie_url")
-  status            String    // on_time | late | early_leave — tidak ada out_of_range (di luar radius ditolak)
+  status            String    // on_time | late | early_leave — di luar semua titik ditolak 422
+  distanceM         Int?      @map("distance_m")
   deviceInfo        String?   @map("device_info")
   createdAt         DateTime  @default(now()) @map("created_at")
 
   employee          Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   region            Region    @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  officeLocation    OfficeLocation? @relation(fields: [officeLocationId], references: [id], onDelete: SetNull)
   loveClaim         LoveClaim?
 
   @@map("attendance")
@@ -855,16 +860,17 @@ model AnnouncementRead {
 model OfficeLocation {
   id                Int       @id @default(autoincrement())
   regionId          Int       @map("region_id")
-  namaLokasi        String    @map("nama_lokasi")
+  namaLokasi        String    @map("nama_lokasi") // Bendungan A, Jembatan B, ...
   lat               Decimal   @db.Decimal(10,8)
   lng               Decimal   @db.Decimal(11,8)
-  radiusM           Int       @default(200) @map("radius_m")
+  radiusM           Int       @default(200) @map("radius_m") // 50–1000 per titik
   address           String?   @db.Text
   isActive          Boolean   @default(true) @map("is_active")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   region            Region    @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  attendances       Attendance[]
 
   @@map("office_location")
 }
@@ -1142,6 +1148,8 @@ To optimize query performance, the following indexes are recommended beyond prim
 | employee | region_id, status_kepegawaian | Composite | Filter by region + status |
 | attendance | employee_id, timestamp | Composite | Employee history, pagination |
 | attendance | region_id, timestamp | Composite | Regional attendance report |
+| attendance | office_location_id | Single | Nearest titik for reporting |
+| office_location | region_id | Single | N titik per wilayah lookup |
 | leave_request | region_id, status | Composite | Pending queue per region |
 | leave_request | employee_id, status | Composite | Employee leave history |
 | announcement | scope, region_id, published_at | Composite | Targeted announcement feed |

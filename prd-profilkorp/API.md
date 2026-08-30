@@ -147,11 +147,11 @@ X-CSRF-TOKEN: <token>
 ```
 - **Status Codes:** 200 (OK), 401 (Unauthorized), 500 (Server Error)
 
-#### List Regions / Kantor Wilayah (BBWS Pompengan Jeneberang)
+#### List Regions / Kantor Wilayah (BBWS Pompengan Jeneberang) — with N Titik Proyek
 - **Method:** `GET`
-- **Path:** `/api/admin/regions`
-- **Description:** Retrieve all kantor (Kantor Pusat + Wilayah Kab/Kota se-Sulsel) with lokasi & radius. Admin Wilayah can view all, but edit only own.
-- **Auth Level:** Admin
+- **Path:** `/api/{super-admin|wilayah}/regions` (legacy `/api/admin/regions`)
+- **Description:** Retrieve all kantor (Kantor Pusat + Wilayah Kab/Kota se-Sulsel) **with N titik proyek per wilayah** (`office_locations`). Admin Wilayah can view all, but edit only own.
+- **Auth Level:** Admin (super_admin unscoped, admin_wilayah: write own)
 - **Request Body:** None
 - **Response Body:**
 ```json
@@ -164,12 +164,13 @@ X-CSRF-TOKEN: <token>
       "slug": "string",
       "kantor_name": "string (e.g., Kantor BBWS PJ Kab. Gowa)",
       "tipe": "string (pusat|cabang)",
-      "lat": "decimal (lokasi kantor)",
-      "lng": "decimal",
-      "radius_m": "integer (50–1000, configurable)",
-      "address": "string (alamat kantor)",
+      "address": "string (alamat kantor induk)",
       "is_active": "boolean",
-      "is_writable": "boolean (true if own region or super_admin)"
+      "is_writable": "boolean (true if own region or super_admin)",
+      "office_locations": [
+        { "id": "integer", "nama_lokasi": "string (Bendungan A)", "lat": "decimal", "lng": "decimal", "radius_m": "integer 50–1000", "address": "string", "is_active": "boolean" },
+        { "id": "integer", "nama_lokasi": "string (Jembatan B)", "lat": "decimal", "lng": "decimal", "radius_m": "integer", "address": "string", "is_active": "boolean" }
+      ]
     }
   ]
 }
@@ -178,8 +179,8 @@ X-CSRF-TOKEN: <token>
 
 #### Create Kantor/Wilayah (Super Admin Only)
 - **Method:** `POST`
-- **Path:** `/api/admin/regions`
-- **Description:** Create wilayah / lokasi kantor baru (1–3 per wilayah). Only Super Admin. Input tiap lokasi via map picker + radius fleksibel.
+- **Path:** `/api/super-admin/regions` (admin_wilayah 403)
+- **Description:** Create wilayah baru + **titik proyek awal** (minimal 1 titik). Only Super Admin. Input tiap titik via map picker Leaflet + radius fleksibel.
 - **Auth Level:** Admin (super_admin)
 - **Request Body:**
 ```json
@@ -187,22 +188,27 @@ X-CSRF-TOKEN: <token>
   "name": "string (required, e.g., Kabupaten Gowa)",
   "kantor_name": "string (required, e.g., Kantor BBWS PJ Kab. Gowa)",
   "tipe": "string (optional: pusat|cabang, default cabang)",
-  "lat": "decimal (required, -90 to 90, lokasi kantor via map picker)",
-  "lng": "decimal (required, -180 to 180)",
-  "radius_m": "integer (optional, 50–1000, default 200)",
-  "address": "string (optional, alamat lengkap kantor)",
-  "is_active": "boolean (optional, default true)"
+  "address": "string (optional, alamat kantor induk)",
+  "is_active": "boolean (optional, default true)",
+  "office_locations": [{ "nama_lokasi": "string (required, ex Bendungan A)", "lat": "decimal (required, -90 to 90)", "lng": "decimal (required, -180 to 180)", "radius_m": "integer (optional 50–1000 default 200)", "address": "string (optional)" }]
 }
 ```
 - **Status Codes:** 201 (Created), 403 (if admin_wilayah), 422, 500
 
 #### Update Kantor Lokasi & Radius
 - **Method:** `PUT`
-- **Path:** `/api/admin/regions/{id}`
-- **Description:** Update lokasi kantor & radius. Super Admin can update any kantor; Admin Wilayah can update **only own kantor** (own region_id) — untuk edit lat/lng/radius_m kantornya sendiri. Others 403.
+- **Path:** `/api/{super-admin|wilayah}/regions/{id}`
+- **Description:** Update kantor metadata atau titik proyek. Super Admin can update any kantor + N titik; **Admin Wilayah can update only own wilayah** (own region_id) — untuk **tambah/edit/hapus N titik proyek di wilayahnya sendiri** (Bendungan A, Jembatan B). Others 403.
 - **Auth Level:** Admin (super_admin: any, admin_wilayah: own only)
-- **Request Body:** Same as create (all optional), plus `radius_m` validation 50–1000.
+- **Request Body:** Same as create (all optional), plus per titik `id` for update; `radius_m` 50–1000 per titik; supports `office_locations` array upsert.
 - **Status Codes:** 200, 403 (other region), 404, 422, 500
+
+#### Titik Proyek (Office Locations) — CRUD per Wilayah
+
+- **Method:** `GET` — **Path:** `/api/{super-admin|wilayah}/regions/{regionId}/office-locations` — List N titik proyek di wilayah. Super Admin all; Admin Wilayah own read, other read-only. **Status Codes:** 200, 403
+- **Method:** `POST` — **Path:** `/api/{super-admin|wilayah}/regions/{regionId}/office-locations` — Tambah titik proyek (nama_lokasi, lat, lng, radius_m 50–1000, address). Super Admin any region; Admin Wilayah only own region — contoh tambah **Jembatan B** di wilayahnya yang sudah punya Bendungan A. **Body:** `{nama_lokasi, lat, lng, radius_m, address}` **Status Codes:** 201, 403, 422
+- **Method:** `PUT` — **Path:** `/api/{super-admin|wilayah}/regions/{regionId}/office-locations/{id}` — Update titik (nama/radius/lat/lng). Scope own region untuk Admin Wilayah. **Status Codes:** 200, 403, 404
+- **Method:** `DELETE` — **Path:** `/api/{super-admin|wilayah}/regions/{regionId}/office-locations/{id}` — Hapus titik (blocked jika last titik — minimal 1 per wilayah). **Status Codes:** 200, 403, 404, 422 (last site)
 
 #### Delete Region (Super Admin Only)
 - **Method:** `DELETE`
