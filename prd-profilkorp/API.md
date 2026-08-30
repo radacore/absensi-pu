@@ -1607,12 +1607,12 @@ X-CSRF-TOKEN: <token>
 
 ### Employee Management (Lengkap HR, Region-Scoped)
 
-#### List Employees (Admin)
+#### List Employees (Admin — Per Titik)
 - **Method:** `GET`
-- **Path:** `/api/admin/employees`
-- **Description:** Retrieve paginated employees. Admin Wilayah: filtered to own region by default, can pass `?all_regions=1` to view read-only others. Super Admin sees all.
+- **Path:** `/api/admin/employees` (alias `/api/super-admin/employees` & `/api/wilayah/employees`)
+- **Description:** Retrieve paginated employees **per titik** (`office_location_id`). Admin Wilayah: filtered to own region by default (+ filter `Titik Proyek` per site + `__null` tanpa titik), can `?all_regions=1` to view read-only others. Super Admin sees all. **1 karyawan = 1 titik** (`office_location_id` FK, NULL = belum assign).
 - **Auth Level:** Admin
-- **Query Parameters:** `page=1`, `per_page=15`, `region_id=null`, `status=null`, `search=null` (NIK/name)
+- **Query Parameters:** `page=1`, `per_page=15`, `region_id=null`, `office_location_id=null (FK titik, filter per titik)`, `status=null`, `search=null` (NIK/name)
 - **Response Body:**
 ```json
 {
@@ -1628,6 +1628,8 @@ X-CSRF-TOKEN: <token>
       "unit_kerja": "string",
       "status_kepegawaian": "string",
       "region": { "id": "integer", "name": "string" },
+      "office_location": { "id": "integer", "nama_lokasi": "string (Bendungan Bili-Bili)", "lat": "decimal", "lng": "decimal", "radius_m": "integer" } ,
+      "office_location_id": "integer|null (NULL=belum di-assign, tidak bisa absen 422)",
       "foto_url": "string",
       "is_writable": "boolean (true if own region)"
     }
@@ -1637,6 +1639,19 @@ X-CSRF-TOKEN: <token>
 ```
 - **Status Codes:** 200 (OK), 401/403, 500
 
+#### Assign/Pindah Titik Proyek Karyawan (1 Karyawan = 1 Titik)
+- **Method:** `POST` (atau `PUT`) — dedicated via SiteDetail per titik
+- **Path:** `POST /api/{super-admin|wilayah}/regions/{regionId}/office-locations/{siteId}/assign` + `POST .../move`
+- **Description:** Assign/pindah karyawan ke 1 titik proyek (1 karyawan = 1 `office_location_id`). **Kandidat tambah** hanya karyawan `regionId==region.id && office_location_id==null` (tanpa titik). Pindah set `office_location_id` ke `siteId` baru (validasi own region untuk `wilayah` guard). Mengosongkan titik (unassign) set `NULL` — karyawan tanpa titik tidak bisa absen/Love 422. Invalidate geofence cache per titik. Frontend: `Admin/SiteDetail.jsx` aksi `Tambah` / `Pindah` per titik.
+- **Request Body:** `{ "employee_id": "integer (required)" }` untuk assign; `{ "employee_id": "integer", "target_office_location_id": "integer" }` untuk pindah; validasi `region_id` match & bukan cross-region.
+- **Status Codes:** 200, 403 (wrong region), 404 (employee/site not found), 422 (already assigned / last-site guard), 500
+
+#### Dedicated Page Per Titik (Inertia — Bukan API JSON)
+- **Method:** `GET` (Inertia)
+- **Path:** `/regions/{region}/sites/{site}` — **3 prefix**: `super_admin.sites.show` (`/super-admin/...`), `admin.sites.show` (`/admin/...` legacy), `wilayah.sites.show` (`/wilayah/...`) — dikonfirmasi `route:list` & `curl 200` untuk `101/102/201/202/301` + employees/karyawan.
+- **Description:** Dedicated page per titik proyek (`Admin/SiteDetail`) — Leaflet draggable marker + circle per titik, form edit titik, anggota per titik saja, kandidat tanpa titik, N≤20, hapus last site 422. Link dari Regions `Kelola → ${base}/regions/${r.id}/sites/${s.id}`, Attendances/Cuti/Love kolom `Titik Proyek` → site.
+- **Auth:** `auth:super_admin` + `role:super_admin` untuk `super-admin`, `auth:wilayah` + `role:admin_wilayah` untuk `wilayah`/`admin` (via `getAdminBase(url)` helper).
+
 #### Get Employee Detail (Admin)
 - **Method:** `GET`
 - **Path:** `/api/admin/employees/{id}`
@@ -1644,10 +1659,10 @@ X-CSRF-TOKEN: <token>
 - **Auth Level:** Admin
 - **Status Codes:** 200, 404, 401/403, 500
 
-#### Create Employee (Region-Scoped)
+#### Create Employee (Region-Scoped, 1 Karyawan = 1 Titik)
 - **Method:** `POST`
-- **Path:** `/api/admin/employees`
-- **Description:** Create employee. Admin Wilayah auto-sets region_id to own region; Super Admin must specify region_id. emails unique, NIP unique if provided.
+- **Path:** `/api/admin/employees` (alias `/api/super-admin/employees` & `/api/wilayah/employees`)
+- **Description:** Create employee **+ optional assign 1 titik**. Admin Wilayah auto-sets region_id to own region; Super Admin must specify region_id. **Jika `office_location_id` disertakan, validasi: titik `region_id` == employee `region_id` (tidak cross-region), 1 karyawan =1 titik.** Kandidat kosong (`NULL`) → tanpa titik (tidak bisa absen 422 sampai di-assign via SiteDetail). emails unique, NIP unique if provided.
 - **Auth Level:** Admin
 - **Request Body:**
 ```json
@@ -1662,16 +1677,18 @@ X-CSRF-TOKEN: <token>
   "email": "string (optional, email)",
   "phone": "string (optional)",
   "region_id": "integer (required for super_admin, ignored for admin_wilayah)",
+  "office_location_id": "integer|null (optional, FK titik di wilayah yang sama; NULL=tanpa titik, contoh 201 Bendungan Bili-Bili — Gowa)",
   "password": "string (required, min 8)"
 }
 ```
-- **Status Codes:** 201 (Created), 403 (if trying to create outside own region), 422, 500
+- **Status Codes:** 201 (Created), 403 (if trying to create outside own region / cross-region titik), 422, 500
 
-#### Update Employee (Region-Scoped)
+#### Update Employee (Region-Scoped, Per Titik)
 - **Method:** `PUT`
-- **Path:** `/api/admin/employees/{id}`
-- **Description:** Update employee. Admin Wilayah 403 if employee.region_id != own region_id.
+- **Path:** `/api/admin/employees/{id}` (alias super-admin/wilayah)
+- **Description:** Update employee termasuk **`office_location_id`** (pindah titik: validasi titik `region_id`==employee `region_id`, 1 karyawan=1 titik; `NULL` = tanpa titik). Admin Wilayah 403 if `employee.region_id != own region_id` or target titik `region_id` mismatch. **Pindah via SiteDetail `Pindah` lebih explicit** (dedicated assign/move).
 - **Auth Level:** Admin
+- **Request Body (partial):** `{ "office_location_id": "integer|null", /* plus HR fields */ }`
 - **Status Codes:** 200, 403, 404, 422, 500
 
 #### Delete Employee (Region-Scoped)
@@ -1689,31 +1706,37 @@ X-CSRF-TOKEN: <token>
 - **Request Body:** `multipart/form-data` with `photo` (image, max 5MB)
 - **Status Codes:** 201, 403, 422, 500
 
-### Attendance Management
+### Attendance Management — Validasi Titik Assigned (1 Karyawan = 1 Titik)
 
-#### List Attendances (Admin, Region-Scoped)
+#### List Attendances (Admin, Region-Scoped, Per Titik)
 - **Method:** `GET`
-- **Path:** `/api/admin/attendances`
-- **Description:** List attendances. Admin Wilayah sees own region only; Super Admin can filter by region_id. Query by date range.
+- **Path:** `/api/admin/attendances` (alias `/api/super-admin/attendances` & `/api/wilayah/attendances`)
+- **Description:** List attendances **per titik** (`office_location_id`). Admin Wilayah sees own region only (default filtered `region_id==own`, plus **filter `Titik Proyek` per site incl. `__null` tanpa titik**); Super Admin can filter by `region_id` + `office_location_id` per titik. Frontend: `Attendances.jsx` `siteById()` helper, filters `Wilayah→Titik Proyek→Status`, kolom `Titik Proyek` link `GET /regions/{region}/sites/{site}`, badge `Dalam/Di luar` (`jarak <= radius(assigned)`) + `Jarak` kolom, drawer detail link titik + `S3 /attendance/{region}/{employee}/{date}` + jam `07:30–16:00` WITA.
 - **Auth Level:** Admin
-- **Query Parameters:** `page=1`, `per_page=20`, `region_id=null`, `employee_id=null`, `date_from=null`, `date_to=null`, `status=null`
+- **Query Parameters:** `page=1`, `per_page=20`, `region_id=null`, `office_location_id=null (FK titik, `__null`=tanpa titik)`, `employee_id=null`, `date_from=null`, `date_to=null`, `status=null (on_time|late|early_leave|excused_love)`
 - **Status Codes:** 200, 401/403, 500
 
-#### List Attendances (Karyawan, Own-Only)
+#### Dashboard breakdown per Titik (Admin)
+- **Method:** `GET` (Inertia) — `Dashboard.jsx`
+- **Path:** `/super-admin` & `/wilayah` (via `getAdminBase(url)` + `OWN_REGION` fallback)
+- **Description:** Dashboard menampilkan **breakdown per Titik** untuk `activeRegion`: `countsPerSite` (`employees.filter(office_location_id==s.id)`), `totalTanpaTitik` (`office_location_id==null`), header select `Semua titik` + filter `Wilayah/Titik` sync focus/visibility, cards Link `${base}/regions/${region.id}/sites/${site.id}` dengan `anggota`, `lat/lng • radius`, `Kelola`.
+- **Auth:** `auth:super_admin`/`wilayah` + role
+
+#### List Attendances (Karyawan, Own-Only, Per Titik Assigned)
 - **Method:** `GET`
 - **Path:** `/api/karyawan/attendances`
-- **Description:** Karyawan view own attendance history paginated.
+- **Description:** Karyawan view own history paginated — **hanya titik assigned** (1 karyawan=1 titik). Tanpa titik → kosong + note "Belum di-assign titik — hubungi Admin Wilayah". Riwayat tampil `jarak/radius` per assigned.
 - **Auth Level:** Karyawan
 - **Status Codes:** 200, 401, 500
 
-#### Check-in/out Attendance (Karyawan PWA)
+#### Check-in/out Attendance (Karyawan PWA — Hanya Ke Titik Assigned)
 - **Method:** `POST`
 - **Path:** `/api/karyawan/attendances`
-- **Description:** GPS+selfie check-in/out. Validates geofence server-side.
+- **Description:** GPS+selfie check-in/out. **Validasi `GeofenceService::isWithinAssignedSite(lat,lng, assigned OfficeLocation)` only** — bukan `isWithinAnySite`. Jika `employee.office_location_id IS NULL` → **422 "Belum di-assign titik"**; jika `distance > radius_m(assigned)` → **422 out_of_radius assigned (tidak tercatat)**. Jam global `07:30–16:00` WITA `toleransi 15m` Senin-Jumat server-side.
 - **Auth Level:** Karyawan
 - **Rate Limit:** 10 requests per hour per employee (prevent spam)
 - **Request Body:** `multipart/form-data` with `type` (in|out), `lat` (decimal), `lng` (decimal), `selfie` (image, max 5MB, required), `timestamp` (optional, server time used if missing), `device_info` (optional string)
-- **Response Body (Success):**
+- **Response Body (Success — Dalam Radius Assigned):**
 ```json
 {
   "success": true,
@@ -1722,24 +1745,33 @@ X-CSRF-TOKEN: <token>
     "type": "string",
     "timestamp": "datetime",
     "status": "string (on_time|late|early_leave)",
-    "distance_m": "integer (distance to kantor)",
-    "selfie_url": "string (S3 URL)"
+    "distance_m": "integer (distance ke titik assigned)",
+    "radius_m": "integer (radius assigned, ex 200)",
+    "office_location_id": "integer (assigned site, ex 201)",
+    "selfie_url": "string (S3 URL /attendance/{region_id}/{employee_id}/{date}/)"
   },
-  "message": "Absensi berhasil"
+  "message": "Absensi berhasil — Dalam radius titik assigned"
 }
 ```
-- **Response Body (Rejected - Out of Radius):** `422` with `error: out_of_radius`, `message: "Di luar radius kantor, tidak dapat absen"` — tidak ada status out_of_range, langsung ditolak.
-- **Status Codes:** 201 (Created), 422 (validation/geofence - di luar radius ditolak), 429, 500
+- **Response Body (Rejected - Tanpa Titik):** `422` with `error: no_assigned_site`, `message: "Belum di-assign titik — hubungi Admin Wilayah"` (assigned `NULL`).
+- **Response Body (Rejected - Di Luar Radius Assigned):** `422` with `error: out_of_radius`, `message: "Di luar radius titik assigned, tidak dapat absen"` — **cek terhadap `office_location_id` assigned saja**, tidak ada status out_of_range, langsung ditolak 422.
+- **Status Codes:** 201 (Created), 422 (validation/geofence — tanpa titik / di luar radius assigned ditolak), 429, 500
 
-### Love Claim Management (4 Hati — Dalam Radius, 1 Level Admin Wilayah)
+#### Karyawan PWA UI (Per Titik) — Sync `_shared.js`
+- **Assign sync:** `loadRegions()` + `loadEmployees()` via `_shared.js` (`DUMMY_REGIONS` 24 regions `101/102/201/202/301...` + `DUMMY_EMPLOYEES` `regionId + office_location_id` ex Andi 201, Siti 101, Budi 202, Rina null), `MOCK_KARYAWAN_ID=1` → `me` + `assigned={site,region}`; `tanpaTitik` branch warning + disabled absen/Love.
+- **Absensi UI:** Banner `Ditugaskan di: {nama_lokasi} — {regionName} • {lat},{lng} • radius {radius_m}m` (atau tanpa titik 422), preview `jarak/radius` + badge `Dalam/Di luar radius titik assigned`, buttons disabled `!inRadius || tanpaTitik`.
+- **Dashboard/Love/Profil/Rekap UI:** Dashboard badge titik, Love `sisa/max` + gate `jarak<=radius(assigned)` else disabled + `Tanpa titik` block, Profil header+card titik, Rekap header+calendar note `Di luar {radius}m tidak tercatat 422`.
 
-#### List Love Claims (Admin — Own Region)
+### Love Claim Management (4 Hati — Dalam Radius Titik Assigned, 1 Level Admin Wilayah)
+
+#### List Love Claims (Admin — Own Region, Per Titik)
 - **Method:** `GET`
-- **Path:** `/api/admin/love-claims`
-- **Description:** List Love Claims pending. Admin Wilayah sees own region only (distance cek: hanya late dalam radius yang bisa claim, out_of_radius tidak ada claim). Super Admin sees all.
+- **Path:** `/api/admin/love-claims` (alias `/api/super-admin/love-claims` & `/api/wilayah/love-claims`)
+- **Description:** List Love Claims pending **per titik**. Admin Wilayah sees own region only + **filter `Titik Proyek` per site incl. `__null` tanpa titik**, kolom `Titik Proyek` link `GET /regions/{region}/sites/{site}`, badge `Dalam/Di luar` (`jarak <= radius_m(assigned)`) + Approve disabled `sisaLove==0 || !inRadius`. Tanpa titik / di luar assigned tidak bisa claim (absen ditolak 422 → tidak ada claim). Super Admin sees all.
 - **Auth Level:** Admin
-- **Query Parameters:** `page=1`, `per_page=15`, `status=null` (pending|approved|rejected), `region_id=null`
+- **Query Parameters:** `page=1`, `per_page=15`, `status=null` (pending|approved|rejected), `region_id=null`, `office_location_id=null (FK titik, per-titik filter)`, `jarak` filter implicit via assigned
 - **Status Codes:** 200, 401/403, 500
+- **Admin UI:** `Cuti.jsx`/`Love.jsx` per titik — `siteById`, `siteFilter` `__null`, `sitesForWilayah` from `regionsData._shared`, kolom/link `Titik Proyek` `${base}/regions/.../sites/...`, `jarak/radius Dalam/Di luar`, `Approve` disabled `sisaLove 0 || !inRadius`.
 
 #### List Own Love Claims (Karyawan)
 - **Method:** `GET`
@@ -1771,42 +1803,45 @@ X-CSRF-TOKEN: <token>
 - **Auth Level:** Karyawan
 - **Status Codes:** 200, 401, 500
 
-#### Create Love Claim (Karyawan — Dalam Radius, hari yang sama Window)
+#### Create Love Claim (Karyawan — Dalam Radius Titik Assigned, Bulan Yang Sama, 1 Karyawan = 1 Titik)
 - **Method:** `POST`
 - **Path:** `/api/karyawan/love-claims`
-- **Description:** Ajukan 1 Love untuk 1 late dalam radius. Validasi: attendance harus milik sendiri, status=late, distance <= radius_m (dalam radius), belum ada claim untuk attendance tersebut, created_at same day (00:00–23:59 WITA) dari attendance timestamp, love_sisa >0.
+- **Description:** Ajukan 1 Love untuk 1 late **dalam radius titik assigned** (1 karyawan=1 titik). Validasi: `employee.office_location_id != null` (tanpa titik → 422 `no_assigned_site`); attendance milik sendiri, `status=late`, `isWithinAssignedSite(distance <= radius_m(assigned))` (**bukan `isWithinAnySite` — cek terhadap titik assigned saja**), belum ada claim untuk attendance tersebut, **bulan yang sama** (YYYY-MM sama, hari beda boleh — bukan harus hari yang sama 00:00–23:59 WITA), `love_sisa>0`.
 - **Auth Level:** Karyawan
-- **Rate Limit:** 10 claims per month per employee (max love)
+- **Rate Limit:** 4 claims per month per employee (max love default 4)
 - **Request Body:** `multipart/form-data` with `attendance_id` (integer, required), `alasan` (string, required, max 500), `dokumen` (file, required, PDF/image, max 5MB)
-- **Response Body (Success):**
+- **Response Body (Success — Dalam Assigned):**
 ```json
 {
   "success": true,
-  "data": { "id": "integer", "status": "pending", "love_sisa": "integer" },
+  "data": { "id": "integer", "status": "pending", "love_sisa": "integer", "office_location_id": "integer (assigned)" },
   "message": "Love claim diajukan, menunggu approval Admin Wilayah"
 }
 ```
-- **Response Body (Rejected — Di Luar Radius):** `422` `{ "success": false, "error": "out_of_radius", "message": "Absen di luar radius tidak dapat pakai Love" }`
+- **Response Body (Rejected — Tanpa Titik):** `422` `{ "success": false, "error": "no_assigned_site", "message": "Belum di-assign titik — hubungi Admin Wilayah" }`
+- **Response Body (Rejected — Di Luar Radius Assigned):** `422` `{ "success": false, "error": "out_of_radius", "message": "Di luar radius titik assigned tidak dapat pakai Love" }` (cek `distance > radius_m(assigned)` only)
 - **Response Body (No Love):** `422` `{ "error": "no_love", "message": "Sisa Love 0, tidak dapat ajukan" }`
-- **Status Codes:** 201 (Created), 422 (validation/out_of_radius/no_love/duplicate/window), 429, 500
+- **Status Codes:** 201 (Created), 422 (validation/no_assigned_site/out_of_radius/no_love/duplicate/bulan-beda), 429, 500
+- **PWA Gate:** Button `Gunakan Love` disabled if `tanpaTitik || !inRadius || sisa===0`; preview `jarak/radius` + badge `Dalam/Di luar radius titik assigned`.
 
-#### Approve/Reject Love Claim (Admin Wilayah — 1 Level)
+#### Approve/Reject Love Claim (Admin Wilayah — 1 Level, Cek Titik Assigned)
 - **Method:** `POST`
-- **Path:** `/api/admin/love-claims/{id}/approve` and `/api/admin/love-claims/{id}/reject`
-- **Description:** 1 level approval by Admin Wilayah own region. Checks: claim.region_id == admin.region_id, claim.status=pending, attendance still late. On approve: love_sisa-1, attendance.status → excused_love, claim.status=approved. On reject: claim.status=rejected, love not deducted. Notifications to karyawan.
+- **Path:** `/api/admin/love-claims/{id}/approve` and `/api/admin/love-claims/{id}/reject` (alias `/api/wilayah/...` own region)
+- **Description:** 1 level approval by Admin Wilayah own region. Checks: `claim.region_id == admin.region_id`, `claim.status=pending`, `attendance.status==late`, **`isWithinAssignedSite(distance <= radius_m(assigned))`** (assigned site 1=1 — approval blocked `!inRadius`); tanpa titik tidak ada claim. On approve: `love_sisa-1`, `attendance.status → excused_love`, `claim.status=approved`. On reject: `claim.status=rejected`, love not deducted. Notifications to karyawan.
 - **Auth Level:** Admin (admin_wilayah own region; super_admin can also approve any but primary is admin cabang)
 - **Request Body (optional):** `{ "notes": "string (optional, max 500)" }`
-- **Status Codes:** 200, 403 (wrong region), 404, 409 (already processed), 500
+- **Status Codes:** 200, 403 (wrong region / !inRadius assigned), 404, 409 (already processed), 500
 
-### Leave Management (Cuti Berjenjang)
+### Leave Management (Cuti Berjenjang, Per Titik)
 
-#### List Leave Requests (Admin, Region-Scoped)
+#### List Leave Requests (Admin, Region-Scoped, Per Titik)
 - **Method:** `GET`
-- **Path:** `/api/admin/leave-requests`
-- **Description:** List cuti. Admin Wilayah sees own region pending. Super Admin sees all. Filter by status/level.
+- **Path:** `/api/admin/leave-requests` (alias super-admin/wilayah)
+- **Description:** List cuti **per titik**. Admin Wilayah sees own region pending + **filter `Titik Proyek` per site incl. `__null` tanpa titik**, kolom Link `Titik Proyek` `GET /regions/{region}/sites/{site}`. Super Admin sees all.
 - **Auth Level:** Admin
-- **Query Parameters:** `page=1`, `per_page=15`, `status=null`, `level=null` (1|2|3), `region_id=null`
+- **Query Parameters:** `page=1`, `per_page=15`, `status=null`, `level=null` (1|2|3), `region_id=null`, `office_location_id=null (FK titik per-titik filter)`
 - **Status Codes:** 200, 401/403, 500
+- **Admin UI:** `Cuti.jsx` per titik — `siteById`, `siteFilter` `__null`, `sitesForWilayah`, kolom/link `Titik Proyek` `${base}/regions/.../sites/...`.
 
 #### List Own Leave Requests (Karyawan)
 - **Method:** `GET`
@@ -1969,10 +2004,10 @@ X-CSRF-TOKEN: <token>
 - **Auth Level:** Karyawan
 - **Status Codes:** 200, 401, 500
 
-#### Get Own Profile (Karyawan)
+#### Get Own Profile (Karyawan — Include Titik Assigned)
 - **Method:** `GET`
 - **Path:** `/api/karyawan/me`
-- **Description:** Retrieve own Lengkap HR profile.
+- **Description:** Retrieve own Lengkap HR profile **+ titik assigned** (`office_location` 1 karyawan=1 titik, NULL=belum assign). PWA header/badge titik + card titik detail.
 - **Auth Level:** Karyawan
 - **Response Body:**
 ```json
@@ -1988,6 +2023,8 @@ X-CSRF-TOKEN: <token>
     "unit_kerja": "string",
     "status_kepegawaian": "string",
     "region": { "id": "integer", "name": "string" },
+    "office_location": { "id": "integer|null", "nama_lokasi": "string (ex Bendungan Bili-Bili)", "lat": "decimal", "lng": "decimal", "radius_m": "integer", "address": "string" },
+    "office_location_id": "integer|null (NULL=Belum di-assign titik — hubungi Admin Wilayah, tidak bisa absen/Love 422)",
     "foto_url": "string",
     "email": "string",
     "phone": "string"

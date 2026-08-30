@@ -354,8 +354,8 @@ Stores Kantor BBWS PJ per wilayah — **24 Wilayah** (Kota Makassar pusat + 23 W
 
 > **Catatan:** `lat/lng/radius_m` **tidak lagi di `regions`** — dipindah ke **per titik proyek** (`office_locations`). Region hanya sebagai wadah N titik.
 
-### OFFICE_LOCATION / PROJECT_SITE — N Titik Proyek per Wilayah
-Stores **N titik proyek per wilayah** — contoh **Bendungan A, Jembatan B, Embung C, Irigasi D** — fleksibel radius per titik, di-input Super Admin / Admin Wilayah (own region) via Leaflet map picker + radius slider. Karyawan absen valid jika `distance <= radius_m` ke **salah satu** titik di wilayahnya.
+### OFFICE_LOCATION / PROJECT_SITE — N Titik Proyek per Wilayah (1 Karyawan = 1 Titik + Dedicated Page)
+Stores **N titik proyek per wilayah** — contoh **Bendungan A, Jembatan B, Embung C, Irigasi D** — fleksibel radius per titik, di-input Super Admin / Admin Wilayah (own region) via Leaflet map picker + radius slider (draggable marker+circle). **1 karyawan = 1 titik (`office_location_id`)** — absen valid hanya `distance <= radius_m(titik assigned)` via `GeofenceService::isWithinAssignedSite`; tanpa titik (`NULL`) 422 tidak bisa absen; di luar assigned 422 ditolak (bukan `isWithinAnySite`).
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|
@@ -370,7 +370,7 @@ Stores **N titik proyek per wilayah** — contoh **Bendungan A, Jembatan B, Embu
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
 
-**Aturan:** Minimal 1 titik per wilayah (validasi saat create wilayah). Admin Wilayah dapat menambah titik baru di wilayahnya (mis. awalnya Bendungan A saja, lalu tambah Jembatan B) tanpa batas ketat selain validasi radius 50–1000 per titik. Geofence: `Haversine(karyawan, tiap titik) → minDistance; lulus jika minDistance <= radius_m(titik_terdekat)`.
+**Aturan:** Minimal 1 titik per wilayah (validasi saat create wilayah); **maks praktis N≤20**, **hapus titik terakhir diblokir 422**. Tiap titik punya dedicated page `GET /regions/{region}/sites/{site}` (`Admin/SiteDetail`) dengan Leaflet draggable+circle + anggota per titik saja. Admin Wilayah tambah `Jembatan B` di wilayahnya yang sudah punya `Bendungan A` via `POST /regions/{regionId}/office-locations` (own region). **Geofence: `GeofenceService::isWithinAssignedSite(employeeLat,Lng, assigned OfficeLocation) → within = dist <= radius_m(assigned)`** — bukan `isWithinAnySite`; `employee.office_location_id IS NULL` → 422 belum di-assign titik (tidak bisa absen/Love); di luar assigned 422 ditolak.
 
 **Catatan domain Sulsel:** Seed awal 24 wilayah: Kantor Pusat (Kota Makassar) + 21 Kabupaten (Bantaeng, Barru, Bone, Bulukumba, Enrekang, Gowa, Jeneponto, Kepulauan Selayar, Luwu, Luwu Timur, Luwu Utara, Maros, Pangkajene dan Kepulauan, Pinrang, Sinjai, Sidenreng Rappang (Sidrap), Soppeng, Takalar, Tana Toraja, Toraja Utara, Wajo) + 2 Kota selain Makassar (Parepare, Palopo) — total 24. Seeder: `database/seeders/RegionSeeder.php` + `OfficeLocationSeeder.php` (tiap wilayah seed 1–2 titik contoh seperti Bendungan/Jembatan). Super Admin CRUD semua wilayah + N titik; **Admin Wilayah dapat tambah/edit/hapus N titik proyek di wilayahnya sendiri** (contoh tambah Bendungan A lalu Jembatan B) dan view wilayah lain read-only.
 
@@ -396,24 +396,24 @@ Stores karyawan Lengkap HR data, linked to region + **assigned 1 titik proyek sa
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
 
-> **Aturan penempatan:** 1 karyawan = 1 titik (`office_location_id`). Daftar "Tambah Anggota" di halaman titik hanya menampilkan karyawan `region_id` sama **dan** `office_location_id IS NULL`. Pindah titik via aksi `Pindah` di halaman titik. Absen valid hanya jika `distance <= radius_m(assigned site)` **dan** `employee.office_location_id == attendance.office_location_id`.
+> **Aturan penempatan:** 1 karyawan = 1 titik (`office_location_id`). Mock PWA `MOCK_KARYAWAN_ID=1` Andi Saputra assigned site 201 Bendungan Bili-Bili — Kab. Gowa 200m. Daftar "Tambah Anggota" di halaman titik hanya menampilkan karyawan `region_id` sama **dan** `office_location_id IS NULL` (kandidatTambah); tanpa titik tidak bisa absen 422 + warning PWA. Pindah titik via aksi `Pindah` di halaman titik. Absen/Love valid hanya jika `distance <= radius_m(assigned site)` via `isWithinAssignedSite` **dan** `employee.office_location_id == attendance.office_location_id`.
 
-### ATTENDANCE
-Stores GPS+selfie absensi records, region-scoped + linked to nearest project site (N titik).
+### ATTENDANCE — Tercatat Hanya ke Titik Assigned (1 Karyawan = 1 Titik)
+Stores GPS+selfie absensi records, region-scoped + linked to **titik proyek assigned karyawan** (`office_location_id == employee.office_location_id`). Tanpa titik atau di luar assigned ditolak 422 tidak tercatat.
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|
 | id | INT | PK, AUTO_INCREMENT | Unique identifier |
 | employee_id | INT | FK (EMPLOYEE.id) | Employee |
 | region_id | INT | FK (REGION.id) | Region (denormalized for query) |
-| office_location_id | INT | FK (OFFICE_LOCATION.id) NULLABLE | Nearest titik proyek saat absen (Bendungan A / Jembatan B) |
+| office_location_id | INT | FK (OFFICE_LOCATION.id) NULLABLE | Titik proyek assigned saat absen (harus == employee.office_location_id, ex 201 Bendungan Bili-Bili) |
 | type | ENUM('in','out') | NOT NULL | Check-in/out |
-| timestamp | TIMESTAMP | NOT NULL | Attendance time |
+| timestamp | TIMESTAMP | NOT NULL | Attendance time (WITA Asia/Makassar) |
 | lat | DECIMAL(10,8) | NOT NULL | GPS lat |
 | lng | DECIMAL(11,8) | NOT NULL | GPS lng |
-| selfie_url | VARCHAR(255) | NOT NULL | S3 URL of selfie |
-| status | ENUM('on_time','late','early_leave','excused_love') | NOT NULL | Validation status (di luar semua titik ditolak 422, tidak tercatat) |
-| distance_m | INT | NULLABLE | Distance to nearest titik (meter) |
+| selfie_url | VARCHAR(255) | NOT NULL | S3 URL of selfie (`/attendance/{region_id}/{employee_id}/{date}/`) |
+| status | ENUM('on_time','late','early_leave','excused_love') | NOT NULL | Validation status (tanpa titik / di luar radius assigned → ditolak 422 tidak tercatat via `isWithinAssignedSite`) |
+| distance_m | INT | NULLABLE | Distance ke titik assigned (meter) — untuk badge Dalam/Di luar & love gate |
 | device_info | VARCHAR(255) | NULLABLE | Device metadata |
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
 
@@ -465,8 +465,8 @@ Pivot for read/unread status per karyawan.
 | employee_id | INT | FK (EMPLOYEE.id) | Reader |
 | read_at | TIMESTAMP | NOT NULL | Read timestamp |
 
-### LOVE_BALANCE
-Stores per-employee per-month Love balance, reset bulanan (1st 00:00 WITA), fleksibel total love, berlaku sebulan (hari beda boleh).
+### LOVE_BALANCE — Reset 1st 00:00 WITA, Dalam Radius Titik Assigned (1=1)
+Stores per-employee per-month Love balance, reset bulanan (1st 00:00 WITA), fleksibel total love (`global_settings.love_max_default` 1–10 default 4), berlaku sebulan (hari beda boleh) — **claim hanya jika `distance <= radius_m(titik assigned)` (1 karyawan=1 titik)**, tanpa titik tidak bisa claim.
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|
@@ -479,8 +479,8 @@ Stores per-employee per-month Love balance, reset bulanan (1st 00:00 WITA), flek
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
 
-### LOVE_CLAIM
-Stores Love Claim for late dalam radius, 1 level Admin Wilayah approval, hari yang sama.
+### LOVE_CLAIM — Dalam Radius Titik Assigned Saja (1 Karyawan = 1 Titik)
+Stores Love Claim for late **dalam radius titik assigned** (`distance <= radius_m(assigned)` via `isWithinAssignedSite`), 1 level Admin Wilayah approval, bulan yang sama (hari beda boleh). Tanpa titik (`employee.office_location_id IS NULL`) tidak bisa claim; di luar assigned ditolak.
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|

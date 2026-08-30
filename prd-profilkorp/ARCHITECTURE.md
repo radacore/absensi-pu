@@ -2,7 +2,7 @@
 
 ## System Overview
 
-BBWS Pompengan Jeneberang — **BBWS Pompengan Jeneberang** is a monolithic Laravel 13 application (PHP 8.4+) with a React 19 frontend via Inertia.js v2. Pusat di **Makassar**, cabang di **Kabupaten/Kota se-Sulsel** (24 wilayah). Each Kantor Wilayah has **N titik proyek per wilayah** (contoh Bendungan A, Jembatan B, Embung C — masing-masing **lat/lng via map picker + radius absen meter**) di-input admin untuk geofence validasi absensi GPS+selfie karyawan cabangnya (karyawan valid jika `distance <= radius_m` ke **salah satu** titik). Architecture SSR + Inertia reactive, no separate API. Styling Tailwind v4, Vite 7, assets (media, selfie) on AWS S3, MySQL 8.4 LTS / 9.x region-scoped per kantor cabang, VPS Ubuntu 24.04 LTS. Roles: Super Admin Pusat (Makassar, CRUD all kantor + N titik/radius, atur Love max & jam global — via `SUPER_ADMIN_PATH` `/super-admin` + `/api/super-admin/*`), Admin Wilayah/Wilayah (tambah/edit N titik proyek di wilayahnya sendiri, approve Love 1 level, write own region — via `WILAYAH_PATH` `/wilayah` + `/api/wilayah/*`), Karyawan (email login, own-data-only, absensi cek jarak ke **titik proyek terdekat** di wilayahnya — di luar semua titik ditolak, Love 4/bulan reset, ajukan dokumen untuk excuse late dalam radius titik, PWA via `KARYAWAN_PATH` `/karyawan`) — **Opsi B: dua URL admin terpisah, tidak saling tukar**.
+BBWS Pompengan Jeneberang — **BBWS Pompengan Jeneberang** is a monolithic Laravel 13 application (PHP 8.4+) with a React 19 frontend via Inertia.js v2. Pusat di **Makassar**, cabang di **Kabupaten/Kota se-Sulsel** (24 wilayah). Each Kantor Wilayah has **N titik proyek per wilayah** (contoh Bendungan A, Jembatan B, Embung C — masing-masing **lat/lng via map picker + radius absen meter**, dedicated page per titik `GET /regions/{region}/sites/{site}`) di-input admin untuk geofence validasi absensi GPS+selfie karyawannya — **1 karyawan = 1 titik (`office_location_id`)**, karyawan valid hanya jika `distance <= radius_m(titik assigned)` via `GeofenceService::isWithinAssignedSite`; `office_location_id IS NULL` (tanpa titik) → **tidak bisa absen 422** (bukan `isWithinAnySite`). Architecture SSR + Inertia reactive, no separate API. Styling Tailwind v4, Vite 7, assets (media, selfie) on AWS S3, MySQL 8.4 LTS / 9.x region-scoped per kantor cabang, VPS Ubuntu 24.04 LTS. Roles: Super Admin Pusat (Makassar, CRUD all kantor + N titik/radius + assign/pindah per titik, atur Love max & jam global — via `SUPER_ADMIN_PATH` `/super-admin` + `/api/super-admin/*`), Admin Wilayah/Wilayah (tambah/edit N titik proyek di wilayahnya sendiri + assign karyawan per titik 1=1, approve Love 1 level cek titik assigned, write own region — via `WILAYAH_PATH` `/wilayah` + `/api/wilayah/*`), Karyawan (email login, own-data-only, **absensi hanya ke titik assigned-nya** — di luar assigned / tanpa titik ditolak 422, Love 4/bulan reset cek assigned, ajukan dokumen untuk excuse late, PWA via `KARYAWAN_PATH` `/karyawan`) — **Opsi B: dua URL admin terpisah, tidak saling tukar**.
 
 ## High-Level Architecture Diagram
 
@@ -73,8 +73,8 @@ The core backend application handles all business logic, routing, and data persi
 - **Authentication & Authorization:** Multi-guard Sanctum 4.x (`admin` guard via email, `karyawan` guard via NIK) + RBAC (Super Admin, Admin Wilayah, Karyawan) + region scope policies.
 - **Data Validation:** Validates all inputs including NIK/NIP, GPS geofence, selfie image, cuti dates, love claim alasan/dokumen, love window hari yang sama, love_sisa >0, dalam radius.
 - **Database Queries:** Optimized eager loading, region-scoped queries, query caching per region.
-  - **File Operations:** Handles uploads to S3: media, absensi selfies (`/attendance/{region}/{employee}/{date}` validated against **titik assigned** karyawan — `employee.office_location_id`, tiap titik `lat/lng/radius_m`, `NULL`=tidak bisa absen / di luar assigned ditolak), love dokumen (`/love-claims/{region}/{employee}/{uuid}.pdf`).
-  - **Geofence Service:** Central service `GeofenceService::isWithinAssignedSite(karyawanLat, karyawanLng, OfficeLocation assigned) → {within: bool, distanceM: int}` — Haversine ke `assigned` + `within = dist <= radius_m(assigned)`; helper `isWithinAnySite` tetap untuk list/nearest reporting. `Employee.office_location_id == null` → 422 belum di-assign titik. Used by AttendanceController.
+  - **File Operations:** Handles uploads to S3: media, absensi selfies (`/attendance/{region}/{employee}/{date}` validated **hanya terhadap titik assigned** `employee.office_location_id` via `GeofenceService::isWithinAssignedSite` — `NULL`=422 tidak bisa absen / di luar assigned 422 ditolak), love dokumen (`/love-claims/{region}/{employee}/{uuid}.pdf` — hanya dalam radius assigned).
+  - **Geofence Service:** Central service `GeofenceService::isWithinAssignedSite(karyawanLat, karyawanLng, OfficeLocation assigned) → {within: bool, distanceM: int}` — Haversine ke `assigned` + `within = dist <= radius_m(assigned)`; helper `isWithinAnySite` **hanya untuk list / nearest reporting (Dashboard breakdown / filter)**, **bukan untuk validasi absen/Love** — validasi absen/Love wajib `isWithinAssignedSite` only. `Employee.office_location_id == null` → 422 belum di-assign titik. Used by AttendanceController & LoveClaimController.
 - **PWA Support:** Serves `manifest.json` + `service-worker.js`, VAPID keys for push, offline queue sync for absensi.
 
 ### Inertia.js v2 Adapter
@@ -89,8 +89,8 @@ Inertia.js v2 bridges Laravel 13 and React 19, enabling server-side routing with
 
 React 19 components are organized into three sections, all using Tailwind CSS v4 and React 19 features (Actions, useOptimistic).
 
-  - **Admin Components:** Dashboard (role-scoped + love stats), Regions CRUD + **N Titik Proyek per wilayah — dedicated page per titik** (`/regions/{region}/sites/{site}`) dengan Leaflet draggable+circle per titik + **anggota per titik saja** (karyawan `office_location_id == site.id`, 1 karyawan =1 titik, assign/pindah), Admin Wilayah own region — map picker per titik, Employee management (region-scoped, `office_location_id` 1 titik), Attendance/Leave/Love Claims (1 level Admin Wilayah approve)/Announcement management, media library, SEO editor, Global Settings (jam kerja + love_max).
- - **Karyawan PWA Components (Mobile-first, 320px+):** Login (email+password), Bottom nav, Profile view/edit, Absensi (GPS+camera + geofence **ke titik assigned** `employee.office_location_id` — label Bendungan A/Jembatan B, distance + "Dalam radius titik assigned" badge, belum assign / di luar assigned ditolak 422), Love (4 dot gold #FCB833, sisa 3/4, ajukan dokumen pakai Love untuk late dalam radius titik assigned, history), Cuti form & status timeline (berjenjang), Pengumuman inbox (read/unread), Rekap Kalender, Offline banner + queue indicator. PWA install prompt + service worker cache.
+  - **Admin Components:** Dashboard (role-scoped **+ breakdown per Titik** — `OWN_REGION`/`wilayah` filter, `siteFilter`, cards per titik `anggota`/`lat/lng•radius`/`Kelola` Link `GET /regions/{region}/sites/{site}`, stats `totalTanpaTitik`), Regions CRUD + **N Titik per wilayah — dedicated page per titik `GET /regions/{region}/sites/{site}` (`super_admin|admin|wilayah.sites.show`)** dengan Leaflet draggable+circle per titik + edit titik + **anggota per titik saja** (`office_location_id == site.id`, 1 karyawan=1 titik, assign `kandidatTambah` filtered `regionId==region.id && office_location_id==null` / pindah), Employees (kolom+filter `Titik Proyek` `office_location_id` select, LS `_shared.js` `bbws_mock_*_v3` sync), Attendances (filter `Wilayah→Titik Proyek→Status` incl. `__null` tanpa titik, `siteById` kolom Titik link+`Dalam/Di luar`+`jarak/radius`+detail drawer S3 `/attendance/{region}/{employee}/{date}`), Cuti/Love (filter `Titik Proyek` + kolom link, Love badge `Dalam/Di luar` + Approve guard `sisa===0||!inRadius`), Announcement/Global Settings (jam kerja + love_max).
+  - **Karyawan PWA Components (Mobile-first, 320px+, 1 Karyawan = 1 Titik):** `MOCK_KARYAWAN_ID=1` Andi Saputra assigned `site 201 Bendungan Bili-Bili — Gowa 200m` via `loadRegions/loadEmployees` sync (`_shared.js`), `tanpaTitik` branch 422; Absensi (banner `Ditugaskan di: {nama} — {region} • lat,lng • radius`, preview `jarak/radius` + badge `Dalam/Di luar radius titik assigned`, buttons disabled `!inRadius||tanpaTitik`, history `jarak/radius`), Dashboard (greeting badge titik assigned), Love (sisa/max + `jarak<=radius(assigned)` gate, `tanpaTitik` block, disabled `!hit||sisa0`), Profil (header+card titik assigned lat/lng•radius), Rekap (header note + calendar `Di luar {radius}m tidak tercatat 422`). Bottom nav, Offline banner + queue indicator, PWA install prompt + SW cache.
 - **Shared Components:** Navigation, footer, modals, form inputs, pagination, loading skeletons, permission gates.
 
 ### MySQL 8.4 LTS / 9.x Database
@@ -99,19 +99,19 @@ Stores all application data with a relational schema optimized for the corporate
 
 **Core Tables (Public + Admin):**
 - `users` — Admin accounts (Super Admin Makassar + Admin Wilayah/Wilayah) with `role` + `region_id` (nullable for Super Admin), hashed password.
- - `regions` — Kantor BBWS PJ (Kantor Pusat + Wilayah Kab/Kota se-Sulsel, 24 wilayah) — `name, slug, kantor_name, tipe (pusat/cabang), address, is_active` — **geofence config dipindah ke `office_locations` N titik per wilayah**.
- - `office_locations` — N titik proyek per wilayah (nama_titik ex Bendungan A/Jembatan B, lat/lng/radius_m 50–1000 per titik, address) — Leaflet picker, minimal 1 per wilayah.
+  - `regions` — Kantor BBWS PJ (Kantor Pusat + Wilayah Kab/Kota se-Sulsel, 24 wilayah) — `name, slug, kantor_name, tipe (pusat/cabang), address, is_active` — **geofence config dipindah ke `office_locations` N titik per wilayah (N≤20, last delete 422)**.
+  - `office_locations` — N titik proyek per wilayah (nama_titik ex Bendungan A/Jembatan B, lat/lng/radius_m 50–1000 per titik, address, is_active) — Leaflet picker per titik, minimal 1 per wilayah, dedicated page `GET /regions/{region}/sites/{site}` + anggota per titik.
  - `pages` — Static pages with meta tags.
 - `page_versions` — Historical versions for rollback.
 - `services`, `projects`, `team_members`, `blog_posts`, `blog_categories`, `blog_tags`, `testimonials`, `contact_submissions`, `media`, `settings` — as before.
 
 **Karyawan/HR Tables (Region-Scoped):**
-- `employees` — Karyawan Lengkap HR (NIK UK, NIP UK, name, golongan, jabatan, unit_kerja, status, region_id FK, foto S3, kontak, dokumen) + auth password.
- - `attendances` — Absensi (employee_id, region_id, **office_location_id (titik terdekat)**, type in/out, timestamp, lat, lng, selfie_url S3, status on_time/late/early_leave, distance_m, device_info — di luar semua titik ditolak 422).
+- `employees` — Karyawan Lengkap HR (NIK UK, NIP UK, name, golongan, jabatan, unit_kerja, status, region_id FK, **office_location_id FK NULLABLE (1 karyawan = 1 titik; NULL=belum assign, tidak bisa absen 422)**, foto S3, kontak, dokumen) + auth password — `OfficeLocation.onDelete:SetNull`.
+  - `attendances` — Absensi (employee_id, region_id, **office_location_id (titik assigned karyawan, harus == employee.office_location_id)**, type in/out, timestamp, lat, lng, selfie_url S3 `/attendance/{region}/{employee}/{date}/`, status on_time/late/early_leave/excused_love, distance_m ke assigned, device_info — **tanpa titik / di luar assigned ditolak 422** via `isWithinAssignedSite`).
 - `leave_requests` — Cuti berjenjang (employee_id, region_id, jenis, tgl mulai/selesai, alasan, dokumen S3, status enum pending/approved_level1/approved_level2/approved/rejected, approved_by/at per level).
 - `announcements` — Pengumuman (title, content HTML, attachment S3, scope global/region, region_id nullable, published_at, is_pinned, created_by).
 - `love_balances` — Love per karyawan per bulan (employee_id, period YYYY-MM, love_sisa, love_max, reset_at) — reset 1st 00:00 WITA, fleksibel max.
-- `love_claims` — Love Claim (employee_id, attendance_id UK, region_id, alasan, dokumen_url S3, status pending/approved/rejected, reviewed_by/at) — 1 level Admin Wilayah, hari yang sama, hanya dalam radius.
+- `love_claims` — Love Claim (employee_id, attendance_id UK, region_id, alasan, dokumen_url S3, status pending/approved/rejected, reviewed_by/at) — 1 level Admin Wilayah, **bulan yang sama (hari beda boleh)**, **hanya dalam radius titik assigned (`distance <= radius_m(assigned)`)**, tanpa titik tidak bisa claim.
 - `announcement_reads` — Pivot (announcement_id, employee_id, read_at) for read/unread.
 
 ### AWS S3 Media Storage
@@ -214,17 +214,16 @@ sequenceDiagram
     PWA->>K: Request GPS + Camera permission
     K->>K: Capture GPS lat/lng + selfie + preview jarak ke kantor
     K->>L: POST /api/karyawan/attendances (lat,lng,selfie, timestamp)
-    L->>DB: Fetch N titik proyek di wilayah karyawan: office_locations by region_id
-    DB-->>L: List titik: Bendungan A lat/lng/radius, Jembatan B lat/lng/radius, ...
-    L->>L: Haversine ke tiap titik + Validate geofence (minDistance <= radius_m(titik terdekat))
-    L->>L: Check distance ke semua titik di wilayah — if semua > radius_m masing-masing → return 422 rejected (tidak simpan, di luar semua titik)
-    L->>L: Check status on_time/late/early_leave + fake GPS heuristic
-    L->>S3: Upload selfie to /attendance/{region}/{employee}/{date}/
+    L->>DB: Fetch employee.office_location_id → assigned OfficeLocation (NULL → 422 "Belum di-assign titik")
+    DB-->>L: Assigned: Bendungan Bili-Bili (site 201) lat/lng/radius 200m (atau NULL)
+    L->>L: GeofenceService::isWithinAssignedSite(lat,lng, assigned) — Haversine + within = dist <= radius_m(assigned); if NULL or !within → return 422 rejected (tidak simpan, di luar titik assigned / tanpa titik)
+    L->>L: Check status on_time/late/early_leave (jam global 07:30–16:00 WITA toleransi 15m) + fake GPS heuristic
+    L->>S3: Upload selfie to /attendance/{region}/{employee}/{date}/ (hanya jika dalam assigned)
     S3-->>L: S3 URL
-    L->>DB: Insert attendances (employee_id, region_id, office_location_id terdekat, lat,lng,selfie_url,status,distance_m)
+    L->>DB: Insert attendances (employee_id, region_id, office_location_id=assigned.id, lat,lng,selfie_url,status,distance_m)
     DB-->>L: Success
-    L->>K: Return success + status + distance_m + titik terdekat nama (Bendungan A)
-    K->>PWA: Cache attendance history offline
+    L->>K: Return success + status + distance_m + titik assigned nama (Bendungan Bili-Bili) + badge Dalam radius assigned
+    K->>PWA: Cache attendance history offline (jarak/radius assigned)
 ```
 
 ### Love Claim Flow (4 Hati — Dalam Radius, 1 Level Admin Wilayah)
@@ -236,20 +235,20 @@ sequenceDiagram
     participant DB as MySQL
     participant S3 as AWS S3
 
-    K->>L: Late attendance tercatat (07:52, 12m dalam radius, status=late)
-    K->>K: Lihat late → Tap "Gunakan Love (3 sisa)" + isi alasan + upload dokumen
+    K->>L: Late attendance tercatat (07:52, 12m dalam radius titik assigned Bendungan Bili-Bili 200m, status=late)
+    K->>K: Lihat late → Tap "Gunakan Love (3 sisa)" + isi alasan + upload dokumen (bulan yang sama, hari beda boleh — cek jarak<=radius assigned)
     K->>L: POST /api/karyawan/love-claims (attendance_id, alasan, dokumen)
-    L->>DB: Validate: own attendance, status=late, distance<=radius_m, no existing claim, same day (00:00–23:59 WITA), love_sisa>0
+    L->>DB: Validate: own attendance, status=late, isWithinAssignedSite(distance<=radius_m(assigned)) — bukan any site, no existing claim, same month (bulan sama), love_sisa>0, office_location_id!=null (tanpa titik → 422)
     L->>S3: Upload dokumen to /love-claims/{region}/{employee}/{uuid}.pdf
     L->>DB: Insert love_claims status=pending
     DB-->>L: Success
     L->>K: Return pending + love_sisa
 
-    Note over L: Admin Wilayah (Gowa) di dashboard melihat pending queue
-    K->>L: (Admin) POST /api/admin/love-claims/{id}/approve
+    Note over L: Admin Wilayah (Gowa) di dashboard melihat pending queue (filter per titik)
+    K->>L: (Admin) POST /api/admin/love-claims/{id}/approve — guard cek within assigned (distance<=radius assigned)
     L->>DB: Update love_claims approved, love_balances love_sisa-1, attendances status=excused_love
     DB-->>L: Success
-    L->>K: Notifikasi: Love disetujui, late di-excuse (rekap jadi on_time)
+    L->>K: Notifikasi: Love disetujui, late di-excuse (rekap jadi on_time); di luar assigned/tanpa titik tidak bisa approve
 ```
 
 ### Public Contact Form Submission Flow
@@ -355,13 +354,13 @@ The domain is registered with a DNS provider and configured to point to the VPS'
 4. Clicks "Tambah Karyawan" → form Lengkap HR (NIK, NIP, golongan, jabatan, unit, status, foto, kontak).
 5. Submits → middleware injects `region_id` automatically, validates NIK unique, uploads foto S3, insert `employees` with `region_id = session.region_id`.
 
-### N Titik Proyek per Wilayah — Input Flow (Geofence Config)
+### N Titik Proyek per Wilayah — Input Flow (1 Karyawan = 1 Titik + Dedicated Page per Titik)
 
-1. Super Admin (Makassar) navigates "Kelola Kantor/Wilayah" → list 24 wilayah (Kantor Pusat + 23 cabang se-Sulsel), tiap wilayah expand list **N titik proyek** (ex Bendungan A, Jembatan B).
-2. Untuk tiap wilayah: dapat **tambah/edit/hapus titik proyek** — tiap titik form **nama titik + lat/lng via map picker Leaflet + radius absen meter 50–1000 default 200 + alamat** + kantor_name/tipe di level wilayah.
-3. Admin Wilayah navigates "Kelola Titik Proyek Saya" → list **N titik di wilayahnya sendiri**; dapat **tambah titik baru** (mis. sudah ada Bendungan A, tambah Jembatan B), edit/hapus titik sendiri + view wilayah lain read-only.
-4. On save → validates lat/lng range, radius 50–1000 per titik, minimal 1 titik per wilayah, upsert `office_locations` (region_id FK). Invalidate geofence cache per region.
-5. Karyawan absensi later validates Haversine ke **tiap titik di wilayahnya**, ambil titik terdekat — shows `Titik terdekat: Bendungan A • 48m • Dalam radius` / `Di luar semua titik` badge.
+1. Super Admin (Makassar) navigates "Kelola Kantor/Wilayah" (prefix `super-admin`/`admin`) → list 24 wilayah (Kantor Pusat + 23 cabang), tiap wilayah expand list **N titik proyek** (Bendungan A, Jembatan B) dengan **breakdown per Titik** di Dashboard (cards `anggota`/`lat/lng•radius`/`Kelola` Link `GET /regions/{region}/sites/{site}`).
+2. Untuk tiap titik: **dedicated page** `GET /regions/{region}/sites/{site}` (`Admin/SiteDetail`) — Leaflet draggable marker+circle per titik + form edit titik (**nama/lat/lng/radius 50–1000/address/is_active**) + **anggota per titik saja** (`office_location_id == site.id`, badge karyawan, select **kandidatTambah hanya `regionId==region.id && office_location_id==null`** + aksi `Tambah`/`Pindah` per titik saja) + hapus titik (blocked jika last site 422).
+3. Admin Wilayah (wilayah `OWN_REGION` ex Kab. Gowa) navigates own region Dashboard (auto `activeRegion` from `wilayah`/`OWN_REGION`) + Regions/Cuti/Love filtered `Wilayah→Titik Proyek→Status` (`__null` tanpa titik); dapat **tambah titik baru** (mis. sudah ada Bendungan Bili-Bili 201, tambah Jembatan Pampang) via `POST /regions/{regionId}/office-locations`, edit/hapus titik sendiri + view wilayah lain read-only; `_shared.js` `DUMMY_REGIONS/DUMMY_EMPLOYEES` + `bbws_mock_*_v3` LS sync.
+4. On save → validates lat/lng range, radius 50–1000 per titik, minimal 1 & N≤20 per wilayah, `office_location_id` 1=1 karyawan (pindah via SiteDetail), upsert `office_locations` (region_id FK). Invalidate geofence cache per region.
+5. Karyawan PWA absensi validates **hanya ke titik assigned** `GeofenceService::isWithinAssignedSite(dist <= radius_m(assigned))` → shows `Ditugaskan di: Bendungan Bili-Bili — Kab. Gowa lat/lng•radius 200m • Dalam/Di luar radius titik assigned` badge; tanpa titik warning 422 disabled; di luar assigned ditolak 422 (bukan `isWithinAnySite`).
 
 ### Admin Content Update Flow
 
@@ -379,14 +378,14 @@ The domain is registered with a DNS provider and configured to point to the VPS'
 
 ## Security Architecture
 
-### Authentication & Authorization (RBAC + Region Isolation)
+### Authentication & Authorization (RBAC + Region + Titik Isolation — 1 Karyawan = 1 Titik)
 
-- **Three Roles:** Super Admin Pusat (all access, manages regions & admin wilayah), Admin Wilayah (CRUD own region employees, read all), Karyawan (own-data-only, NIK login, PWA).
-- **Multi-Guard:** `admin` guard (email) and `karyawan` guard (NIK) via Sanctum 4.x, separate session handling.
-- **Credentials:** Bcrypt hash in `users` (admin) and `employees` (karyawan password). email is UK, unique.
+- **Three Roles:** Super Admin Pusat (all, manages regions & **N titik + 1 karyawan=1 titik assign/pindah**, love max & jam global), Admin Wilayah (CRUD own region employees **+ assign 1 titik per karyawan**, read all, approve Love cek assigned), Karyawan (own-data-only, email login, **absen/Love hanya titik assigned**, tanpa titik 422, PWA 320px+).
+- **Multi-Guard:** `super_admin` (email, region_id null) vs `wilayah` (email, region_id FK) vs `karyawan` (email, region_id + office_location_id via `_shared.js`) via Sanctum 4.x, Opsi B pisah URL (`SUPER_ADMIN_PATH` vs `WILAYAH_PATH` vs `KARYAWAN_PATH`) — tidak cross-login.
+- **Credentials:** Bcrypt hash `users` (admin) + `employees` (karyawan). email UK unique; **employee.office_location_id FK NULLABLE 1=1 titik** (SetNull on delete).
 - **Session-Based Auth:** HTTP-only cookies, CSRF token required.
-- **Region Isolation:** Policies + global query scopes enforce `region_id` on all region-scoped models. Admin Wilayah writes blocked if `region_id` mismatch (403). Karyawan blocked from other employee_id.
-- **Rate Limiting:** Admin login, karyawan NIK login (5/15min per IP + per NIK), contact form, absensi spam throttled.
+- **Region + Titik Isolation:** Policies + global scopes enforce `region_id` + **per-titik `office_location_id`** (Dashboard/Attendances/Cuti/Love filter `Titik Proyek` + `__null` tanpa titik, kolom Titik link SiteDetail). Admin Wilayah writes blocked if `region_id` mismatch (403) atau cross-region pindah. Karyawan blocked from other `employee_id`+other `office_location_id`; absen/Love `isWithinAssignedSite` only.
+- **Rate Limiting:** Admin login (`super_admin` vs `wilayah` 5/15min per IP terpisah), karyawan email login (5/15min per IP+per email), contact, absensi spam, love 4/month per employee.
 
 ### Data Protection
 
