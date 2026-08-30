@@ -1,0 +1,70 @@
+// Shared mock — source of truth untuk Regions & SiteDetail (frontend only, localStorage)
+// 1 karyawan = 1 titik (office_location_id). Absen valid hanya di titik itu.
+
+export const OWN_REGION = 'Kab. Gowa';
+export const MAX_SITES = 20;
+
+export const DUMMY_REGIONS = [
+    { id: 1, name: 'Kota Makassar', kantor: 'Kantor Pusat', tipe: 'pusat', locations: [{ id: 101, nama_lokasi: 'Bendungan Tallo — Makassar', lat: -5.1477, lng: 119.4327, radius: 300, address: 'Jl. AP Pettarani No.1' }, { id: 102, nama_lokasi: 'Jembatan Pettarani', lat: -5.156, lng: 119.44, radius: 200, address: 'Jl. Pettarani' }], address: 'Jl. AP Pettarani No.1 — Makassar' },
+    { id: 2, name: 'Kab. Gowa', kantor: 'Kantor Wilayah Gowa', tipe: 'cabang', locations: [{ id: 201, nama_lokasi: 'Bendungan Bili-Bili', lat: -5.3114, lng: 119.42, radius: 200, address: 'Jl. Poros Malino' }, { id: 202, nama_lokasi: 'Jembatan Pampang', lat: -5.32, lng: 119.45, radius: 150, address: 'Jl. Pampang' }], address: 'Jl. Poros Malino — Gowa' },
+    { id: 3, name: 'Kab. Maros', kantor: 'Kantor Wilayah Maros', tipe: 'cabang', locations: [{ id: 301, nama_lokasi: 'Kantor Maros', lat: -5.005, lng: 119.58, radius: 200, address: 'Jl. Poros Maros' }], address: 'Jl. Poros Maros' },
+    { id: 4, name: 'Kab. Bone', kantor: 'Kantor Wilayah Bone', tipe: 'cabang', locations: [{ id: 401, nama_lokasi: 'Kantor Bone', lat: -4.54, lng: 120.33, radius: 150, address: 'Jl. Ahmad Yani — Bone' }], address: 'Jl. Ahmad Yani — Bone' },
+    { id: 5, name: 'Kota Parepare', kantor: 'Kantor Wilayah Parepare', tipe: 'cabang', locations: [{ id: 501, nama_lokasi: 'Kantor Parepare', lat: -4.0148, lng: 119.625, radius: 200, address: 'Jl. Andi Makkasau — Parepare' }], address: 'Jl. Andi Makkasau — Parepare' },
+    { id: 6, name: 'Kota Palopo', kantor: 'Kantor Wilayah Palopo', tipe: 'cabang', locations: [{ id: 601, nama_lokasi: 'Kantor Palopo', lat: -3.0014, lng: 120.192, radius: 200, address: 'Jl. Andi Djemma — Palopo' }], address: 'Jl. Andi Djemma — Palopo' },
+    { id: 7, name: 'Kab. Bantaeng', kantor: 'Kantor Wilayah Bantaeng', tipe: 'cabang', locations: [{ id: 701, nama_lokasi: 'Kantor Bantaeng', lat: -5.54, lng: 119.93, radius: 180, address: 'Jl. Andi Mannappiang — Bantaeng' }], address: 'Jl. Andi Mannappiang — Bantaeng' },
+    { id: 8, name: 'Kab. Barru', kantor: 'Kantor Wilayah Barru', tipe: 'cabang', locations: [{ id: 801, nama_lokasi: 'Kantor Barru', lat: -4.42, lng: 119.68, radius: 180, address: 'Jl. Sultan Hasanuddin — Barru' }], address: 'Jl. Sultan Hasanuddin — Barru' },
+    { id: 9, name: 'Kab. Bulukumba', kantor: 'Kantor Wilayah Bulukumba', tipe: 'cabang', locations: [{ id: 901, nama_lokasi: 'Kantor Bulukumba', lat: -5.56, lng: 120.19, radius: 200, address: 'Jl. Sam Ratulangi — Bulukumba' }], address: 'Jl. Sam Ratulangi — Bulukumba' },
+    { id: 10, name: 'Kab. Enrekang', kantor: 'Kantor Wilayah Enrekang', tipe: 'cabang', locations: [{ id: 1001, nama_lokasi: 'Kantor Enrekang', lat: -3.58, lng: 119.77, radius: 200, address: 'Jl. Pahlawan — Enrekang' }], address: 'Jl. Pahlawan — Enrekang' },
+    { id: 11, name: 'Kab. Jeneponto', kantor: 'Kantor Wilayah Jeneponto', tipe: 'cabang', locations: [{ id: 1101, nama_lokasi: 'Kantor Jeneponto', lat: -5.66, lng: 119.73, radius: 200, address: 'Jl. Pahlawan — Jeneponto' }], address: 'Jl. Pahlawan — Jeneponto' },
+    { id: 12, name: 'Kab. Kepulauan Selayar', kantor: 'Kantor Wilayah Selayar', tipe: 'cabang', locations: [{ id: 1201, nama_lokasi: 'Kantor Selayar', lat: -6.12, lng: 120.45, radius: 250, address: 'Jl. Ahmad Yani — Benteng Selayar' }], address: 'Jl. Ahmad Yani — Benteng Selayar' },
+    { id: 13, name: 'Kab. Luwu', kantor: 'Kantor Wilayah Luwu', tipe: 'cabang', locations: [{ id: 1301, nama_lokasi: 'Kantor Luwu', lat: -3.39, lng: 120.38, radius: 200, address: 'Jl. Trans Sulawesi — Belopa' }], address: 'Jl. Trans Sulawesi — Belopa' },
+    { id: 14, name: 'Kab. Luwu Timur', kantor: 'Kantor Wilayah Luwu Timur', tipe: 'cabang', locations: [{ id: 1401, nama_lokasi: 'Kantor Luwu Timur', lat: -2.60, lng: 121.10, radius: 200, address: 'Jl. Soekarno Hatta — Malili' }], address: 'Jl. Soekarno Hatta — Malili' },
+    { id: 15, name: 'Kab. Luwu Utara', kantor: 'Kantor Wilayah Luwu Utara', tipe: 'cabang', locations: [{ id: 1501, nama_lokasi: 'Kantor Luwu Utara', lat: -2.77, lng: 120.10, radius: 200, address: 'Jl. Simpurusiang — Masamba' }], address: 'Jl. Simpurusiang — Masamba' },
+    { id: 16, name: 'Kab. Pangkajene dan Kepulauan', kantor: 'Kantor Wilayah Pangkep', tipe: 'cabang', locations: [{ id: 1601, nama_lokasi: 'Kantor Pangkep', lat: -4.84, lng: 119.54, radius: 200, address: 'Jl. H. Abd. Rahman — Pangkajene' }], address: 'Jl. H. Abd. Rahman — Pangkajene' },
+    { id: 17, name: 'Kab. Pinrang', kantor: 'Kantor Wilayah Pinrang', tipe: 'cabang', locations: [{ id: 1701, nama_lokasi: 'Kantor Pinrang', lat: -3.79, lng: 119.65, radius: 200, address: 'Jl. Bintang — Pinrang' }], address: 'Jl. Bintang — Pinrang' },
+    { id: 18, name: 'Kab. Sinjai', kantor: 'Kantor Wilayah Sinjai', tipe: 'cabang', locations: [{ id: 1801, nama_lokasi: 'Kantor Sinjai', lat: -5.12, lng: 120.25, radius: 200, address: 'Jl. Persatuan Raya — Sinjai' }], address: 'Jl. Persatuan Raya — Sinjai' },
+    { id: 19, name: 'Kab. Soppeng', kantor: 'Kantor Wilayah Soppeng', tipe: 'cabang', locations: [{ id: 1901, nama_lokasi: 'Kantor Soppeng', lat: -4.35, lng: 119.88, radius: 200, address: 'Jl. Lamumpatue — Watansoppeng' }], address: 'Jl. Lamumpatue — Watansoppeng' },
+    { id: 20, name: 'Kab. Takalar', kantor: 'Kantor Wilayah Takalar', tipe: 'cabang', locations: [{ id: 2001, nama_lokasi: 'Kantor Takalar', lat: -5.41, lng: 119.44, radius: 200, address: 'Jl. Syekh Yusuf — Takalar' }], address: 'Jl. Syekh Yusuf — Takalar' },
+    { id: 21, name: 'Kab. Tana Toraja', kantor: 'Kantor Wilayah Tana Toraja', tipe: 'cabang', locations: [{ id: 2101, nama_lokasi: 'Kantor Tana Toraja', lat: -3.04, lng: 119.84, radius: 200, address: 'Jl. Pongtiku — Makale' }], address: 'Jl. Pongtiku — Makale' },
+    { id: 22, name: 'Kab. Toraja Utara', kantor: 'Kantor Wilayah Toraja Utara', tipe: 'cabang', locations: [{ id: 2201, nama_lokasi: 'Kantor Toraja Utara', lat: -3.05, lng: 119.81, radius: 200, address: 'Jl. Poros Rantepao — Rantepao' }], address: 'Jl. Poros Rantepao — Rantepao' },
+    { id: 23, name: 'Kab. Wajo', kantor: 'Kantor Wilayah Wajo', tipe: 'cabang', locations: [{ id: 2301, nama_lokasi: 'Kantor Wajo', lat: -4.12, lng: 120.03, radius: 200, address: 'Jl. Andi Paddanguri — Sengkang' }], address: 'Jl. Andi Paddanguri — Sengkang' },
+    { id: 24, name: 'Kab. Sidrap', kantor: 'Kantor Wilayah Sidrap', tipe: 'cabang', locations: [{ id: 2401, nama_lokasi: 'Kantor Sidrap', lat: -3.94, lng: 119.79, radius: 200, address: 'Jl. Jenderal Sudirman — Pangkajene Sidenreng' }], address: 'Jl. Jenderal Sudirman — Pangkajene Sidenreng' },
+];
+
+export const DUMMY_EMPLOYEES = [
+    { id: 1, nik: '7371001234567890', nip: '198501012010011001', nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', gol: 'III/a', jabatan: 'Staff Teknik', unit: 'Bidang Jalan', status: 'PNS', region: 'Kab. Gowa', regionId: 2, office_location_id: 201, foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face&auto=format' },
+    { id: 2, nik: '7371001234567891', nip: '199002022015022002', nama: 'Siti Rahma', email: 'siti@bbws-pj.go.id', gol: 'III/b', jabatan: 'Analis Data', unit: 'Bidang Air', status: 'PPPK', region: 'Kota Makassar', regionId: 1, office_location_id: 101, foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face&auto=format' },
+    { id: 3, nik: '7371001234567892', nip: '', nama: 'Budi Santoso', email: 'budi@bbws-pj.go.id', gol: '-', jabatan: 'Operator', unit: 'Bidang Jalan', status: 'Kontrak', region: 'Kab. Gowa', regionId: 2, office_location_id: 202, foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face&auto=format' },
+    { id: 4, nik: '7371001234567893', nip: '', nama: 'Rina Wati', email: 'rina@bbws-pj.go.id', gol: '-', jabatan: 'Admin', unit: 'Bidang Umum', status: 'Kontrak', region: 'Kab. Gowa', regionId: 2, office_location_id: null, foto: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face&auto=format' },
+    { id: 5, nik: '7371001234567894', nip: '', nama: 'Dewi Lestari', email: 'dewi@bbws-pj.go.id', gol: '-', jabatan: 'Staff', unit: 'Bidang Jalan', status: 'PNS', region: 'Kab. Maros', regionId: 3, office_location_id: 301, foto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face&auto=format' },
+];
+
+const LS_REGIONS = 'bbws_mock_regions_v3';
+const LS_EMPLOYEES = 'bbws_mock_employees_v3';
+
+export function loadRegions() {
+    try {
+        const raw = localStorage.getItem(LS_REGIONS);
+        if (raw) return JSON.parse(raw);
+    } catch {}
+    return DUMMY_REGIONS;
+}
+export function saveRegions(list) {
+    try { localStorage.setItem(LS_REGIONS, JSON.stringify(list)); } catch {}
+}
+export function loadEmployees() {
+    try {
+        const raw = localStorage.getItem(LS_EMPLOYEES);
+        if (raw) return JSON.parse(raw);
+    } catch {}
+    return DUMMY_EMPLOYEES;
+}
+export function saveEmployees(list) {
+    try { localStorage.setItem(LS_EMPLOYEES, JSON.stringify(list)); } catch {}
+}
+export function getBase(url) {
+    if (url.startsWith('/super-admin')) return '/super-admin';
+    if (url.startsWith('/admin')) return '/admin';
+    if (url.startsWith('/wilayah')) return '/wilayah';
+    return '/admin';
+}

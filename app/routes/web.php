@@ -25,6 +25,7 @@ Route::prefix('super-admin')->group(function () {
     Route::get('/login', fn () => Inertia::render('Admin/Login'))->name('super_admin.login');
     Route::get('/', fn () => Inertia::render('Admin/Dashboard'))->name('super_admin.dashboard');
     Route::get('/regions', fn () => Inertia::render('Admin/Regions'))->name('super_admin.regions');
+    Route::get('/regions/{region}/sites/{site}', fn ($region, $site) => Inertia::render('Admin/SiteDetail', ['regionId' => (int) $region, 'siteId' => (int) $site]))->name('super_admin.sites.show');
     Route::get('/employees', fn () => Inertia::render('Admin/Employees'))->name('super_admin.employees');
     Route::get('/admin-wilayah', fn () => Inertia::render('Admin/AdminWilayah'))->name('super_admin.admin-wilayah');
     Route::get('/attendances', fn () => Inertia::render('Admin/Attendances'))->name('super_admin.attendances');
@@ -40,6 +41,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/login', fn () => Inertia::render('Admin/Login'))->name('admin.login');
     Route::get('/', fn () => Inertia::render('Admin/Dashboard'))->name('admin.dashboard');
     Route::get('/regions', fn () => Inertia::render('Admin/Regions'))->name('admin.regions');
+    Route::get('/regions/{region}/sites/{site}', fn ($region, $site) => Inertia::render('Admin/SiteDetail', ['regionId' => (int) $region, 'siteId' => (int) $site]))->name('admin.sites.show');
     Route::get('/employees', fn () => Inertia::render('Admin/Employees'))->name('admin.employees');
     Route::get('/admin-wilayah', fn () => Inertia::render('Admin/AdminWilayah'))->name('admin.admin-wilayah');
     Route::get('/attendances', fn () => Inertia::render('Admin/Attendances'))->name('admin.attendances');
@@ -55,6 +57,7 @@ Route::prefix('wilayah')->group(function () {
     Route::get('/login', fn () => Inertia::render('Admin/Login'))->name('wilayah.login');
     Route::get('/', fn () => Inertia::render('Admin/Dashboard'))->name('wilayah.dashboard');
     Route::get('/regions', fn () => Inertia::render('Admin/Regions'))->name('wilayah.regions');
+    Route::get('/regions/{region}/sites/{site}', fn ($region, $site) => Inertia::render('Admin/SiteDetail', ['regionId' => (int) $region, 'siteId' => (int) $site]))->name('wilayah.sites.show');
     Route::get('/employees', fn () => Inertia::render('Admin/Employees'))->name('wilayah.employees');
     Route::get('/admin-wilayah', fn () => Inertia::render('Admin/AdminWilayah'))->name('wilayah.admin-wilayah');
     Route::get('/attendances', fn () => Inertia::render('Admin/Attendances'))->name('wilayah.attendances');

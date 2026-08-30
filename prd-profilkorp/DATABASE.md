@@ -28,6 +28,7 @@ erDiagram
     REGION ||--o{ ATTENDANCE : "has many"
     REGION ||--o{ OFFICE_LOCATION : "has many"
     OFFICE_LOCATION ||--o{ ATTENDANCE : "has many"
+    OFFICE_LOCATION ||--o{ EMPLOYEE : "assigned per titik"
     REGION ||--o{ ANNOUNCEMENT : "has many"
     EMPLOYEE ||--o{ ATTENDANCE : "has many"
     EMPLOYEE ||--o{ LEAVE_REQUEST : "has many"
@@ -373,11 +374,11 @@ Stores **N titik proyek per wilayah** — contoh **Bendungan A, Jembatan B, Embu
 
 **Catatan domain Sulsel:** Seed awal 24 wilayah: Kantor Pusat (Kota Makassar) + 21 Kabupaten (Bantaeng, Barru, Bone, Bulukumba, Enrekang, Gowa, Jeneponto, Kepulauan Selayar, Luwu, Luwu Timur, Luwu Utara, Maros, Pangkajene dan Kepulauan, Pinrang, Sinjai, Sidenreng Rappang (Sidrap), Soppeng, Takalar, Tana Toraja, Toraja Utara, Wajo) + 2 Kota selain Makassar (Parepare, Palopo) — total 24. Seeder: `database/seeders/RegionSeeder.php` + `OfficeLocationSeeder.php` (tiap wilayah seed 1–2 titik contoh seperti Bendungan/Jembatan). Super Admin CRUD semua wilayah + N titik; **Admin Wilayah dapat tambah/edit/hapus N titik proyek di wilayahnya sendiri** (contoh tambah Bendungan A lalu Jembatan B) dan view wilayah lain read-only.
 
-### EMPLOYEE
-Stores karyawan Lengkap HR data, linked to region, auth via NIK + password. Own-data-only policy.
+### EMPLOYEE — 1 Karyawan = 1 Titik Proyek (per titik saja)
+Stores karyawan Lengkap HR data, linked to region + **assigned 1 titik proyek saja** (`office_location_id`), auth via email+password. Own-data-only + titik-assigned policy.
 
 | Column | Type | Constraints | Description |
-|:---|:---|:---|:---|
+|:---|:---|:---|---|
 | id | INT | PK, AUTO_INCREMENT | Unique identifier |
 | nik | VARCHAR(16) | UK, NOT NULL | 16-digit NIK (data, bukan login — login pakai email) |
 | nip | VARCHAR(255) | UK, NULLABLE | NIP (optional unique) |
@@ -387,12 +388,15 @@ Stores karyawan Lengkap HR data, linked to region, auth via NIK + password. Own-
 | unit_kerja | VARCHAR(255) | NOT NULL | Work unit |
 | status_kepegawaian | ENUM('PNS','PPPK','Kontrak','Honorer') | NOT NULL | Employment status |
 | region_id | INT | FK (REGION.id), NOT NULL | Assigned region |
+| office_location_id | INT | FK (OFFICE_LOCATION.id), NULLABLE | Titik proyek assigned (1 karyawan = 1 titik; NULL = belum di-assign, tidak bisa absen) |
 | password | VARCHAR(255) | NOT NULL | Hashed password (bcrypt) |
 | foto_url | VARCHAR(255) | NULLABLE | S3 URL of photo |
 | email | VARCHAR(255) | UK, NOT NULL | Login email (unique, untuk semua role) |
 | phone | VARCHAR(20) | NULLABLE | Contact phone |
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
 | updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE | Last update time |
+
+> **Aturan penempatan:** 1 karyawan = 1 titik (`office_location_id`). Daftar "Tambah Anggota" di halaman titik hanya menampilkan karyawan `region_id` sama **dan** `office_location_id IS NULL`. Pindah titik via aksi `Pindah` di halaman titik. Absen valid hanya jika `distance <= radius_m(assigned site)` **dan** `employee.office_location_id == attendance.office_location_id`.
 
 ### ATTENDANCE
 Stores GPS+selfie absensi records, region-scoped + linked to nearest project site (N titik).
@@ -757,7 +761,7 @@ model Region {
 
 model Employee {
   id                Int       @id @default(autoincrement())
-  nik               String    @unique // 16 digits, login
+  nik               String    @unique // 16 digits
   nip               String?   @unique
   name              String
   golongan          String?
@@ -765,6 +769,7 @@ model Employee {
   unitKerja         String    @map("unit_kerja")
   statusKepegawaian String    @map("status_kepegawaian") // PNS | PPPK | Kontrak | Honorer
   regionId          Int       @map("region_id")
+  officeLocationId  Int?      @map("office_location_id") // 1 karyawan = 1 titik; null = belum assign
   password          String
   fotoUrl           String?   @map("foto_url")
   email             String?
@@ -773,6 +778,7 @@ model Employee {
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   region            Region    @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  officeLocation    OfficeLocation? @relation(fields: [officeLocationId], references: [id], onDelete: SetNull)
   attendances       Attendance[]
   leaveRequests     LeaveRequest[]
   announcementReads AnnouncementRead[]
@@ -871,6 +877,7 @@ model OfficeLocation {
 
   region            Region    @relation(fields: [regionId], references: [id], onDelete: Cascade)
   attendances       Attendance[]
+  assignedEmployees Employee[]
 
   @@map("office_location")
 }
