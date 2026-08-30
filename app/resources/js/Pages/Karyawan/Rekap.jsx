@@ -1,7 +1,29 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
 import { Link } from '@inertiajs/react';
+import { useEffect, useMemo, useState } from 'react';
+import { loadRegions, loadEmployees } from '@/Pages/Admin/_shared';
+
+const MOCK_KARYAWAN_ID = 1;
 
 export default function Rekap() {
+    const [regionsData, setRegionsData] = useState(() => loadRegions());
+    const [employees, setEmployees] = useState(() => loadEmployees());
+    useEffect(() => {
+        const sync = () => { setRegionsData(loadRegions()); setEmployees(loadEmployees()); };
+        window.addEventListener('focus', sync);
+        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
+        document.addEventListener('visibilitychange', onVis);
+        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); };
+    }, []);
+    const me = useMemo(() => employees.find((e) => e.id === MOCK_KARYAWAN_ID) || employees[0], [employees]);
+    const assigned = useMemo(() => {
+        if (!me || me.office_location_id == null) return null;
+        for (const r of regionsData) {
+            const s = r.locations.find((x) => x.id === Number(me.office_location_id));
+            if (s) return { site: s, region: r };
+        }
+        return null;
+    }, [me, regionsData]);
     const days = Array.from({ length: 30 }, (_, i) => {
         const d = i + 1;
         if ([6, 7, 13, 14, 20, 21, 27, 28].includes(d)) return { d, status: 'libur' };
@@ -16,10 +38,16 @@ export default function Rekap() {
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Rekap kehadiran</h2>
-                        <p className="text-sm text-[#64748B]">Agustus 2026 • Kantor Wilayah Gowa • Love 3/4</p>
+                        <p className="text-sm text-[#64748B]">Agustus 2026 • {assigned ? `${assigned.region.name} • ${assigned.site.nama_lokasi} • ${assigned.site.radius} m` : 'Tanpa titik — tidak bisa absen'} • Love 3/4</p>
                     </div>
                     <span className="bg-[#FCB833] text-[#0F172A] text-xs font-semibold px-3 py-1.5 rounded-full">4 Love</span>
                 </div>
+                {assigned && (
+                    <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-3 flex items-center justify-between">
+                        <span className="text-xs font-medium text-[#1E3A8A]">{assigned.site.nama_lokasi} • {assigned.site.lat.toFixed(4)}, {assigned.site.lng.toFixed(4)}</span>
+                        <span className="text-xs text-[#64748B]">{assigned.site.radius} m</span>
+                    </div>
+                )}
                 <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] flex items-center justify-between">
                     <div className="flex gap-1.5">
                         {[1,2,3,4].map((i) => (<span key={i} className={`w-8 h-2 rounded-full ${i <= 3 ? 'bg-[#FCB833]' : 'bg-[#F1F5F9]'}`}></span>))}
@@ -71,7 +99,7 @@ export default function Rekap() {
                                 ${d.status === 'hadir' ? 'bg-[#FCB833] text-[#0F172A]' : d.status === 'terlambat' ? 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]' : d.status === 'cuti' ? 'bg-[#ECFDF5] text-[#065F46]' : d.status === 'future' ? 'text-[#CBD5E1]' : 'bg-[#F8FAFC] text-[#94A3B8]'}`}>{d.d}</span>
                         ))}
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-4">Jam global 07:30–16:00 WITA • Tepat waktu ≤07:45 • Di luar radius tidak tercatat</p>
+                    <p className="text-xs text-[#94A3B8] mt-4">Jam global 07:30–16:00 WITA • Tepat waktu ≤07:45 • {assigned ? `Di luar ${assigned.site.radius} m titik ${assigned.site.nama_lokasi} tidak tercatat (422)` : 'Tanpa titik — tidak tercatat'}</p>
                 </div>
 
                 <div className="flex gap-2">

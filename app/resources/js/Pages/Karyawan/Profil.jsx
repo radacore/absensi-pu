@@ -1,5 +1,8 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { loadRegions, loadEmployees } from '@/Pages/Admin/_shared';
+
+const MOCK_KARYAWAN_ID = 1;
 
 export default function Profil() {
     const [photo, setPhoto] = useState(null);
@@ -7,6 +10,24 @@ export default function Profil() {
     const fileRef = useRef(null);
     const [pwd, setPwd] = useState({ old: '', next: '', confirm: '' });
     const [msg, setMsg] = useState(null);
+    const [regionsData, setRegionsData] = useState(() => loadRegions());
+    const [employees, setEmployees] = useState(() => loadEmployees());
+    useEffect(() => {
+        const sync = () => { setRegionsData(loadRegions()); setEmployees(loadEmployees()); };
+        window.addEventListener('focus', sync);
+        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
+        document.addEventListener('visibilitychange', onVis);
+        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); };
+    }, []);
+    const me = useMemo(() => employees.find((e) => e.id === MOCK_KARYAWAN_ID) || employees[0], [employees]);
+    const assigned = useMemo(() => {
+        if (!me || me.office_location_id == null) return null;
+        for (const r of regionsData) {
+            const s = r.locations.find((x) => x.id === Number(me.office_location_id));
+            if (s) return { site: s, region: r };
+        }
+        return null;
+    }, [me, regionsData]);
 
     const handlePhoto = (e) => {
         const file = e.target.files?.[0];
@@ -46,11 +67,26 @@ export default function Profil() {
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0116 0"/></svg>
                         )}
                     </div>
-                    <h2 className="font-semibold text-[16px] text-[#0F172A] mt-3">Andi Saputra</h2>
-                    <p className="text-sm text-[#64748B]">Staff Teknik • Bidang Jalan</p>
-                    <p className="text-xs text-[#94A3B8] mt-1">PNS • Gol. III/a • NIK 7371 • NIP 1985</p>
-                    <span className="inline-block mt-3 text-xs font-medium bg-[#F1F5F9] text-[#334155] px-3 py-1 rounded-full">Kantor Wilayah Gowa</span>
+                    <h2 className="font-semibold text-[16px] text-[#0F172A] mt-3">{me?.nama}</h2>
+                    <p className="text-sm text-[#64748B]">{me?.jabatan} • {me?.unit}</p>
+                    <p className="text-xs text-[#94A3B8] mt-1">{me?.status} • {me?.gol} • NIK {me?.nik?.slice(-4)} • NIP {me?.nip?.slice(0,4) || '—'}</p>
+                    <span className="inline-block mt-3 text-xs font-medium bg-[#F1F5F9] text-[#334155] px-3 py-1 rounded-full">{me?.region}</span>
+                    {assigned ? (
+                        <p className="mt-3 text-xs bg-[#EFF6FF] text-[#1E3A8A] px-3 py-1.5 rounded-full inline-flex">{assigned.site.nama_lokasi} • {assigned.site.radius} m</p>
+                    ) : (
+                        <p className="mt-3 text-xs bg-[#FEF2F2] text-[#991B1B] px-3 py-1.5 rounded-full inline-flex">Tanpa titik — tidak bisa absen</p>
+                    )}
                 </div>
+
+                {assigned && (
+                    <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
+                        <p className="text-xs font-medium text-[#94A3B8]">Titik assigned</p>
+                        <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.site.nama_lokasi}</p>
+                        <p className="text-xs font-mono text-[#64748B]">{assigned.site.lat.toFixed(4)}, {assigned.site.lng.toFixed(4)} • {assigned.site.radius} m</p>
+                        {assigned.site.address && <p className="text-xs text-[#94A3B8] mt-1">{assigned.site.address}</p>}
+                        <p className="text-xs text-[#94A3B8] mt-2">Absen valid hanya dalam radius titik assigned • di luar / titik lain ditolak 422 (1 karyawan = 1 titik)</p>
+                    </div>
+                )}
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
                     <h3 className="font-medium text-sm text-[#0F172A]">Data pribadi</h3>
@@ -62,7 +98,7 @@ export default function Profil() {
                         </div>
                         <div>
                             <label htmlFor="email" className="text-xs font-medium text-[#334155]">Email</label>
-                            <input id="email" defaultValue="andi@pu-sulsel.go.id" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                            <input id="email" defaultValue={me?.email || 'andi@pu-sulsel.go.id'} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
                         </div>
                     </div>
                     <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />

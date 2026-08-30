@@ -1,6 +1,9 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
 import { Link } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { loadRegions, loadEmployees } from '@/Pages/Admin/_shared';
+
+const MOCK_KARYAWAN_ID = 1;
 
 export default function Dashboard() {
     const [now, setNow] = useState(new Date());
@@ -8,6 +11,24 @@ export default function Dashboard() {
         const id = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(id);
     }, []);
+    const [regionsData, setRegionsData] = useState(() => loadRegions());
+    const [employees, setEmployees] = useState(() => loadEmployees());
+    useEffect(() => {
+        const sync = () => { setRegionsData(loadRegions()); setEmployees(loadEmployees()); };
+        window.addEventListener('focus', sync);
+        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
+        document.addEventListener('visibilitychange', onVis);
+        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); };
+    }, []);
+    const me = useMemo(() => employees.find((e) => e.id === MOCK_KARYAWAN_ID) || employees[0], [employees]);
+    const assigned = useMemo(() => {
+        if (!me || me.office_location_id == null) return null;
+        for (const r of regionsData) {
+            const s = r.locations.find((x) => x.id === Number(me.office_location_id));
+            if (s) return { site: s, region: r };
+        }
+        return null;
+    }, [me, regionsData]);
     const hour = now.getHours();
     const greeting = hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 19 ? 'Selamat sore' : 'Selamat malam';
     const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -20,8 +41,13 @@ export default function Dashboard() {
                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full border-[3px] border-white shadow-[0_4px_16px_rgba(15,23,42,0.12)] overflow-hidden bg-[#F1F5F9]">
                         <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face&auto=format" alt="Foto profil Andi Saputra" className="w-full h-full object-cover" />
                     </div>
-                    <h2 className="font-semibold text-[18px] tracking-tight text-[#0F172A] mt-1 text-center">{greeting}, Andi Saputra</h2>
+                    <h2 className="font-semibold text-[18px] tracking-tight text-[#0F172A] mt-1 text-center">{greeting}, {me?.nama || 'Andi Saputra'}</h2>
                     <p className="text-sm text-[#64748B] text-center mt-1">{dateStr} • {timeStr} WITA</p>
+                    {assigned ? (
+                        <p className="text-xs text-center mt-2 bg-[#EFF6FF] text-[#1E3A8A] px-2.5 py-1 rounded-full inline-flex mx-auto">{assigned.site.nama_lokasi} • {assigned.site.radius} m • {assigned.region.name}</p>
+                    ) : (
+                        <p className="text-xs text-center mt-2 bg-[#FEF2F2] text-[#991B1B] px-2.5 py-1 rounded-full inline-flex mx-auto">Tanpa titik — tidak bisa absen (hubungi Admin {me?.region})</p>
+                    )}
                     <Link href="/karyawan/love" className="mt-4 flex items-center justify-center gap-2">
                         {[1,2,3,4].map((i) => (
                             <span key={i} className={`w-8 h-8 rounded-xl flex items-center justify-center ${i <= 3 ? 'bg-[#FFF7E6] border border-[#FCB833]/20' : 'bg-[#F1F5F9]'}`}>
@@ -39,7 +65,7 @@ export default function Dashboard() {
                         </span>
                         <div>
                             <p className="font-semibold text-sm leading-tight">Absensi</p>
-                            <p className="text-xs text-white/60 leading-tight">Masuk &amp; pulang</p>
+                            <p className="text-xs text-white/60 leading-tight">{assigned ? `${assigned.site.nama_lokasi} • ${assigned.site.radius}m` : 'Tanpa titik'}</p>
                         </div>
                     </Link>
                     <Link href="/karyawan/cuti" className="bg-white rounded-2xl p-5 flex flex-col justify-between min-h-[110px] shadow-[0_2px_16px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition">
@@ -48,7 +74,7 @@ export default function Dashboard() {
                         </span>
                         <div>
                             <p className="font-semibold text-sm text-[#0F172A] leading-tight">Cuti</p>
-                            <p className="text-xs text-[#64748B] leading-tight">Ajukan &amp; lacak</p>
+                            <p className="text-xs text-[#64748B] leading-tight">Ajukan & lacak</p>
                         </div>
                     </Link>
                 </div>
@@ -71,7 +97,7 @@ export default function Dashboard() {
                     </span>
                     <div>
                         <p className="font-semibold text-sm text-[#0F172A] leading-tight">Rekap bulanan</p>
-                        <p className="text-xs text-[#92400E]">Kalender • 90% hadir</p>
+                        <p className="text-xs text-[#92400E]">Kalender • 90% hadir {assigned ? `• ${assigned.site.nama_lokasi}` : ''}</p>
                     </div>
                 </Link>
 
