@@ -217,7 +217,7 @@ export default function SiteDetail({ regionId, siteId }) {
                             <h3 className="text-sm font-semibold text-[#0F172A]">Peta Titik — klik peta / drag marker untuk ubah koordinat</h3>
                             <span className="text-xs bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full border border-[#FCB833]/20">{site.radius} m radius</span>
                         </div>
-                        <div ref={mapRef} className="h-[360px] w-full bg-[#F1F5F9]" />
+                        <div ref={mapRef} className="h-[360px] w-full bg-[#F1F5F9] relative z-0 isolate" style={{ isolation: 'isolate' }} />
                         <div className="px-4 py-3 bg-[#F8FAFC] flex flex-wrap gap-2 text-xs">
                             <span className="bg-white border border-[#E2E8F0] px-2.5 py-1 rounded-full font-mono">{Number(site.lat).toFixed(6)}, {Number(site.lng).toFixed(6)}</span>
                             <span className="text-[#64748B] self-center">Geser slider di Edit untuk ubah radius • Klik peta saat edit</span>
@@ -289,7 +289,7 @@ export default function SiteDetail({ regionId, siteId }) {
                 {toast && <p className={`text-xs text-center rounded-xl py-2 px-3 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
 
                 {editOpen && (
-                    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditOpen(false)}>
+                    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={() => setEditOpen(false)}>
                         <div className="bg-white rounded-2xl w-full max-w-[520px] shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4 flex items-center justify-between border-b">
                                 <h3 className="font-semibold text-[#0F172A]">Edit Titik Proyek</h3>
@@ -330,7 +330,7 @@ export default function SiteDetail({ regionId, siteId }) {
                 )}
 
                 {addOpen && (
-                    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setAddOpen(false); setSelectedIds(new Set()); }}>
+                    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={() => { setAddOpen(false); setSelectedIds(new Set()); }}>
                         <div className="bg-white rounded-2xl w-full max-w-[520px] max-h-[80vh] overflow-hidden shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4 border-b shrink-0">
                                 <h3 className="font-semibold text-[#0F172A]">Tambah Anggota ke {site.nama_lokasi}</h3>
@@ -373,7 +373,7 @@ export default function SiteDetail({ regionId, siteId }) {
                 )}
 
                 {confirmRemove && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmRemove(null)}>
+                    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmRemove(null)}>
                         <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4">
                                 <h3 className="font-semibold text-[#0F172A]">Keluarkan {confirmRemove.nama}?</h3>
@@ -389,7 +389,7 @@ export default function SiteDetail({ regionId, siteId }) {
                 )}
 
                 {moveOpen && (
-                    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setMoveOpen(null)}>
+                    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={() => setMoveOpen(null)}>
                         <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4 border-b">
                                 <h3 className="font-semibold text-[#0F172A]">Pindah {moveOpen.nama}</h3>

@@ -304,7 +304,7 @@ export default function Regions() {
                 {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2 px-3">{toast}</p>}
 
                 {wilayahOpen && (
-                    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeWilayah}>
+                    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={closeWilayah}>
                         <div className="bg-white rounded-2xl w-full max-w-[520px] shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4 flex items-center justify-between border-b">
                                 <h3 className="font-semibold text-[#0F172A]">{editingWilayah ? 'Edit Wilayah' : 'Tambah Wilayah'}</h3>
@@ -338,7 +338,7 @@ export default function Regions() {
                 )}
 
                 {addSiteFor && (
-                    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeAddSite}>
+                    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={closeAddSite}>
                         <div className="bg-white rounded-2xl w-full max-w-[640px] max-h-[90vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-white px-6 py-4 flex items-center justify-between border-b">
                                 <h3 className="font-semibold text-[#0F172A]">Tambah Titik — {addSiteFor.name} (1 titik)</h3>
@@ -377,7 +377,7 @@ export default function Regions() {
                 )}
 
                 {confirmDeleteSite && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDeleteSite(null)}>
+                    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDeleteSite(null)}>
                         <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4">
                                 <h3 className="font-semibold text-[#0F172A]">Hapus {confirmDeleteSite.siteName}?</h3>
@@ -392,7 +392,7 @@ export default function Regions() {
                 )}
 
                 {confirmDeleteWilayah && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDeleteWilayah(null)}>
+                    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDeleteWilayah(null)}>
                         <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4">
                                 <h3 className="font-semibold text-[#0F172A]">Hapus wilayah {confirmDeleteWilayah.name}?</h3>
