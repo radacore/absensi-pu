@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 
 function getBase(url) {
     if (url.startsWith('/super-admin')) return '/super-admin';
+    if (url.startsWith('/admin')) return '/admin';
     if (url.startsWith('/wilayah')) return '/wilayah';
     return '/admin';
 }
@@ -11,7 +12,7 @@ export default function AdminLogin() {
     const [show, setShow] = useState(false);
     const { url } = usePage();
     const base = getBase(url);
-    const isWilayah = base === '/wilayah';
+    const isWilayah = base === '/admin' || base === '/wilayah';
     const isSuper = base === '/super-admin';
     return (
         <div className="min-h-[100dvh] bg-[#0F172A] flex items-center justify-center px-5 py-8">
@@ -25,7 +26,7 @@ export default function AdminLogin() {
                 </div>
                 <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-6">
                     <h2 className="font-semibold text-[#0F172A]">Masuk {isWilayah ? 'Admin Wilayah' : isSuper ? 'Super Admin' : 'Admin'}</h2>
-                    <p className="text-sm text-[#64748B] mt-1">Email + password • FR-10 • rate limit 5/15 menit • {isWilayah ? 'POST /api/wilayah/login' : 'POST /api/super-admin/login'}</p>
+                    <p className="text-sm text-[#64748B] mt-1">Email + password • FR-10 • rate limit 5/15 menit • {isWilayah ? 'POST /api/admin/login' : 'POST /api/super-admin/login'}</p>
                     <form onSubmit={(e)=>e.preventDefault()} className="mt-5 space-y-4">
                         <div>
                             <label htmlFor="email" className="text-xs font-medium text-[#334155]">Email</label>
@@ -42,7 +43,7 @@ export default function AdminLogin() {
                         <p className="text-center text-xs text-[#94A3B8]">{isWilayah ? 'Wilayah scope via region_id FK • login tidak cross ke super-admin' : 'Wilayah scope via region_id • Super Admin NULL region • tidak cross-login'}</p>
                     </form>
                 </div>
-                <p className="text-center text-xs text-white/30 mt-4">Opsi B — {isWilayah ? '/wilayah' : isSuper ? '/super-admin' : '/admin legacy'} • Karyawan di <Link href="/karyawan/login" className="underline text-white/50">/karyawan</Link></p>
+                <p className="text-center text-xs text-white/30 mt-4">Opsi B — {isWilayah ? '/admin' : isSuper ? '/super-admin' : '/admin'} {base === '/wilayah' ? '(alias)' : ''} • Karyawan di <Link href="/karyawan/login" className="underline text-white/50">/karyawan</Link></p>
             </div>
         </div>
     );

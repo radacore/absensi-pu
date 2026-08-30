@@ -8,7 +8,7 @@ const dataMap = {
     3: { nama: 'Siti Rahma', kantor: 'Makassar', jenis: 'Besar', tgl: '20 Agu 2026', alasan: 'Ibadah haji — 12 hari', dokumen: 'jadwal-haji.pdf', status: 'Disetujui', level: 3, foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face&auto=format' },
 };
 
-function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 export default function CutiDetail() {
     const { props, url } = usePage();
     const base = getBase(url);

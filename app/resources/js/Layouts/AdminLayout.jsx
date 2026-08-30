@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 function getAdminBase(url) {
     if (url.startsWith('/super-admin')) return '/super-admin';
+    if (url.startsWith('/admin')) return '/admin';
     if (url.startsWith('/wilayah')) return '/wilayah';
     return '/admin';
 }
@@ -23,7 +24,7 @@ export default function AdminLayout({ children }) {
     const { url } = usePage();
     const base = getAdminBase(url);
     const menu = menuDefs.map((m) => ({ ...m, href: `${base}${m.path}` }));
-    const isWilayah = base === '/wilayah';
+    const isWilayah = base === '/admin' || base === '/wilayah';
     const roleLabel = isWilayah ? 'Admin Wilayah' : 'Super Admin • Makassar';
     const [open, setOpen] = useState(false);
     return (
