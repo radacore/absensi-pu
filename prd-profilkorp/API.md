@@ -1,8 +1,19 @@
 # API.md: BBWS Pompengan Jeneberang
 
-## Authentication & Authorization
+## Authentication & Authorization — Opsi B: Pisah URL (Super Admin / Wilayah / Karyawan)
 
-BBWS Pompengan Jeneberang uses **Laravel Sanctum 4.x** with **multi-guard** session-based authentication. Admin and Karyawan endpoints require valid authenticated sessions with role & region scoping.
+BBWS Pompengan Jeneberang uses **Laravel Sanctum 4.x** with **multi-guard** session-based authentication. **Tiga guard/frontend terpisah** (Opsi B): `super_admin` via `SUPER_ADMIN_PATH`, `wilayah` via `WILAYAH_PATH`, `karyawan` via `KARYAWAN_PATH`. Tidak ada cross-login — session super-admin tidak valid di wilayah path dan sebaliknya.
+
+**Web Paths (Inertia):**
+- Super Admin: `SUPER_ADMIN_PATH` → dev `/super-admin` (`/super-admin/login`, `/super-admin`, `/super-admin/regions`, …) — guard `auth:super_admin` + `role:super_admin` + `region_id=null`.
+- Admin Wilayah: `WILAYAH_PATH` → dev `/wilayah` (`/wilayah/login`, `/wilayah`, `/wilayah/employees`, …) — guard `auth:wilayah` (atau `auth:admin` dengan role check) + `role:admin_wilayah` + `region_id=FK`.
+- Karyawan: `KARYAWAN_PATH` → dev `/karyawan` (`/karyawan/login`, `/karyawan`, …) — guard `auth:karyawan`, own-data-only.
+
+**API Paths (split prefix, same resource shape):**
+- Super Admin: `/api/super-admin/*` — `auth:super_admin` + `role:super_admin` (akses semua region).
+- Admin Wilayah: `/api/wilayah/*` — `auth:wilayah` + `role:admin_wilayah` + region scoping (write own, read all via `?all_regions=1`).
+- Karyawan: `/api/karyawan/*` — `auth:karyawan`.
+- Legacy `/api/admin/*` dipertahankan sebagai alias ke `/api/super-admin/*` untuk backward compat, tapi docs baru pakai `/api/super-admin/*` & `/api/wilayah/*`. Semua contoh di bawah tulis sebagai `/api/{super-admin|wilayah}/*` — ganti prefix sesuai role.
 
 **Session Header Format:**
 ```
@@ -11,7 +22,8 @@ X-CSRF-TOKEN: <token>
 ```
 
 **Authorization Levels:**
-- **Admin:** Requires `auth:admin` session. Roles: `super_admin` (all regions) and `admin_wilayah` (scoped to `region_id`, write own region only, read all).
+- **Super Admin:** Requires `auth:super_admin` session. Role `super_admin`, `region_id=null`, unscoped all regions. Hanya via `SUPER_ADMIN_PATH` / `/api/super-admin/*`.
+- **Admin Wilayah:** Requires `auth:wilayah` session. Role `admin_wilayah`, `region_id=FK`, scoped write own region only (read all).
 - **Karyawan:** Requires `auth:karyawan` session via email + password. Own-data-only: can only access own employee_id data. Rate-limited per email + IP.
 
 ## Standard Response & Pagination Formats
@@ -50,13 +62,19 @@ X-CSRF-TOKEN: <token>
 }
 ```
 
-## Admin API Endpoints
+## Admin API Endpoints — Prefix Split: `/api/super-admin/*` vs `/api/wilayah/*`
+
+> **Konvensi Opsi B:** Semua endpoint admin di bawah ini tersedia di **dua prefix** dengan guard berbeda:
+> - **Super Admin:** `/api/super-admin/*` (`auth:super_admin`, `role:super_admin`, unscoped)
+> - **Admin Wilayah:** `/api/wilayah/*` (`auth:wilayah` + `role:admin_wilayah`, scoped own region)
+> Contoh `GET /api/super-admin/regions` dan `GET /api/wilayah/regions` bentuk response sama; bedanya adalah scoping & 403 rules. Di tabel rate-limit, `super-admin` & `wilayah` dihitung terpisah.
+> Dokumen ini menulis path sebagai `/api/{super-admin|wilayah}/*` di ringkasan; detail per endpoint tetap tulis `/api/admin/*` sebagai alias legacy — implementasi baru pakai dua prefix.
 
 ### Authentication
 
-#### Admin Login
+#### Admin Login — Pisah Guard (Super Admin vs Wilayah)
 - **Method:** `POST`
-- **Path:** `/api/admin/login`
+- **Path:** `/api/super-admin/login` (Super Admin) & `/api/wilayah/login` (Admin Wilayah) — legacy alias `/api/admin/login` tetap ada tapi deprecated
 - **Description:** Authenticate the administrator and establish a session. Rate-limited to prevent brute-force attacks.
 - **Auth Level:** Public
 - **Rate Limit:** 5 failed attempts per 15 minutes per IP
@@ -1831,12 +1849,11 @@ X-CSRF-TOKEN: <token>
 - **Auth Level:** Admin (super_admin)
 - **Status Codes:** 200, 403, 404, 500
 
-#### Forgot Password Karyawan (Email)
-- **Method:** `POST`
-- **Path:** `/api/karyawan/forgot-password`
-- **Description:** Karyawan request reset via email.
-- **Auth Level:** Public
-- **Status Codes:** 200, 422, 500
+#### Reset via Admin — Karyawan & Admin Wilayah (Tanpa Self-Service)
+- Karyawan & Admin Wilayah **tidak punya** self-service forgot-password. Reset dilakukan admin via:
+  - `POST /api/super-admin/employees/{id}/reset-password` atau `POST /api/wilayah/employees/{id}/reset-password` (Karyawan — Admin Wilayah own region; Super Admin via super-admin prefix)
+  - `POST /api/super-admin/admin-users/{id}/reset-password` (Admin Wilayah — hanya Super Admin)
+- Legacy `POST /api/karyawan/forgot-password` (self-service) **dihapus** (FR-32).
 
 ### Announcement Management (Pengumuman)
 
@@ -2023,7 +2040,9 @@ The following endpoints are rate-limited to prevent abuse:
 
 | Endpoint | Limit | Window |
 |:---|:---|:---|
-| `POST /api/admin/login` | 5 failed attempts | 15 minutes per IP |
+| `POST /api/super-admin/login` | 5 failed attempts | 15 minutes per IP (guard super_admin) |
+| `POST /api/wilayah/login` | 5 failed attempts | 15 minutes per IP (guard wilayah) |
+| `POST /api/admin/login` (alias legacy) | 5 failed attempts | 15 minutes per IP (deprecated, maps to super-admin) |
 | `POST /api/karyawan/login` | 5 failed attempts | 15 minutes per IP + per email |
 | `POST /api/karyawan/attendances` | 10 requests | 1 hour per employee |
 | `POST /api/karyawan/love-claims` | 4 requests | 1 month per employee (max love) |

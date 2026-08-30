@@ -319,8 +319,8 @@ Public site tables (`pages`, `services`, `projects`, `team_members`, `blog_posts
 
 ## Table Definitions
 
-### ADMIN
-Stores administrator accounts with role & region scoping (Super Admin vs Admin Wilayah).
+### ADMIN — Opsi B: Pisah Guard super_admin vs wilayah (SUPER_ADMIN_PATH vs WILAYAH_PATH)
+Stores administrator accounts with role & region scoping (Super Admin vs Admin Wilayah). **Opsi B pisah URL**: `super_admin` → `SUPER_ADMIN_PATH` (dev `/super-admin`, `auth:super_admin`, `region_id=NULL`, unscoped) vs `admin_wilayah` → `WILAYAH_PATH` (dev `/wilayah`, `auth:wilayah`, `region_id=FK`, write own region) — tidak cross-login; legacy `admin` guard alias ke `super_admin`. Tiga URL obfuscated `SUPER_ADMIN_PATH` / `WILAYAH_PATH` / `KARYAWAN_PATH` via env.
 
 | Column | Type | Constraints | Description |
 |:---|:---|:---|:---|

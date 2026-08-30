@@ -1,6 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
 const wilayahList = ['Semua','Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
 
@@ -13,6 +14,8 @@ const initial = [
 ];
 
 export default function CutiAdmin() {
+    const { url } = usePage();
+    const base = getBase(url);
     const [q, setQ] = useState('');
     const [wilayah, setWilayah] = useState('Semua');
     const [status, setStatus] = useState('Semua');
@@ -74,7 +77,7 @@ export default function CutiAdmin() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-1 rounded-full ${c.status === 'Disetujui' ? 'bg-[#ECFDF5] text-[#065F46]' : c.status === 'Menunggu' ? 'bg-[#FFF7E6] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{c.status}</span></td>
-                                        <td className="px-4 py-3 text-right"><Link href={`/admin/cuti/${c.id}`} className="text-xs font-medium bg-[#0F172A] text-white px-3 py-1.5 rounded-lg inline-block hover:bg-[#1E3A8A]">Review</Link></td>
+                                        <td className="px-4 py-3 text-right"><Link href={`${base}/cuti/${c.id}`} className="text-xs font-medium bg-[#0F172A] text-white px-3 py-1.5 rounded-lg inline-block hover:bg-[#1E3A8A]">Review</Link></td>
                                     </tr>
                                 ))}
                             </tbody>

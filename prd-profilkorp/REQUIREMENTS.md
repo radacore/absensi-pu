@@ -4,11 +4,11 @@
 
 ### 1.2. Admin Dashboard
 
-**FR-10: Secure Authentication (Super Admin & Admin Wilayah)**
-The system SHALL provide dedicated login for Super Admin Pusat and Admin Wilayah (per Kabupaten/Kota), implementing session-based auth via Laravel Sanctum 4.x with role & region scoping. Admin URL obfuscated.
-*   Admin MUST be able to log in via email + password. Super Admin manages Admin Wilayah accounts (CRUD, assign region_id).
-*   Invalid attempts SHALL return generic error + rate limiting (5/15min per IP per guard).
-*   System MUST maintain session with region_id in session; all write queries scoped to own region (Admin Wilayah), Super Admin unscoped.
+**FR-10: Secure Authentication (Super Admin & Admin Wilayah — Opsi B Pisah URL)**
+The system SHALL provide **dua URL login terpisah**: **Super Admin Pusat** di `SUPER_ADMIN_PATH` (dev: `/super-admin`) dan **Admin Wilayah** di `WILAYAH_PATH` (dev: `/wilayah`), masing-masing session-based auth via Laravel Sanctum 4.x dengan role & region scoping. Ketiga URL (SUPER_ADMIN_PATH, WILAYAH_PATH, KARYAWAN_PATH) di-obfuscate di production via env random hash. Super Admin tidak dapat login via WILAYAH_PATH dan sebaliknya (guard terpisah, 403 jika role mismatch).
+*   Admin MUST be able to log in via email + password **di URL-nya masing-masing** (`/super-admin/login` untuk Super Admin, `/wilayah/login` untuk Admin Wilayah). Super Admin manages Admin Wilayah accounts (CRUD, assign region_id) hanya via SUPER_ADMIN_PATH.
+*   Invalid attempts SHALL return generic error + rate limiting **terpisah per guard** (super-admin 5/15min, wilayah 5/15min, karyawan 5/15min per IP per guard).
+*   System MUST maintain session with `role` + `region_id` in session; `region_id=null` untuk Super Admin (all regions), `region_id=FK` untuk Admin Wilayah; all write queries scoped to own region (Admin Wilayah), Super Admin unscoped. Middleware `role:super_admin` untuk SUPER_ADMIN_PATH dan `role:admin_wilayah` untuk WILAYAH_PATH.
 
 **FR-11: Main Dashboard Overview (Role-Scoped)**
 The system SHALL present a role-scoped dashboard: Super Admin sees global analytics + all regions stats; Admin Wilayah sees own region stats (employee count, attendance today, pending cuti) + read-only global stats.
@@ -78,11 +78,11 @@ The system SHALL provide an interface to manage site-wide information: Company N
 
 ### 1.3. Karyawan Mobile PWA (Employee Self-Service) — NEW
 
-**FR-22: Karyawan & Admin Authentication (Email + Password, PWA)**
-The system SHALL provide dedicated login via **email + password untuk semua role** (Super Admin, Admin Wilayah, Karyawan) — bukan NIK. Menggunakan Laravel Sanctum dengan guard sesuai role, region-scoped untuk Admin Wilayah/Karyawan.
-*   Semua role MUST log in via email (unique) + password (min 8) (`/login` obfuscated per role).
-*   Invalid login SHALL return generic error + rate limit 5 failed /15min per IP + per NIK throttling.
-*   Session MUST contain `user_id`/`employee_id` + `region_id`; all queries auto-scoped. PWA manifest + service worker installable. **Tidak ada self-service reset mandiri** — karyawan & Admin Wilayah password direset oleh admin di Admin Management; karyawan tidak dapat reset sendiri via email link.
+**FR-22: Karyawan & Admin Authentication (Email + Password, PWA — Pisah URL)**
+The system SHALL provide dedicated login via **email + password untuk semua role** (Super Admin, Admin Wilayah, Karyawan) — bukan NIK. Menggunakan Laravel Sanctum dengan guard sesuai role, region-scoped untuk Admin Wilayah/Karyawan. **Tiga URL terpisah**: `SUPER_ADMIN_PATH` (`/super-admin`), `WILAYAH_PATH` (`/wilayah`), `KARYAWAN_PATH` (`/karyawan` di dev, obfuscated di prod).
+*   Semua role MUST log in via email (unique) + password (min 8) **di path-nya**: Super Admin `/super-admin/login`, Admin Wilayah `/wilayah/login`, Karyawan `KARYAWAN_PATH/login` — masing-masing rate limit 5 failed /15min per IP per guard. Tidak ada cross-login antar path.
+*   Invalid login SHALL return generic error + rate limit 5 failed /15min per IP per guard (super-admin / wilayah / karyawan terpisah).
+*   Session MUST contain `user_id`/`employee_id` + `role` + `region_id`; all queries auto-scoped. PWA manifest + service worker installable (khusus KARYAWAN_PATH). **Tidak ada self-service reset mandiri** — karyawan & Admin Wilayah password direset oleh admin di Admin Management; karyawan tidak dapat reset sendiri via email link.
 
 **FR-23: Karyawan Profile (View & Limited Edit, Own-Data-Only)**
 The system SHALL allow karyawan to view own Lengkap HR profile and edit limited fields.
@@ -151,7 +151,7 @@ The system SHALL provide Love (4 hearts/month) as buffer untuk late dalam radius
 | Category | Requirement | Measurable Target |
 |:---|:---|:---|
 | Performance | Fast Page Loads | LCP < 2.5s; FCP < 1.8s; TTFB < 200ms cached; PWA Lighthouse >90 mobile |
-| Security | System Integrity | HTTPS enforced; OWASP Top 10; Obfuscated admin+karyawan URLs; Rate limiting on all logins (admin, karyawan NIK) & contact; Region isolation middleware |
+| Security | System Integrity | HTTPS enforced; OWASP Top 10; **Tiga URL obfuscated terpisah** `SUPER_ADMIN_PATH` / `WILAYAH_PATH` / `KARYAWAN_PATH` (guard terpisah, tidak cross-login); Rate limiting on all logins (super-admin, wilayah, karyawan) & contact; Region isolation middleware |
 | Scalability | Traffic Handling | Stateless; Handle 1,000 public + 500 karyawan PWA concurrent <500ms |
 | Usability | Accessibility & UX | Fully responsive + PWA installable (320px+); WCAG 2.1 AA; 44px tap; GPS/camera UX |
 | Maintainability | Code Quality | PSR-12; >80% backend coverage including RBAC & region scoping tests |
@@ -164,7 +164,7 @@ The system SHALL provide Love (4 hearts/month) as buffer untuk late dalam radius
 *   The system MUST implement RBAC with 3 roles: Super Admin Pusat, Admin Wilayah (per region), Karyawan (NIK login, own-data-only).
 *   Admin Wilayah can view all regions but write only own region; Karyawan cannot view other employees — enforced at policy + query scope layer.
 *   The technology stack (Laravel 13 + PHP 8.4+, React 19, Inertia v2, Tailwind v4, Vite 7, MySQL 8.4 LTS / 9.x, AWS S3, PWA) is fixed — all latest stable.
-*   Admin & Karyawan URLs MUST be obfuscated (not `/admin`, `/karyawan`) via `ADMIN_PATH` & `KARYAWAN_PATH` env.
+*   Admin & Karyawan URLs MUST be obfuscated terpisah — `SUPER_ADMIN_PATH` (e.g. `/super-admin-<hash>`), `WILAYAH_PATH` (e.g. `/wilayah-<hash>`), `KARYAWAN_PATH` (e.g. `/karyawan-<hash>`) via env. Dev defaults: `/super-admin`, `/wilayah`, `/karyawan`. Tidak ada path `/admin` generik di production.
 
 ## 4. Assumptions
 

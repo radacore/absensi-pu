@@ -29,8 +29,8 @@ The system is composed of two primary components: a regional admin dashboard mul
 
 ## Functional Requirements
 
-### Admin Dashboard (Super Admin & Admin Wilayah)
-*   **FR-10: Secure Authentication (Admin):** Dedicated login for Super Admin & Admin Wilayah. Implements session-based auth via Laravel Sanctum 4.x with role & region scoping. Admin URL obfuscated.
+### Admin Dashboard (Super Admin & Admin Wilayah — Pisah URL)
+*   **FR-10: Secure Authentication (Super Admin & Admin Wilayah — Opsi B Pisah URL):** Dedicated login **terpisah URL**: **Super Admin Pusat** via `SUPER_ADMIN_PATH` (contoh `/super-admin-<hash>`, dev: `/super-admin`) dan **Admin Wilayah** via `WILAYAH_PATH` (contoh `/wilayah-<hash>`, dev: `/wilayah`). Keduanya email+password via Laravel Sanctum 4.x dengan role & region scoping. URL tidak saling tukar — Super Admin tidak login via `/wilayah`, Admin Wilayah tidak via `/super-admin`. Karyawan tetap via `KARYAWAN_PATH` (contoh `/karyawan-<hash>`). Ketiga URL di-obfuscate di production via env.
 *   **FR-11: Main Dashboard:** Overview with analytics, recent contact submissions, quick links. Super Admin sees all regions; Admin Wilayah sees filtered stats for own region + read-only global stats.
 *   **FR-12: Page Content Management:** WYSIWYG (TinyMCE) for static pages.
 *   **FR-13: Portfolio Management:** Full CRUD for portfolio projects.
@@ -44,7 +44,7 @@ The system is composed of two primary components: a regional admin dashboard mul
 *   **FR-21: Global Settings Management:** Site-wide settings termasuk **Jam Kerja Global** (jam_masuk, jam_pulang, toleransi_late_menit, hari_kerja Senin-Jumat). Only Super Admin Pusat (Makassar) can edit; Admin Wilayah read-only.
 
 ### Karyawan Mobile PWA (Employee Self-Service)
-*   **FR-22: Karyawan Authentication (Email + Password):** Dedicated mobile PWA login via email + password untuk semua role (Super Admin, Admin Wilayah, Karyawan). Sanctum session dengan guard sesuai role, rate-limited, supports PWA install. Karyawan only accesses own data. Karyawan & Admin Wilayah tidak punya fitur reset mandiri — password direset/diganti oleh Super Admin/Admin Wilayah di Admin Management (Karyawan oleh Admin Wilayah own region; Admin Wilayah oleh Super Admin).
+*   **FR-22: Karyawan Authentication (Email + Password):** Dedicated mobile PWA login via email + password untuk Karyawan di `KARYAWAN_PATH` (`/karyawan` di dev). Sanctum session dengan guard `karyawan`, rate-limited, supports PWA install. Karyawan only accesses own data. Karyawan & Admin Wilayah tidak punya fitur reset mandiri — password direset/diganti oleh Super Admin/Admin Wilayah di Admin Management (Karyawan oleh Admin Wilayah own region; Admin Wilayah oleh Super Admin). Super Admin & Admin Wilayah login bukan di PWA melainkan di `SUPER_ADMIN_PATH` / `WILAYAH_PATH` masing-masing.
 *   **FR-23: Karyawan Profile (View & Limited Edit):** View own Lengkap HR profile (NIK, NIP, golongan, jabatan, unit kerja, status, foto, kontak). Can edit limited fields (foto, kontak, password). Cannot view other employees.
 *   **FR-24: Admin Wilayah - Employee Data Management (Lengkap HR):** Admin Wilayah inputs/manages employee data for own Kantor Wilayah only (read all, write own). Fields: NIK (UK), NIP, name, golongan, jabatan, unit kerja, status kepegawaian, foto (S3), kontak, dokumen. Super Admin manages all cabang + akun Admin Wilayah. Isolasi via `region_id`.
 *   **FR-25: Absensi GPS + Selfie (Mobile PWA, Geofence Kantor):** Karyawan check-in/out via PWA dengan validasi GPS terhadap **lokasi kantor cabangnya** (lat/lng + radius_m yang di-input admin). Radius configurable per kantor (mis. 100–500m). Selfie upload S3. Records: timestamp, lat/lng, selfie_url, status on-time/late + jarak_m ke kantor (tidak ada out_of_range — di luar radius ditolak). Admin Wilayah views attendance cabang sendiri; Super Admin views all cabang.
@@ -60,7 +60,7 @@ The system is composed of two primary components: a regional admin dashboard mul
 | Category | Requirement | Metric / Target |
 |:---|:---|:---|
 | **Performance** | Fast Page Loads | - LCP < 2.5s, FCP < 1.8s, TTFB < 200ms cached. - PWA Lighthouse >90 mobile, offline cache for karyawan. |
-| **Security** | System Integrity | - HTTPS enforced. OWASP Top 10 protection. Admin URL obfuscated. Rate limiting on all logins (admin + karyawan NIK) & contact form. Region isolation middleware (write own region only). |
+| **Security** | System Integrity | - HTTPS enforced. OWASP Top 10 protection. **Tiga URL obfuscated terpisah**: `SUPER_ADMIN_PATH`, `WILAYAH_PATH`, `KARYAWAN_PATH`. Rate limiting on all logins (super-admin + wilayah + karyawan + contact form). Region isolation middleware (write own region only). Super Admin URL tidak melayani login Admin Wilayah dan sebaliknya. |
 | **Scalability** | Traffic Handling | - Stateless app. Handle 1,000 concurrent public + 500 concurrent karyawan PWA with <500ms. |
 | **Usability** | Accessibility & UX | - Fully responsive + PWA installable. WCAG 2.1 AA. 44px tap targets. GPS+camera permission UX for absensi. |
 | **Maintainability** | Code Quality | - PSR-12, >80% backend coverage, well-documented. RBAC & region scoping tested. |
@@ -95,7 +95,7 @@ The system is composed of two primary components: a regional admin dashboard mul
 
 | Risk | Impact | Mitigation Strategy |
 |:---|:---|:---|
-| **Admin/Karyawan Panel Breach** | High | Unauthorized data access, region leak. | - Strong password (NIK + min 8 chars). 2FA for Super Admin. Region middleware + policy checks. Rate limiting per guard. |
+| **Admin/Karyawan Panel Breach** | High | Unauthorized data access, region leak. | - Strong password (email + min 8 chars). 2FA for Super Admin. Region middleware + policy checks. Rate limiting per guard (super-admin / wilayah / karyawan terpisah). Pisah URL `/super-admin` vs `/wilayah` mengurangi surface enumeration. |
 | **Karyawan Data Leak Across Regions** | High | Employee sees other region's data. | - Enforce `region_id` scoping at query + policy layer. Tests for isolation. Audit logs per region. |
 | **Fake GPS Absensi** | Medium | Fraudulent attendance. | - Geofence validation server-side, selfie liveness check, timestamp + device info logging. |
 | **Data Loss on S3** | High | Loss of all company media assets. | - Enable versioning on the AWS S3 bucket. - Implement a restrictive IAM policy for the application user. - Regularly back up bucket metadata. |

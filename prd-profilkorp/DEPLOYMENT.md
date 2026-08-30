@@ -42,7 +42,8 @@ AWS_URL=https://profilkorp-prod.s3.amazonaws.com
 SANCTUM_STATEFUL_DOMAINS=www.profilkorp.com
 SESSION_DOMAIN=.profilkorp.com
 
-ADMIN_PATH=/dashboard-admin-<random-hash>
+SUPER_ADMIN_PATH=/super-admin-<random-hash>
+WILAYAH_PATH=/wilayah-<random-hash>
 KARYAWAN_PATH=/karyawan-<random-hash>
 VAPID_PUBLIC_KEY=<vapid-public>
 VAPID_PRIVATE_KEY=<vapid-private>
@@ -621,14 +622,17 @@ upstream profilkorp_backend {
    Route::post('/contact', 'ContactController@store')
        ->middleware('throttle:5,1');  // 5 requests per minute
    
-   Route::post('/admin/login', 'AuthController@login')
-       ->middleware('throttle:5,1');  // Brute-force protection
-   ```
+    Route::post('/super-admin/login', 'AuthController@loginSuperAdmin')
+        ->middleware('throttle:5,1');  // guard super_admin
+    Route::post('/wilayah/login', 'AuthController@loginWilayah')
+        ->middleware('throttle:5,1');  // guard wilayah — terpisah
+    ```
 
-4. **Admin Path Obfuscation**
-   - Use a random hash instead of `/admin`
-   - Example: `/dashboard-admin-a7f3k9x2`
-   - Store in `.env`: `ADMIN_PATH`
+4. **Admin Path Obfuscation — Opsi B Pisah URL (Tiga Path)**
+   - **Opsi B:** pisah `SUPER_ADMIN_PATH` + `WILAYAH_PATH` + `KARYAWAN_PATH` — masing-masing random hash, guard terpisah, tidak cross-login.
+   - Contoh prod: `SUPER_ADMIN_PATH=/super-admin-a7f3k9x2`, `WILAYAH_PATH=/wilayah-m2p8q1z4`, `KARYAWAN_PATH=/karyawan-b4n6r9w0` (dev: `/super-admin`, `/wilayah`, `/karyawan`).
+   - `/admin` generik tidak ada di production — legacy alias hanya untuk backward compat.
+   - Store in `.env`: `SUPER_ADMIN_PATH`, `WILAYAH_PATH`, `KARYAWAN_PATH`.
 
 5. **Two-Factor Authentication (2FA)**
    ```bash

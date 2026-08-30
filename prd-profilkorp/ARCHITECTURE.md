@@ -2,7 +2,7 @@
 
 ## System Overview
 
-BBWS Pompengan Jeneberang — **BBWS Pompengan Jeneberang** is a monolithic Laravel 13 application (PHP 8.4+) with a React 19 frontend via Inertia.js v2. Pusat di **Makassar**, cabang di **Kabupaten/Kota se-Sulsel** (24 wilayah). Each Kantor Wilayah has **lokasi kantor (lat/lng via map picker) + radius absen (meter)** di-input admin untuk geofence validasi absensi GPS+selfie karyawan cabangnya. Architecture SSR + Inertia reactive, no separate API. Styling Tailwind v4, Vite 7, assets (media, selfie) on AWS S3, MySQL 8.4 LTS / 9.x region-scoped per kantor cabang, VPS Ubuntu 24.04 LTS. Roles: Super Admin Pusat (Makassar, CRUD all kantor + lokasi/radius, atur Love max & jam global), Admin Wilayah/Wilayah (edit lokasi/radius kantornya sendiri, approve Love 1 level, write own region), Karyawan (NIK login, own-data-only, absensi cek jarak ke kantor cabangnya — di luar radius ditolak, Love 4/bulan reset, ajukan dokumen untuk excuse late dalam radius, PWA).
+BBWS Pompengan Jeneberang — **BBWS Pompengan Jeneberang** is a monolithic Laravel 13 application (PHP 8.4+) with a React 19 frontend via Inertia.js v2. Pusat di **Makassar**, cabang di **Kabupaten/Kota se-Sulsel** (24 wilayah). Each Kantor Wilayah has **lokasi kantor (lat/lng via map picker) + radius absen (meter)** di-input admin untuk geofence validasi absensi GPS+selfie karyawan cabangnya. Architecture SSR + Inertia reactive, no separate API. Styling Tailwind v4, Vite 7, assets (media, selfie) on AWS S3, MySQL 8.4 LTS / 9.x region-scoped per kantor cabang, VPS Ubuntu 24.04 LTS. Roles: Super Admin Pusat (Makassar, CRUD all kantor + lokasi/radius, atur Love max & jam global — via `SUPER_ADMIN_PATH` `/super-admin` + `/api/super-admin/*`), Admin Wilayah/Wilayah (edit lokasi/radius kantornya sendiri, approve Love 1 level, write own region — via `WILAYAH_PATH` `/wilayah` + `/api/wilayah/*`), Karyawan (email login, own-data-only, absensi cek jarak ke kantor cabangnya — di luar radius ditolak, Love 4/bulan reset, ajukan dokumen untuk excuse late dalam radius, PWA via `KARYAWAN_PATH` `/karyawan`) — **Opsi B: dua URL admin terpisah, tidak saling tukar**.
 
 ## High-Level Architecture Diagram
 
@@ -25,9 +25,10 @@ graph TD
     K["Route Middleware<br/>(Auth + Role + RegionScope)"]
     
     L["Public Routes<br/>(Deprecated)"]
-    M["Admin Routes<br/>(Dashboard, CRUD, Regions)"]
-    M2["Karyawan PWA Routes<br/>(Absensi, Cuti, Love, Pengumuman, Rekap)"]
-    N["API Routes<br/>(Contact, Media, Employee APIs)"]
+    M["Super Admin Routes<br/>(SUPER_ADMIN_PATH /super-admin + /api/super-admin/*)"]
+    M3["Wilayah Routes<br/>(WILAYAH_PATH /wilayah + /api/wilayah/*)"]
+    M2["Karyawan PWA Routes<br/>(KARYAWAN_PATH /karyawan + /api/karyawan/*)"]
+    N["API Routes<br/>(Contact, Media, Employee APIs — split super-admin vs wilayah)"]
     O["PWA Service Worker<br/>(Offline Cache)"]
     
     A -->|HTTP/HTTPS| D
@@ -50,11 +51,13 @@ graph TD
     
     K --> L
     K --> M
+    K --> M3
     K --> M2
     D --> N
     
     L --> F
     M --> F
+    M3 --> F
     M2 --> F
     N --> G
     N --> H
@@ -126,26 +129,27 @@ In-memory cache layer (Redis 7+) for reducing database load and improving respon
 - **Session Storage:** Optional session driver for distributed deployments.
 - **Rate Limiting:** Stores rate limit counters for login and contact form endpoints.
 
-### Laravel Sanctum 4.x & Multi-Guard Session Authentication
+### Laravel Sanctum 4.x & Multi-Guard Session Authentication — Opsi B Pisah URL
 
-Multi-guard auth for 3 roles, all session-based via Sanctum.
+Multi-guard auth for 3 roles, all session-based via Sanctum, **pisah URL** (Opsi B).
 
-- **Guards:** `admin` (users table, email) for Super Admin & Admin Wilayah; `karyawan` (employees table, NIK) for employees. Separate session cookies & CSRF handling.
-- **Session Tokens:** HTTP-only cookies, Sanctum 4.x. Login validates NIK/email + bcrypt password.
+- **Guards:** `super_admin` (users table, email, role=super_admin, region_id=null) untuk Super Admin via `SUPER_ADMIN_PATH`; `wilayah` (users table, email, role=admin_wilayah, region_id=FK) untuk Admin Wilayah via `WILAYAH_PATH`; `karyawan` (employees table, email) untuk employees via `KARYAWAN_PATH`. Legacy `admin` guard dipertahankan sebagai alias ke `super_admin` untuk backward compat. Separate session cookies & CSRF handling per guard — tidak cross-login.
+- **Session Tokens:** HTTP-only cookies, Sanctum 4.x. Login validates email + bcrypt password per guard.
 - **CSRF Protection:** Built-in middleware for all state-changing requests.
-- **Login Endpoints:** `POST /admin/login` (admin guard), `POST /karyawan/login` (karyawan guard, NIK). Rate-limited 5/15min per IP + per NIK.
-- **Logout:** Invalidates session per guard.
+- **Login Endpoints:** `POST /super-admin/login` (super_admin guard) di `SUPER_ADMIN_PATH`, `POST /wilayah/login` (wilayah guard) di `WILAYAH_PATH`, `POST /karyawan/login` (karyawan guard, email). Legacy `POST /admin/login` alias ke super-admin. Masing-masing rate-limited 5/15min per IP per guard (super-admin vs wilayah terpisah).
+- **Logout:** Invalidates session per guard (`/super-admin/logout`, `/wilayah/logout`, `/karyawan/logout`).
+- **Web Routes (Inertia):** `Route::prefix(env('SUPER_ADMIN_PATH','/super-admin'))->middleware(['auth:super_admin','role:super_admin'])`, `Route::prefix(env('WILAYAH_PATH','/wilayah'))->middleware(['auth:wilayah','role:admin_wilayah'])`, `Route::prefix(env('KARYAWAN_PATH','/karyawan'))->middleware(['auth:karyawan'])`. Production: ketiga path di-obfuscate via env hash (mis. `/super-admin-a7f3k9x2`, `/wilayah-m2p8q1z4`, `/karyawan-b4n6r9w0`).
 
-### Route Middleware & Guards (RBAC + RegionScope)
+### Route Middleware & Guards (RBAC + RegionScope — Pisah URL)
 
-Middleware enforces auth + role + region isolation.
+Middleware enforces auth + role + region isolation, **split per path**.
 
-- **Auth Guards:** `auth:admin` for admin routes, `auth:karyawan` for PWA routes.
-- **Role Middleware:** `role:super_admin` vs `role:admin_wilayah` vs `role:karyawan` — gates dashboard access.
-- **RegionScope Middleware:** For Admin Wilayah, injects `region_id` from session and scopes all writes: `where region_id = auth()->user()->region_id`. Read allows all but UI marks other regions "Read Only". Super Admin bypasses scope.
-- **Own-Data Policy:** Karyawan policies enforce `employee_id == auth()->id()` for profile/attendance/leave/love/announcement reads. Love claim hanya untuk own attendance late dalam radius.
-- **Rate Limiting:** Login (per guard) + contact form + absensi (prevent spam) throttled via Redis.
-- **HTTPS Enforcement:** Redirect all HTTP to HTTPS. PWA requires secure context for GPS/camera.
+- **Auth Guards:** `auth:super_admin` untuk `SUPER_ADMIN_PATH` / `/api/super-admin/*`, `auth:wilayah` (alias `auth:admin` dengan role check) untuk `WILAYAH_PATH` / `/api/wilayah/*`, `auth:karyawan` untuk `KARYAWAN_PATH` / `/api/karyawan/*`.
+- **Role Middleware:** `role:super_admin` hanya di SUPER_ADMIN_PATH (region_id harus null), `role:admin_wilayah` hanya di WILAYAH_PATH (region_id FK required), `role:karyawan` hanya di KARYAWAN_PATH — request dengan role mismatch 403.
+- **RegionScope Middleware:** Untuk Admin Wilayah (`/wilayah/*`), injects `region_id` dari session dan scopes all writes: `where region_id = auth()->user()->region_id`. Read allows all tapi UI tandai "Read Only" untuk region lain. Super Admin (`/super-admin/*`) bypasses scope (unscoped, CRUD all regions). Karyawan own-data via policy.
+- **Own-Data Policy:** Karyawan policies enforce `employee_id == auth()->id()` untuk profile/attendance/leave/love/announcement reads. Love claim hanya untuk own attendance late dalam radius.
+- **Rate Limiting:** Login **terpisah per guard** (super-admin 5/15min, wilayah 5/15min, karyawan 5/15min per IP) + contact form + absensi spam throttled via Redis.
+- **HTTPS Enforcement:** Redirect all HTTP to HTTPS. PWA requires secure context untuk GPS/camera.
 
 ## Critical Flow Sequence Diagrams
 
@@ -153,41 +157,43 @@ Middleware enforces auth + role + region isolation.
 
 ```mermaid
 sequenceDiagram
-    participant Admin as Admin User
+    participant Admin as Admin User (Super Admin vs Wilayah)
     participant Browser as Browser
     participant Laravel as Laravel Server
-    participant Sanctum as Sanctum Auth
+    participant Sanctum as Sanctum Auth (per guard)
     participant DB as MySQL Database
     participant S3 as AWS S3
     
-    Admin->>Browser: Navigate to /admin/login
-    Browser->>Laravel: GET /admin/login
-    Laravel->>Browser: Render Login Page (React)
+    Note over Admin,Browser: Opsi B — Super Admin via /super-admin/login, Wilayah via /wilayah/login
+    Admin->>Browser: Navigate to /super-admin/login (atau /wilayah/login)
+    Browser->>Laravel: GET /super-admin/login (route SUPER_ADMIN_PATH) / GET /wilayah/login (WILAYAH_PATH)
+    Laravel->>Browser: Render Login Page (React) — judul disesuaikan guard
+    Note over Laravel: Middleware role:super_admin atau role:admin_wilayah — cross role 403
     
     Admin->>Browser: Enter credentials & submit
-    Browser->>Laravel: POST /admin/login
-    Laravel->>Sanctum: Validate credentials
-    Sanctum->>DB: Query users table
+    Browser->>Laravel: POST /api/super-admin/login (atau /api/wilayah/login) — guard terpisah
+    Laravel->>Sanctum: Validate credentials (cek role sesuai path, email+bcrypt)
+    Sanctum->>DB: Query users table where role sesuai guard
     DB-->>Sanctum: User record
-    Sanctum->>Sanctum: Hash & compare password
-    Sanctum-->>Laravel: Auth success
-    Laravel->>Browser: Set session cookie + redirect
+    Sanctum->>Sanctum: Hash & compare password (+ cek region_id null vs FK)
+    Sanctum-->>Laravel: Auth success (session cookie per guard)
+    Laravel->>Browser: Set session cookie + redirect to /super-admin (atau /wilayah)
     
-    Admin->>Browser: Navigate to /admin/blog/create
-    Browser->>Laravel: GET /admin/blog/create
-    Laravel->>Sanctum: Verify session token
+    Admin->>Browser: Navigate to /super-admin/blog/create (atau /wilayah/...)
+    Browser->>Laravel: GET /super-admin/blog/create (auth:super_admin, role:super_admin)
+    Laravel->>Sanctum: Verify session token (guard super_admin)
     Sanctum-->>Laravel: Valid
     Laravel->>Browser: Render Blog Create Form (React)
     
     Admin->>Browser: Fill form, upload featured image
-    Browser->>Laravel: POST /admin/blog (multipart)
+    Browser->>Laravel: POST /api/super-admin/blog (multipart) — atau /api/wilayah/* untuk wilayah
     Laravel->>S3: Upload image to S3
     S3-->>Laravel: S3 URL
     Laravel->>DB: Insert blog_posts record
     Laravel->>DB: Insert media record
     DB-->>Laravel: Success
-    Laravel->>Browser: Redirect to /admin/blog
-    Browser->>Laravel: GET /admin/blog
+    Laravel->>Browser: Redirect to /super-admin/blog
+    Browser->>Laravel: GET /super-admin/blog
     Laravel->>DB: Query blog_posts (paginated)
     DB-->>Laravel: Posts list
     Laravel->>Browser: Render Blog List (React)

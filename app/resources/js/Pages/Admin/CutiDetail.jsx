@@ -8,8 +8,10 @@ const dataMap = {
     3: { nama: 'Siti Rahma', kantor: 'Makassar', jenis: 'Besar', tgl: '20 Agu 2026', alasan: 'Ibadah haji — 12 hari', dokumen: 'jadwal-haji.pdf', status: 'Disetujui', level: 3, foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face&auto=format' },
 };
 
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 export default function CutiDetail() {
-    const { props } = usePage();
+    const { props, url } = usePage();
+    const base = getBase(url);
     const id = props.id || 1;
     const data = dataMap[id] || dataMap[1];
     const [status, setStatus] = useState(data.status);
@@ -18,7 +20,7 @@ export default function CutiDetail() {
     return (
         <AdminLayout>
             <div className="space-y-5 max-w-[880px]">
-                <Link href="/admin/cuti" className="inline-flex items-center gap-2 text-sm font-medium text-[#64748B] hover:text-[#0F172A]">
+                <Link href={`${base}/cuti`} className="inline-flex items-center gap-2 text-sm font-medium text-[#64748B] hover:text-[#0F172A]">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M15 18l-6-6 6-6"/></svg>
                     Kembali ke daftar cuti
                 </Link>

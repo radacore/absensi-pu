@@ -1,6 +1,8 @@
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
 const wilayahList = ['Semua','Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
 
@@ -18,6 +20,8 @@ const attendanceSeed = [
 ];
 
 export default function Dashboard() {
+    const { url } = usePage();
+    const base = getBase(url);
     const [wilayah, setWilayah] = useState('Semua');
     const [tgl] = useState(() => new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }));
 
@@ -40,16 +44,16 @@ export default function Dashboard() {
                         <select value={wilayah} onChange={(e)=>setWilayah(e.target.value)} className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1E3A8A]/10">
                             {wilayahList.map((w)=><option key={w} value={w}>{w}</option>)}
                         </select>
-                        <Link href="/admin/attendances" className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">Lihat Absensi →</Link>
+                        <Link href={`${base}/attendances`} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">Lihat Absensi →</Link>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                        { label: 'Total Karyawan', value: wilayah === 'Semua' ? '1,248' : String(total), sub: wilayah === 'Semua' ? '24 wilayah' : `${wilayah}`, accent: 'gold', href: '/admin/employees' },
-                        { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late`, accent: 'emerald', href: '/admin/attendances' },
-                        { label: 'Cuti pending', value: '23', sub: 'butuh approval', accent: 'amber', href: '/admin/cuti' },
-                        { label: 'Love pending', value: '8', sub: 'claim hari ini', accent: 'gold', href: '/admin/love' },
+                        { label: 'Total Karyawan', value: wilayah === 'Semua' ? '1,248' : String(total), sub: wilayah === 'Semua' ? '24 wilayah' : `${wilayah}`, accent: 'gold', href: `${base}/employees` },
+                        { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late`, accent: 'emerald', href: `${base}/attendances` },
+                        { label: 'Cuti pending', value: '23', sub: 'butuh approval', accent: 'amber', href: `${base}/cuti` },
+                        { label: 'Love pending', value: '8', sub: 'claim hari ini', accent: 'gold', href: `${base}/love` },
                     ].map((s) => (
                         <Link key={s.label} href={s.href} className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_24px_rgba(15,23,42,0.08)] transition text-left">
                             <p className="text-xs font-medium text-[#94A3B8]">{s.label}</p>
@@ -79,8 +83,8 @@ export default function Dashboard() {
                             {filtered.length===0 && <p className="text-xs text-[#94A3B8] text-center py-6">Tidak ada data untuk wilayah ini (seed top 10)</p>}
                         </div>
                         <div className="mt-4 flex flex-wrap gap-2">
-                            <Link href="/admin/regions" className="text-xs font-medium bg-[#F8FAFC] text-[#334155] px-3 py-1.5 rounded-full border">Kelola 24 Kantor Wilayah →</Link>
-                            <Link href="/admin/employees" className="text-xs font-medium bg-[#FFF7E6] text-[#92400E] px-3 py-1.5 rounded-full border border-[#FCB833]/20">Karyawan</Link>
+                            <Link href={`${base}/regions`} className="text-xs font-medium bg-[#F8FAFC] text-[#334155] px-3 py-1.5 rounded-full border">Kelola 24 Kantor Wilayah →</Link>
+                            <Link href={`${base}/employees`} className="text-xs font-medium bg-[#FFF7E6] text-[#92400E] px-3 py-1.5 rounded-full border border-[#FCB833]/20">Karyawan</Link>
                         </div>
                     </div>
                     <div className="bg-[#0F172A] rounded-2xl p-5 text-white flex flex-col">
@@ -94,10 +98,10 @@ export default function Dashboard() {
                             <div className="flex justify-between"><span className="text-white/60">Timezone</span><span className="font-medium">Asia/Makassar</span></div>
                         </div>
                         <p className="text-xs text-white/50 mt-4">Fleksibel — Super Admin atur di Pengaturan, berlaku bulan depan • Reset Love 1st 00:00 WITA</p>
-                        <Link href="/admin/settings" className="mt-4 bg-white text-[#0F172A] rounded-xl py-2.5 text-sm font-semibold text-center">Buka Pengaturan</Link>
+                        <Link href={`${base}/settings`} className="mt-4 bg-white text-[#0F172A] rounded-xl py-2.5 text-sm font-semibold text-center">Buka Pengaturan</Link>
                         <div className="mt-4 grid grid-cols-2 gap-2">
-                            <Link href="/admin/cuti" className="bg-white/10 rounded-xl py-2 text-xs font-medium text-center">Cuti berjenjang</Link>
-                            <Link href="/admin/love" className="bg-[#FCB833] text-[#0F172A] rounded-xl py-2 text-xs font-semibold text-center">Love claims</Link>
+                            <Link href={`${base}/cuti`} className="bg-white/10 rounded-xl py-2 text-xs font-medium text-center">Cuti berjenjang</Link>
+                            <Link href={`${base}/love`} className="bg-[#FCB833] text-[#0F172A] rounded-xl py-2 text-xs font-semibold text-center">Love claims</Link>
                         </div>
                     </div>
                 </div>

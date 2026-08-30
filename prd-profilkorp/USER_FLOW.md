@@ -8,10 +8,10 @@ All flows are built on Laravel 13 (PHP 8.4+) with React 19 and Inertia.js v2 (Vi
 
 ---
 
-## Flow 3: Administrator – Login to Admin Dashboard
+## Flow 3: Administrator – Login to Admin Dashboard (Opsi B: /super-admin vs /wilayah)
 
 ### Trigger
-The administrator navigates to the obfuscated admin login URL (e.g., `/dashboard-admin-login` or similar).
+The administrator navigates to their **role-specific obfuscated login URL** — **Super Admin** → `SUPER_ADMIN_PATH/login` (dev `/super-admin/login`) atau **Admin Wilayah** → `WILAYAH_PATH/login` (dev `/wilayah/login`). Keduanya terpisah, tidak cross-login.
 
 ### Pre-conditions
 - The admin login page is deployed and accessible.
@@ -27,12 +27,12 @@ The administrator navigates to the obfuscated admin login URL (e.g., `/dashboard
 
 | No | Actor | Action/Step | System Response | Alternative/Error Path |
 |:---|:---|:---|:---|:---|
-| 1 | Administrator | Navigates to the admin login URL | Laravel renders the login page via Inertia.js. React component displays a login form with email/username and password fields, and a "Login" button. | If the URL is incorrect or the login page is not configured, a 404 error is shown. |
-| 2 | Administrator | Enters email and password | React component validates the input on the client side (required fields, email format if applicable). If validation passes, the login button is enabled. | If validation fails, an error message is displayed. The login button remains disabled. |
-| 3 | Administrator | Clicks the "Login" button | React component sends a POST request to the `/api/admin/login` endpoint with the credentials and a CSRF token. | If the CSRF token is invalid, a 419 error is returned. |
-| 4 | System | Validates credentials on the server side | Laravel queries the `users` table for a user with the provided email/username. If found, the password is verified using bcrypt. If credentials are correct, a session is created via Laravel Sanctum. | If the user is not found or the password is incorrect, a 401 response is returned with a generic error message ("Invalid credentials"). Rate limiting is applied to prevent brute-force attacks (e.g., max 5 attempts per minute per IP). |
-| 5 | System | Returns a success response and session token | Laravel returns a 200 response with a session token (stored in a secure, HttpOnly cookie). | N/A |
-| 6 | Administrator | Is redirected to the admin dashboard | Inertia.js redirects the user to the `/admin/dashboard` route. React component loads the main dashboard page. | If the redirect fails, the user remains on the login page and an error message is displayed. |
+| 1 | Administrator (Super Admin / Wilayah) | Navigates to `SUPER_ADMIN_PATH/login` (Super Admin) atau `WILAYAH_PATH/login` (Wilayah) | Laravel renders login page via Inertia.js sesuai guard — title "Super Admin Pusat" vs "Admin Wilayah". URL salah role (mis. Super Admin ke `/wilayah/login`) tetap render tapi login akan 403 role mismatch. | If URL salah / not configured, 404. |
+| 2 | Administrator | Enters email and password | React validates required + email format; login enabled. | If validation fails, error shown. |
+| 3 | Administrator | Clicks the "Login" button | POST ke `/api/super-admin/login` (guard super_admin) atau `/api/wilayah/login` (guard wilayah) + CSRF, **rate limit terpisah** 5/15min per IP per guard. | CSRF invalid → 419. |
+| 4 | System | Validates credentials + role sesuai URL | Laravel cek `users` where email + role sesuai guard (`super_admin` untuk SUPER_ADMIN_PATH, `admin_wilayah` untuk WILAYAH_PATH), bcrypt verify, buat Sanctum session per guard (tidak cross-login). | Not found / wrong password → 401 generic "Invalid credentials". Role mismatch → 403. Rate limited → 429. |
+| 5 | System | Returns success + HttpOnly session cookie (per guard) | 200 + session cookie khusus guard. | N/A |
+| 6 | Administrator | Redirected to dashboard role-scoped | Inertia redirect ke `/super-admin` (Super Admin) atau `/wilayah` (Admin Wilayah) — masing-masing layout & menu sesuai guard. | Redirect fail → stay login + error. |
 
 ---
 

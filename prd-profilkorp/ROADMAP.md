@@ -23,7 +23,7 @@ These features are **critical** for the initial release. Without them, the appli
 
 | Feature | Reference | Status | Notes |
 |:---|:---|:---|:---|
-| RBAC Authentication (Admin+Karyawan) | FR-10/FR-22 | Core | Super Admin/Admin Wilayah (email) + Karyawan (NIK) login, Sanctum multi-guard, rate limiting. |
+| RBAC Authentication (Admin+Karyawan — Opsi B Pisah URL) | FR-10/FR-22 | Core | Super Admin (`SUPER_ADMIN_PATH` /super-admin + guard super_admin) + Admin Wilayah (`WILAYAH_PATH` /wilayah + guard wilayah) + Karyawan (`KARYAWAN_PATH` /karyawan) — email login semua role, Sanctum multi-guard terpisah tidak cross-login, rate limiting per guard. |
 | Admin Dashboard (Role-Scoped) | FR-11 | Core | Overview scoped by region; Super Admin all regions, Admin Wilayah own region. |
 | Region Management | FR-29 | Core | Super Admin CRUD Kabupaten/Kota + geofence config. |
 | Employee Data Management | FR-24 | Core | Admin Wilayah CRUD Lengkap HR per region (read all, write own). |
@@ -34,8 +34,8 @@ These features are **critical** for the initial release. Without them, the appli
 | Contact Submission Viewer | FR-17 | Core | View and archive contact form submissions. |
 | Media Library (AWS S3) | FR-18 | Core | Upload, delete, and browse media on S3. |
 | Global Settings | FR-21 | Core | Manage company name, logo, contact info, social links (Super Admin only). |
-| HTTPS & Security Basics | NFR-Security | Core | HTTPS, CSRF, rate limiting on all logins, region isolation middleware. |
-| Karyawan PWA - Auth & Profile | FR-22/FR-23 | Core | NIK login, view own profile, edit limited fields, PWA installable. |
+| HTTPS & Security Basics | NFR-Security | Core | HTTPS, CSRF, rate limiting terpisah per guard (super-admin / wilayah / karyawan), region isolation middleware, tiga URL obfuscated pisah. |
+| Karyawan PWA - Auth & Profile | FR-22/FR-23 | Core | Email login (`KARYAWAN_PATH`), view own profile, edit limited fields, PWA installable. Guard terpisah dari super-admin/wilayah. |
 | Karyawan PWA - Absensi | FR-25 | Core | GPS+selfie check-in/out with geofence validation, S3 selfie. |
 | Karyawan PWA - Cuti | FR-26 | Core | Ajukan cuti + berjenjang approval (3 levels) with notifications. |
 | 
@@ -150,7 +150,7 @@ These are deliverables and artifacts that must be completed before or in paralle
 - MySQL 8.4 LTS database created with initial schema (regions, employees, public tables) + ERD approved
 - Tailwind CSS v4 setup and design system + PWA design tokens established
 - Git repository with branching strategy
-- Development, staging, and production env vars documented (including ADMIN_PATH, KARYAWAN_PATH, VAPID keys, S3 paths)
+- Development, staging, and production env vars documented (including SUPER_ADMIN_PATH, WILAYAH_PATH, KARYAWAN_PATH, VAPID keys, S3 paths)
 
 **Week 2–3:**
 - Homepage component with hero banner, featured services section, latest blog posts, and testimonials carousel
@@ -279,8 +279,8 @@ These are deliverables and artifacts that must be completed before or in paralle
 - [ ] TTFB <200ms cached, LCP <2.5s, FCP <1.8s
 - [ ] HTTPS + HSTS enforced on all pages + PWA secure context
 - [ ] OWASP Top 10 addressed + region isolation + own-data 403 verified
-- [ ] Rate limiting on admin login, karyawan NIK login, contact form, absensi
-- [ ] Admin & Karyawan URLs obfuscated (not /admin, not /karyawan)
+- [ ] Rate limiting terpisah per guard: super-admin (`/super-admin/login` 5/15min), wilayah (`/wilayah/login` 5/15min), karyawan (`/karyawan/login` 5/15min), contact form, absensi
+- [ ] Tiga URL obfuscated terpisah (Opsi B): `SUPER_ADMIN_PATH` (bukan `/admin`), `WILAYAH_PATH` (bukan `/admin`), `KARYAWAN_PATH` (bukan `/karyawan` di prod) — tidak cross-login
 - [ ] Geofence validation server-side tested (ditolak di luar radius)
 
 ### Testing & Quality

@@ -210,7 +210,7 @@ All spacing, padding, margins, and sizing should be multiples of 8px to maintain
 
 ### Admin Dashboard Screens (Administrator Priority Order — Super Admin & Admin Wilayah)
 
-1. **Admin Login** — Email+password, role-scoped, obfuscated path. Fast + rate-limited.
+1. **Admin Login (Opsi B Pisah URL)** — **Super Admin** `SUPER_ADMIN_PATH/login` vs **Admin Wilayah** `WILAYAH_PATH/login` (dev `/super-admin/login` / `/wilayah/login`), email+password, guard terpisah tidak cross-login, obfuscated + rate-limited per guard.
 2. **Dashboard Overview (Role-Scoped)** — Super Admin: all regions stats; Admin Wilayah: own region (employee count, attendance today, pending cuti) + read-only global.
 3. **Region Management (Super Admin Only)** — CRUD Kabupaten/Kota + geofence (lat/lng/radius) + assign admin wilayah.
 4. **Karyawan Management (Lengkap HR)** — List filtered own region (toggle read all), Create/Edit with NIK/NIP/golongan/jabatan/unit/status, foto S3, region auto-scoped.
@@ -231,7 +231,7 @@ All spacing, padding, margins, and sizing should be multiples of 8px to maintain
 
 ### Karyawan PWA Screens (Mobile-First, 320px+, Installable — Priority Order)
 
-1. **Karyawan Login (NIK + Password)** — Mobile-first 320px, numeric NIK input, show/hide password, rate-limit error UX, PWA install banner.
+1. **Karyawan Login (Email + Password, KARYAWAN_PATH)** — Mobile-first 320px, `KARYAWAN_PATH/login` (dev `/karyawan/login`, obfuscated di prod), email input, show/hide password, rate-limit error UX, PWA install banner. Tidak cross-login dengan `/super-admin` / `/wilayah`.
 2. **Dashboard Home** — Greeting + today attendance status (on_time/late/belum absen), pending cuti count, unread pengumuman count, quick actions (Absen, Ajukan Cuti).
 3. **Absensi (GPS + Selfie)** — Big "Absen Masuk/Pulang" button 44px+, GPS permission UX, camera capture, preview selfie + distance to kantor, status badge (on_time/late — tidak ada out_of_range, di luar radius ditolak), history list (paginated), offline queue indicator.
 4. **Cuti (Berjenjang)** — Form ajukan (jenis, tgl mulai/selesai, alasan, dokumen), list own requests with status timeline (pending → level1 → level2 → approved/rejected), detail with approver notes.
