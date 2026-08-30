@@ -1,6 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, usePage } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { loadRegions, loadEmployees } from './_shared';
 
 function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
@@ -24,8 +25,20 @@ export default function Dashboard() {
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     const OWN_DASH = 'Kab. Gowa';
+    const [regionsData, setRegionsData] = useState(() => loadRegions());
+    const [employees, setEmployees] = useState(() => loadEmployees());
     const [wilayah, setWilayah] = useState(isWilayah ? OWN_DASH : 'Semua');
+    const [siteFilter, setSiteFilter] = useState('Semua');
     const [tgl] = useState(() => new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }));
+
+    useEffect(() => {
+        const sync = () => { setRegionsData(loadRegions()); setEmployees(loadEmployees()); };
+        window.addEventListener('focus', sync);
+        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
+        document.addEventListener('visibilitychange', onVis);
+        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); };
+    }, []);
+    useEffect(() => { setSiteFilter('Semua'); }, [wilayah]);
 
     const filtered = useMemo(() => {
         if (isWilayah) return attendanceSeed.filter((c) => c.wilayah === OWN_DASH);
@@ -35,6 +48,23 @@ export default function Dashboard() {
     const total = filtered.reduce((s, c) => s + c.total, 0);
     const late = filtered.reduce((s, c) => s + c.late, 0);
     const pct = total ? Math.round((hadir / total) * 100) : 0;
+
+    // per-titik breakdown: pakai regionsData + employees per titik
+    const activeRegionName = isWilayah ? OWN_DASH : wilayah;
+    const activeRegion = useMemo(() => regionsData.find((r) => r.name === activeRegionName) || null, [regionsData, activeRegionName]);
+    const sitesForActive = activeRegion ? activeRegion.locations : [];
+    const countsPerSite = useMemo(() => {
+        if (!activeRegion) return [];
+        return sitesForActive.map((s) => ({
+            site: s,
+            anggota: employees.filter((e) => e.office_location_id === s.id).length,
+        }));
+    }, [sitesForActive, employees, activeRegion]);
+    const siteCards = siteFilter === 'Semua' ? countsPerSite : countsPerSite.filter((x) => String(x.site.id) === String(siteFilter));
+    const totalTanpaTitik = useMemo(() => {
+        if (!activeRegion) return 0;
+        return employees.filter((e) => e.regionId === activeRegion.id && e.office_location_id == null).length;
+    }, [employees, activeRegion]);
 
     const stats = isWilayah
         ? [
@@ -75,12 +105,18 @@ export default function Dashboard() {
                         <p className="text-sm text-[#64748B]">{isWilayah ? `${OWN_DASH} • ${tgl} • WITA` : `Kantor Pusat Makassar • 24 Kantor Wilayah Sulsel • ${tgl} • WITA`}</p>
                         <p className="text-xs text-[#94A3B8] mt-1">{isWilayah ? `Hanya data ${OWN_DASH} — tidak tampil wilayah lain` : wilayah === 'Semua' ? 'Super Admin — semua wilayah' : `Filter: ${wilayah}`}</p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
                         {isWilayah ? (
                             <span className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm font-medium text-[#0F172A]">{OWN_DASH}</span>
                         ) : (
                             <select value={wilayah} onChange={(e)=>setWilayah(e.target.value)} className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1E3A8A]/10">
                                 {wilayahList.map((w)=><option key={w} value={w}>{w}</option>)}
+                            </select>
+                        )}
+                        {(isWilayah || wilayah !== 'Semua') && activeRegion && sitesForActive.length > 0 && (
+                            <select value={siteFilter} onChange={(e)=>setSiteFilter(e.target.value)} className="rounded-xl bg-[#FFF7E6] border border-[#FCB833]/30 px-3 py-2.5 text-sm outline-none">
+                                <option value="Semua">Semua titik ({sitesForActive.length})</option>
+                                {sitesForActive.map((s)=><option key={s.id} value={String(s.id)}>{s.nama_lokasi} • {s.radius}m</option>)}
                             </select>
                         )}
                         <Link href={`${base}/attendances`} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">Lihat Absensi →</Link>
@@ -97,6 +133,31 @@ export default function Dashboard() {
                         </Link>
                     ))}
                 </div>
+
+                {/* Per-titik breakdown ketika fokus 1 wilayah / own region */}
+                {(isWilayah || wilayah !== 'Semua') && activeRegion && (
+                    <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-medium text-sm text-[#0F172A]">Breakdown per Titik — {activeRegion.name} • {activeRegion.kantor}</h3>
+                            <span className="text-xs text-[#94A3B8]">{sitesForActive.length} titik • 1 karyawan = 1 titik • {totalTanpaTitik} tanpa titik</span>
+                        </div>
+                        <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {siteCards.map(({ site, anggota }) => (
+                                <Link key={site.id} href={`${base}/regions/${activeRegion.id}/sites/${site.id}`} className="rounded-2xl border border-[#E2E8F0] p-4 hover:border-[#FCB833]/40 hover:bg-[#FFF7E6]/40 transition text-left">
+                                    <p className="text-sm font-semibold text-[#0F172A] truncate">{site.nama_lokasi}</p>
+                                    <p className="text-xs font-mono text-[#64748B] mt-1">{site.lat.toFixed(4)}, {site.lng.toFixed(4)} • {site.radius} m</p>
+                                    <div className="mt-3 flex items-center justify-between">
+                                        <span className="text-xs bg-[#0F172A] text-white px-2 py-1 rounded-full">{anggota} anggota</span>
+                                        <span className="text-xs font-semibold text-[#1E3A8A]">Kelola →</span>
+                                    </div>
+                                    {site.address && <p className="text-xs text-[#94A3B8] mt-2 truncate">{site.address}</p>}
+                                </Link>
+                            ))}
+                        </div>
+                        {sitesForActive.length === 0 && <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada titik di {activeRegion.name} — tambah 1 titik di Kelola Wilayah.</p>}
+                        {totalTanpaTitik > 0 && <p className="text-xs text-[#92400E] bg-[#FFF7E6] border border-[#FCB833]/20 rounded-xl px-3 py-2 mt-3">{totalTanpaTitik} karyawan {activeRegion.name} belum punya titik — tidak bisa absen (422). Assign di halaman titik.</p>}
+                    </div>
+                )}
 
                 <div className="grid lg:grid-cols-3 gap-4">
                     <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
@@ -116,7 +177,7 @@ export default function Dashboard() {
                             ))}
                             {filtered.length===0 && <p className="text-xs text-[#94A3B8] text-center py-6">Tidak ada data untuk wilayah ini (seed top 10)</p>}
                         </div>
-                         <div className="mt-4 flex flex-wrap gap-2">
+                          <div className="mt-4 flex flex-wrap gap-2">
                             {isWilayah ? (
                                 <>
                                     <Link href={`${base}/regions`} className="text-xs font-medium bg-[#F8FAFC] text-[#334155] px-3 py-1.5 rounded-full border">{OWN_DASH} • Kelola Lokasi →</Link>
