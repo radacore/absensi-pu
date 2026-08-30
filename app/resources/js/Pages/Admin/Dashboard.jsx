@@ -36,14 +36,44 @@ export default function Dashboard() {
     const late = filtered.reduce((s, c) => s + c.late, 0);
     const pct = total ? Math.round((hadir / total) * 100) : 0;
 
+    const stats = isWilayah
+        ? [
+            { label: 'Total Karyawan', value: String(total), sub: `${OWN_DASH} • 1 kantor`, accent: 'gold', href: `${base}/employees` },
+            { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late • ${OWN_DASH}`, accent: 'emerald', href: `${base}/attendances` },
+            { label: 'Cuti pending', value: '3', sub: `${OWN_DASH} • butuh approval`, accent: 'amber', href: `${base}/cuti` },
+            { label: 'Love pending', value: '2', sub: `${OWN_DASH} • claim hari ini`, accent: 'gold', href: `${base}/love` },
+          ]
+        : [
+            { label: 'Total Karyawan', value: wilayah === 'Semua' ? '1,248' : String(total), sub: wilayah === 'Semua' ? '24 wilayah' : `${wilayah}`, accent: 'gold', href: `${base}/employees` },
+            { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late`, accent: 'emerald', href: `${base}/attendances` },
+            { label: 'Cuti pending', value: '23', sub: 'butuh approval • semua wilayah', accent: 'amber', href: `${base}/cuti` },
+            { label: 'Love pending', value: '8', sub: 'claim hari ini • semua wilayah', accent: 'gold', href: `${base}/love` },
+          ];
+
+    const wilayahActivities = [
+        { t: '07:52 — Andi Saputra (Gowa) terlambat 7m — dalam radius 42m', tag: 'late', color: 'amber' },
+        { t: '08:10 — Love claim oleh Andi Saputra — menunggu Admin Gowa (bulan sama)', tag: 'love', color: 'gold' },
+        { t: '07:44 — Dewi Lestari (Gowa) hadir tepat waktu — 31m', tag: 'on_time', color: 'emerald' },
+        { t: '09:05 — Cuti diajukan Nurul (Gowa) — Tahunan 2 hari — level 1', tag: 'cuti', color: 'sky' },
+        { t: '07:38 — Rudi Hartono (Gowa) hadir — radius 27m — multi-lokasi terdekat', tag: 'on_time', color: 'emerald' },
+    ];
+    const allActivities = [
+        { t: '07:52 — Andi Saputra (Gowa) terlambat 7m — dalam radius 42m', tag: 'late', color: 'amber' },
+        { t: '07:38 — Siti Rahma (Makassar) hadir tepat waktu — 38m', tag: 'on_time', color: 'emerald' },
+        { t: '08:10 — Love claim oleh Andi Saputra — menunggu Admin Gowa (bulan sama)', tag: 'love', color: 'gold' },
+        { t: '09:15 — Cuti diajukan Rudi (Bone) — Tahunan 3 hari — level 1', tag: 'cuti', color: 'sky' },
+        { t: '07:40 — Budi Santoso (Maros) hadir — radius 21m — multi-lokasi terdekat', tag: 'on_time', color: 'emerald' },
+    ];
+    const activities = isWilayah ? wilayahActivities : allActivities;
+
     return (
         <AdminLayout>
             <div className="space-y-6">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Dashboard — ${OWN_DASH}` : `Dashboard ${wilayah === 'Semua' ? 'Super Admin' : 'Admin Wilayah'}`}</h1>
-                        <p className="text-sm text-[#64748B]">Kantor Pusat Makassar • 24 Kantor Wilayah Sulsel • {tgl} • WITA {isWilayah && `• ${OWN_DASH} only`}</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">{isWilayah ? `Admin Wilayah: tampil & action hanya ${OWN_DASH} — tidak bisa lihat wilayah lain` : wilayah === 'Semua' ? 'Super Admin lihat semua • Admin Wilayah lihat own region saja (mock filter)' : `Filter: ${wilayah} — data filtered frontend only`}</p>
+                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Dashboard ${OWN_DASH}` : `Dashboard ${wilayah === 'Semua' ? 'Super Admin' : 'Admin Wilayah'}`}</h1>
+                        <p className="text-sm text-[#64748B]">{isWilayah ? `${OWN_DASH} • ${tgl} • WITA` : `Kantor Pusat Makassar • 24 Kantor Wilayah Sulsel • ${tgl} • WITA`}</p>
+                        <p className="text-xs text-[#94A3B8] mt-1">{isWilayah ? `Hanya data ${OWN_DASH} — tidak tampil wilayah lain` : wilayah === 'Semua' ? 'Super Admin — semua wilayah' : `Filter: ${wilayah}`}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                         {isWilayah ? (
@@ -58,12 +88,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
-                        { label: 'Total Karyawan', value: wilayah === 'Semua' ? '1,248' : String(total), sub: wilayah === 'Semua' ? '24 wilayah' : `${wilayah}`, accent: 'gold', href: `${base}/employees` },
-                        { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late`, accent: 'emerald', href: `${base}/attendances` },
-                        { label: 'Cuti pending', value: '23', sub: 'butuh approval', accent: 'amber', href: `${base}/cuti` },
-                        { label: 'Love pending', value: '8', sub: 'claim hari ini', accent: 'gold', href: `${base}/love` },
-                    ].map((s) => (
+                    {stats.map((s) => (
                         <Link key={s.label} href={s.href} className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_24px_rgba(15,23,42,0.08)] transition text-left">
                             <p className="text-xs font-medium text-[#94A3B8]">{s.label}</p>
                             <p className="text-2xl font-semibold tracking-tight text-[#0F172A] mt-1">{s.value}</p>
@@ -76,8 +101,8 @@ export default function Dashboard() {
                 <div className="grid lg:grid-cols-3 gap-4">
                     <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                         <div className="flex items-center justify-between">
-                            <h3 className="font-medium text-sm text-[#0F172A]">Kehadiran per wilayah (hari ini)</h3>
-                            <span className="text-xs text-[#94A3B8]">{filtered.length} wilayah {wilayah !== 'Semua' ? `• ${wilayah}` : '• top 10'}</span>
+                            <h3 className="font-medium text-sm text-[#0F172A]">{isWilayah ? `Kehadiran ${OWN_DASH} (hari ini)` : 'Kehadiran per wilayah (hari ini)'}</h3>
+                            <span className="text-xs text-[#94A3B8]">{isWilayah ? `1 kantor • ${OWN_DASH}` : `${filtered.length} wilayah ${wilayah !== 'Semua' ? `• ${wilayah}` : '• top 10'}`}</span>
                         </div>
                         <div className="mt-4 space-y-3 max-h-[320px] overflow-y-auto pr-1">
                             {filtered.map((c) => (
@@ -91,14 +116,23 @@ export default function Dashboard() {
                             ))}
                             {filtered.length===0 && <p className="text-xs text-[#94A3B8] text-center py-6">Tidak ada data untuk wilayah ini (seed top 10)</p>}
                         </div>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                            <Link href={`${base}/regions`} className="text-xs font-medium bg-[#F8FAFC] text-[#334155] px-3 py-1.5 rounded-full border">Kelola 24 Kantor Wilayah →</Link>
-                            <Link href={`${base}/employees`} className="text-xs font-medium bg-[#FFF7E6] text-[#92400E] px-3 py-1.5 rounded-full border border-[#FCB833]/20">Karyawan</Link>
+                         <div className="mt-4 flex flex-wrap gap-2">
+                            {isWilayah ? (
+                                <>
+                                    <Link href={`${base}/regions`} className="text-xs font-medium bg-[#F8FAFC] text-[#334155] px-3 py-1.5 rounded-full border">{OWN_DASH} • Kelola Lokasi →</Link>
+                                    <Link href={`${base}/employees`} className="text-xs font-medium bg-[#FFF7E6] text-[#92400E] px-3 py-1.5 rounded-full border border-[#FCB833]/20">Karyawan {OWN_DASH}</Link>
+                                </>
+                            ) : (
+                                <>
+                                    <Link href={`${base}/regions`} className="text-xs font-medium bg-[#F8FAFC] text-[#334155] px-3 py-1.5 rounded-full border">Kelola 24 Kantor Wilayah →</Link>
+                                    <Link href={`${base}/employees`} className="text-xs font-medium bg-[#FFF7E6] text-[#92400E] px-3 py-1.5 rounded-full border border-[#FCB833]/20">Karyawan</Link>
+                                </>
+                            )}
                         </div>
                     </div>
                     <div className="bg-[#0F172A] rounded-2xl p-5 text-white flex flex-col">
-                        <h3 className="font-medium text-sm">Global Settings</h3>
-                        <p className="text-xs text-white/50 mt-1">Hanya Super Admin bisa edit • berlaku konsisten</p>
+                        <h3 className="font-medium text-sm">{isWilayah ? `Info ${OWN_DASH}` : 'Global Settings'}</h3>
+                        <p className="text-xs text-white/50 mt-1">{isWilayah ? `Kebijakan dari Pusat • read-only` : 'Hanya Super Admin bisa edit • berlaku konsisten'}</p>
                         <div className="mt-4 space-y-3 text-sm">
                             <div className="flex justify-between"><span className="text-white/60">Jam kerja</span><span className="font-medium">07:30–16:00 WITA</span></div>
                             <div className="flex justify-between"><span className="text-white/60">Toleransi</span><span className="font-medium">15 menit</span></div>
@@ -106,10 +140,10 @@ export default function Dashboard() {
                             <div className="flex justify-between"><span className="text-white/60">Hari kerja</span><span className="font-medium">Sen–Jum</span></div>
                             <div className="flex justify-between"><span className="text-white/60">Timezone</span><span className="font-medium">Asia/Makassar</span></div>
                         </div>
-                        <p className="text-xs text-white/50 mt-4">Fleksibel — Super Admin atur di Pengaturan, berlaku bulan depan • Reset Love 1st 00:00 WITA</p>
-                        <Link href={`${base}/settings`} className="mt-4 bg-white text-[#0F172A] rounded-xl py-2.5 text-sm font-semibold text-center">Buka Pengaturan</Link>
+                        <p className="text-xs text-white/50 mt-4">{isWilayah ? 'Diatur Pusat — lihat di Pengaturan (read-only)' : 'Fleksibel — Super Admin atur di Pengaturan, berlaku bulan depan • Reset Love 1st 00:00 WITA'}</p>
+                        <Link href={`${base}/settings`} className="mt-4 bg-white text-[#0F172A] rounded-xl py-2.5 text-sm font-semibold text-center">{isWilayah ? 'Lihat Pengaturan' : 'Buka Pengaturan'}</Link>
                         <div className="mt-4 grid grid-cols-2 gap-2">
-                            <Link href={`${base}/cuti`} className="bg-white/10 rounded-xl py-2 text-xs font-medium text-center">Cuti berjenjang</Link>
+                            <Link href={`${base}/cuti`} className="bg-white/10 rounded-xl py-2 text-xs font-medium text-center">{isWilayah ? `Cuti ${OWN_DASH.replace('Kab. ','')}` : 'Cuti berjenjang'}</Link>
                             <Link href={`${base}/love`} className="bg-[#FCB833] text-[#0F172A] rounded-xl py-2 text-xs font-semibold text-center">Love claims</Link>
                         </div>
                     </div>
@@ -117,17 +151,11 @@ export default function Dashboard() {
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="px-5 py-4 flex items-center justify-between">
-                        <h3 className="font-medium text-sm text-[#0F172A]">Aktivitas terbaru</h3>
-                        <span className="text-xs text-[#94A3B8]">Hari ini • {hadir} hadir</span>
+                        <h3 className="font-medium text-sm text-[#0F172A]">{isWilayah ? `Aktivitas terbaru — ${OWN_DASH}` : 'Aktivitas terbaru'}</h3>
+                        <span className="text-xs text-[#94A3B8]">Hari ini • {hadir} hadir {isWilayah ? `• ${OWN_DASH}` : ''}</span>
                     </div>
                     <div className="divide-y divide-[#F1F5F9]">
-                        {[
-                            { t: '07:52 — Andi Saputra (Gowa) terlambat 7m — dalam radius 42m', tag: 'late', color: 'amber' },
-                            { t: '07:38 — Siti Rahma (Makassar) hadir tepat waktu — 38m', tag: 'on_time', color: 'emerald' },
-                            { t: '08:10 — Love claim oleh Andi Saputra — menunggu Admin Gowa (bulan sama)', tag: 'love', color: 'gold' },
-                            { t: '09:15 — Cuti diajukan Rudi (Bone) — Tahunan 3 hari — level 1', tag: 'cuti', color: 'sky' },
-                            { t: '07:40 — Budi Santoso (Maros) hadir — radius 21m — multi-lokasi terdekat', tag: 'on_time', color: 'emerald' },
-                        ].map((a, i) => (
+                        {activities.map((a, i) => (
                             <div key={i} className="px-5 py-3 flex items-center gap-3">
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${a.color === 'gold' ? 'bg-[#FCB833]' : a.color === 'emerald' ? 'bg-[#10B981]' : a.color === 'amber' ? 'bg-[#F59E0B]' : 'bg-[#0EA5E9]'}`}></span>
                                 <p className="text-sm text-[#334155] flex-1 min-w-0 truncate">{a.t}</p>
