@@ -22,10 +22,15 @@ const attendanceSeed = [
 export default function Dashboard() {
     const { url } = usePage();
     const base = getBase(url);
-    const [wilayah, setWilayah] = useState('Semua');
+    const isWilayah = base === '/admin' || base === '/wilayah';
+    const OWN_DASH = 'Kab. Gowa';
+    const [wilayah, setWilayah] = useState(isWilayah ? OWN_DASH : 'Semua');
     const [tgl] = useState(() => new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }));
 
-    const filtered = useMemo(() => wilayah === 'Semua' ? attendanceSeed : attendanceSeed.filter((c) => c.wilayah === wilayah), [wilayah]);
+    const filtered = useMemo(() => {
+        if (isWilayah) return attendanceSeed.filter((c) => c.wilayah === OWN_DASH);
+        return wilayah === 'Semua' ? attendanceSeed : attendanceSeed.filter((c) => c.wilayah === wilayah);
+    }, [wilayah, isWilayah]);
     const hadir = filtered.reduce((s, c) => s + c.hadir, 0);
     const total = filtered.reduce((s, c) => s + c.total, 0);
     const late = filtered.reduce((s, c) => s + c.late, 0);
@@ -36,14 +41,18 @@ export default function Dashboard() {
             <div className="space-y-6">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">Dashboard {wilayah === 'Semua' ? 'Super Admin' : 'Admin Wilayah'}</h1>
-                        <p className="text-sm text-[#64748B]">Kantor Pusat Makassar • 24 Kantor Wilayah Sulsel • {tgl} • WITA</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">{wilayah === 'Semua' ? 'Super Admin lihat semua • Admin Wilayah lihat own region saja (mock filter)' : `Filter: ${wilayah} — data filtered frontend only`}</p>
+                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Dashboard — ${OWN_DASH}` : `Dashboard ${wilayah === 'Semua' ? 'Super Admin' : 'Admin Wilayah'}`}</h1>
+                        <p className="text-sm text-[#64748B]">Kantor Pusat Makassar • 24 Kantor Wilayah Sulsel • {tgl} • WITA {isWilayah && `• ${OWN_DASH} only`}</p>
+                        <p className="text-xs text-[#94A3B8] mt-1">{isWilayah ? `Admin Wilayah: tampil & action hanya ${OWN_DASH} — tidak bisa lihat wilayah lain` : wilayah === 'Semua' ? 'Super Admin lihat semua • Admin Wilayah lihat own region saja (mock filter)' : `Filter: ${wilayah} — data filtered frontend only`}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                        <select value={wilayah} onChange={(e)=>setWilayah(e.target.value)} className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1E3A8A]/10">
-                            {wilayahList.map((w)=><option key={w} value={w}>{w}</option>)}
-                        </select>
+                        {isWilayah ? (
+                            <span className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm font-medium text-[#0F172A]">{OWN_DASH}</span>
+                        ) : (
+                            <select value={wilayah} onChange={(e)=>setWilayah(e.target.value)} className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1E3A8A]/10">
+                                {wilayahList.map((w)=><option key={w} value={w}>{w}</option>)}
+                            </select>
+                        )}
                         <Link href={`${base}/attendances`} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">Lihat Absensi →</Link>
                     </div>
                 </div>

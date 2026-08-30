@@ -1,18 +1,29 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
+
 export default function Settings() {
+    const { url } = usePage();
+    const base = getBase(url);
+    const isWilayah = base === '/admin' || base === '/wilayah';
     const [jamMasuk, setJamMasuk] = useState('07:30');
     const [jamPulang, setJamPulang] = useState('16:00');
     const [toleransi, setToleransi] = useState(15);
     const [loveMax, setLoveMax] = useState(4);
     const [saved, setSaved] = useState(false);
+    const handleSave = () => {
+        if (isWilayah) return;
+        setSaved(true); setTimeout(() => setSaved(false), 2000);
+    };
     return (
         <AdminLayout>
             <div className="space-y-5 max-w-[720px]">
                 <div>
                     <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">Pengaturan Global</h1>
                     <p className="text-sm text-[#64748B]">Hanya Super Admin Kantor Pusat bisa edit • Admin Wilayah read-only • Berlaku bulan depan untuk Love</p>
+                    {isWilayah && <span className="inline-block mt-2 text-xs font-medium bg-[#FEF2F2] text-[#991B1B] px-2.5 py-1 rounded-full border">Read-only untuk Admin Wilayah</span>}
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-5">
@@ -24,16 +35,16 @@ export default function Settings() {
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="masuk" className="text-xs font-medium text-[#334155]">Jam masuk</label>
-                            <input id="masuk" type="time" value={jamMasuk} onChange={(e) => setJamMasuk(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                            <label htmlFor="masuk" className="text-xs font-medium text-[#334155]">Jam masuk {isWilayah && <span className="text-[#94A3B8]">— read-only</span>}</label>
+                            <input id="masuk" type="time" value={jamMasuk} onChange={(e) => !isWilayah && setJamMasuk(e.target.value)} disabled={isWilayah} className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${isWilayah ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`} />
                         </div>
                         <div>
-                            <label htmlFor="pulang" className="text-xs font-medium text-[#334155]">Jam pulang</label>
-                            <input id="pulang" type="time" value={jamPulang} onChange={(e) => setJamPulang(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                            <label htmlFor="pulang" className="text-xs font-medium text-[#334155]">Jam pulang {isWilayah && <span className="text-[#94A3B8]">— read-only</span>}</label>
+                            <input id="pulang" type="time" value={jamPulang} onChange={(e) => !isWilayah && setJamPulang(e.target.value)} disabled={isWilayah} className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${isWilayah ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`} />
                         </div>
                         <div>
-                            <label htmlFor="tol" className="text-xs font-medium text-[#334155]">Toleransi (menit)</label>
-                            <input id="tol" type="number" min="0" max="60" value={toleransi} onChange={(e) => setToleransi(Number(e.target.value))} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                            <label htmlFor="tol" className="text-xs font-medium text-[#334155]">Toleransi (menit) {isWilayah && <span className="text-[#94A3B8]">— read-only</span>}</label>
+                            <input id="tol" type="number" min="0" max="60" value={toleransi} onChange={(e) => !isWilayah && setToleransi(Number(e.target.value))} disabled={isWilayah} className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${isWilayah ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`} />
                         </div>
                         <div>
                             <label className="text-xs font-medium text-[#334155]">Hari kerja</label>
@@ -51,9 +62,9 @@ export default function Settings() {
                         Love — Fleksibel per Bulan
                     </h3>
                     <div>
-                        <label htmlFor="love" className="text-xs font-medium text-[#334155]">Total Love / bulan (1–10)</label>
+                        <label htmlFor="love" className="text-xs font-medium text-[#334155]">Total Love / bulan (1–10) {isWilayah && <span className="text-[#94A3B8]">— read-only</span>}</label>
                         <div className="mt-1.5 flex items-center gap-3">
-                            <input id="love" type="range" min="1" max="10" value={loveMax} onChange={(e) => setLoveMax(Number(e.target.value))} className="flex-1 accent-[#FCB833]" />
+                            <input id="love" type="range" min="1" max="10" value={loveMax} onChange={(e) => !isWilayah && setLoveMax(Number(e.target.value))} disabled={isWilayah} className={`flex-1 accent-[#FCB833] ${isWilayah ? 'opacity-40 cursor-not-allowed' : ''}`} />
                             <span className="w-10 h-10 rounded-xl bg-[#FCB833] text-[#0F172A] flex items-center justify-center font-semibold">{loveMax}</span>
                         </div>
                         <div className="mt-2 flex gap-1.5">
@@ -63,8 +74,9 @@ export default function Settings() {
                     <p className="text-xs text-[#94A3B8]">Berlaku bulan depan • Reset 1st 00:00 WITA • Saat ini 4 Love untuk semua karyawan (demo)</p>
                 </div>
 
-                <button type="button" onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); }} className="w-full bg-[#0F172A] text-white rounded-xl py-3 text-sm font-semibold hover:bg-[#1E3A8A] transition">Simpan pengaturan</button>
+                <button type="button" onClick={handleSave} disabled={isWilayah} className={`w-full rounded-xl py-3 text-sm font-semibold transition ${isWilayah ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white hover:bg-[#1E3A8A]'}`}>{isWilayah ? 'Read-only — hanya Super Admin bisa simpan' : 'Simpan pengaturan'}</button>
                 {saved && <p className="text-xs text-center text-[#10B981] bg-[#ECFDF5] rounded-xl py-2">Tersimpan (frontend only) — jam & love akan dipakai bulan depan</p>}
+                {isWilayah && <p className="text-xs text-center text-[#94A3B8]">Wilayah lihat saja — perubahan hanya di /super-admin/settings oleh Super Admin</p>}
             </div>
         </AdminLayout>
     );

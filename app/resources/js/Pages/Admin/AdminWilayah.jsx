@@ -1,5 +1,8 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
+
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
 const initial = [
     { id: 1, nama: 'Admin Gowa', email: 'admin.gowa@bbws-pj.go.id', region: 'Kab. Gowa', status: 'Aktif', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face&auto=format' },
@@ -10,6 +13,9 @@ const regions = ['Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Pare
 const empty = { nama: '', email: '', region: regions[1], password: '' };
 
 export default function AdminWilayah() {
+    const { url } = usePage();
+    const base = getBase(url);
+    const isWilayah = base === '/admin' || base === '/wilayah';
     const [list, setList] = useState(initial);
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -39,6 +45,17 @@ export default function AdminWilayah() {
     const toggleStatus = (id) => setList((l)=>l.map((x)=>x.id===id ? { ...x, status: x.status==='Aktif' ? 'Nonaktif' : 'Aktif' } : x));
     const remove = (id) => { setList((l)=>l.filter((x)=>x.id!==id)); setToast('Dihapus (frontend only)'); setTimeout(()=>setToast(null),2000); };
 
+    if (isWilayah) {
+        return (
+            <AdminLayout>
+                <div className="bg-white rounded-2xl p-8 text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
+                    <p className="text-sm font-medium text-[#991B1B]">Akses ditolak</p>
+                    <p className="text-sm text-[#64748B] mt-1">Menu Admin Wilayah hanya untuk Super Admin — gunakan /super-admin/admin-wilayah</p>
+                    <p className="text-xs text-[#94A3B8] mt-2">Admin Wilayah tidak bisa kelola akun lain (least privilege)</p>
+                </div>
+            </AdminLayout>
+        );
+    }
     return (
         <AdminLayout>
             <div className="space-y-5">

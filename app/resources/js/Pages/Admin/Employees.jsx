@@ -1,5 +1,9 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
+
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
+const OWN_REGION = 'Kab. Gowa';
 
 const initial = [
     { id: 1, nik: '7371001234567890', nip: '198501012010011001', nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', gol: 'III/a', jabatan: 'Staff Teknik', unit: 'Bidang Jalan', status: 'PNS', kantor: 'Gowa', region: 'Kab. Gowa', foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face&auto=format' },
@@ -11,16 +15,28 @@ const regions = ['Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Pare
 const empty = { nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', region: regions[1] };
 
 export default function Employees() {
+    const { url } = usePage();
+    const base = getBase(url);
+    const isWilayah = base === '/admin' || base === '/wilayah';
     const [list, setList] = useState(initial);
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
-    const [form, setForm] = useState(empty);
+    const [form, setForm] = useState({ ...empty, region: isWilayah ? OWN_REGION : empty.region });
     const [toast, setToast] = useState(null);
-    const [filter, setFilter] = useState('Semua');
+    const [filter, setFilter] = useState(isWilayah ? OWN_REGION : 'Semua');
     const [photo, setPhoto] = useState(null);
     const [preview, setPreview] = useState(null);
 
-    const filtered = filter === 'Semua' ? list : list.filter((e) => e.region === filter || e.status === filter);
+    const scopedList = isWilayah ? list.filter((e) => e.region === OWN_REGION) : list;
+    const filtered = (() => {
+        const baseList = scopedList;
+        if (!isWilayah && filter === 'Semua') return baseList;
+        if (isWilayah) {
+            if (filter === OWN_REGION) return baseList;
+            return baseList.filter((e) => e.status === filter);
+        }
+        return baseList.filter((e) => e.region === filter || e.status === filter);
+    })();
 
     const openAdd = () => { setEditing(null); setForm(empty); setPhoto(null); setPreview(null); setOpen(true); };
     const openEdit = (e) => { setEditing(e); setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, region:e.region }); setPreview(e.foto); setPhoto(null); setOpen(true); };
@@ -32,9 +48,11 @@ export default function Employees() {
     };
 
     const save = () => {
+        if (isWilayah && form.region !== OWN_REGION) { setToast(`Admin Wilayah hanya boleh di ${OWN_REGION}`); setTimeout(()=>setToast(null),2000); return; }
         if (!form.nama.trim() || !form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { setToast('Nama & email valid wajib'); setTimeout(()=>setToast(null),2000); return; }
         if (!/^\d{16}$/.test(form.nik)) { setToast('NIK 16 digit'); setTimeout(()=>setToast(null),2000); return; }
         if (editing) {
+            if (isWilayah && editing.region !== OWN_REGION) { setToast('Tidak bisa edit karyawan luar wilayah'); setTimeout(()=>setToast(null),2000); return; }
             setList((l) => l.map((x) => x.id===editing.id ? { ...x, nik:form.nik, nip:form.nip, nama:form.nama, email:form.email, gol:form.gol, jabatan:form.jabatan, unit:form.unit, status:form.status, region:form.region, kantor:form.region.replace('Kab. ','').replace('Kota ',''), foto: preview||x.foto } : x));
             setToast('Karyawan diperbarui (frontend only)');
         } else {
@@ -43,22 +61,32 @@ export default function Employees() {
         }
         setOpen(false); setTimeout(()=>setToast(null),2000);
     };
-    const handleReset = (e) => { setToast(`Reset password — link kirim ke ${e.email} (Admin/Super Admin, frontend only)`); setTimeout(()=>setToast(null),3000); };
-    const remove = (id) => { setList((l)=>l.filter((x)=>x.id!==id)); setToast('Dihapus (frontend only)'); setTimeout(()=>setToast(null),2000); };
+    const handleReset = (e) => {
+        if (isWilayah && e.region !== OWN_REGION) { setToast('Hanya own region'); setTimeout(()=>setToast(null),2000); return; }
+        setToast(`Reset password — link kirim ke ${e.email} (Admin/Super Admin, frontend only)`); setTimeout(()=>setToast(null),3000);
+    };
+    const remove = (id) => {
+        const target = list.find((x)=>x.id===id);
+        if (isWilayah && target && target.region !== OWN_REGION) { setToast('Hanya own region'); setTimeout(()=>setToast(null),2000); return; }
+        setList((l)=>l.filter((x)=>x.id!==id)); setToast('Dihapus (frontend only)'); setTimeout(()=>setToast(null),2000);
+    };
 
     return (
         <AdminLayout>
             <div className="space-y-5">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">Karyawan — Lengkap HR</h1>
-                        <p className="text-sm text-[#64748B]">{list.length} karyawan • email UK • NIP UK jika ada • Foto S3</p>
+                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Karyawan — ${OWN_REGION}` : 'Karyawan — Lengkap HR'}</h1>
+                        <p className="text-sm text-[#64748B]">{isWilayah ? `${scopedList.length} karyawan own region • ${OWN_REGION}` : `${list.length} karyawan • email UK • NIP UK jika ada • Foto S3`}</p>
+                        {isWilayah && <span className="inline-block mt-1 text-xs bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full border border-[#FCB833]/20">Write own region saja</span>}
                     </div>
                     <button type="button" onClick={openAdd} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0">+ Tambah Karyawan</button>
                 </div>
 
                 <div className="flex gap-2 overflow-x-auto pb-1">
-                    {['Semua','Kab. Gowa','Kota Makassar','PNS','PPPK','Kontrak'].map((f) => (
+                    {isWilayah ? ['Kab. Gowa','PNS','PPPK','Kontrak'].map((f) => (
+                        <button key={f} type="button" onClick={() => setFilter(f)} className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border ${filter===f ? 'bg-[#0F172A] text-white border-[#0F172A]' : 'bg-white text-[#64748B] border-[#E2E8F0]'}`}>{f}</button>
+                    )) : ['Semua','Kab. Gowa','Kota Makassar','PNS','PPPK','Kontrak'].map((f) => (
                         <button key={f} type="button" onClick={() => setFilter(f)} className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border ${filter===f ? 'bg-[#0F172A] text-white border-[#0F172A]' : 'bg-white text-[#64748B] border-[#E2E8F0]'}`}>{f}</button>
                     ))}
                 </div>
@@ -97,7 +125,7 @@ export default function Employees() {
                             </tbody>
                         </table>
                     </div>
-                    <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">Super Admin write all • Admin Wilayah write own region (Reset password karyawan own region) • read all</div>
+                    <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">{isWilayah ? `Admin Wilayah: tampil & write hanya ${OWN_REGION} — reset password own saja` : 'Super Admin write all • Admin Wilayah write own region (Reset password karyawan own region) • read all'}</div>
                 </div>
 
                 {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2">{toast}</p>}
@@ -154,10 +182,14 @@ export default function Employees() {
                                         <input value={form.unit} onChange={(e)=>setForm({...form, unit:e.target.value})} placeholder="Bidang Jalan" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
                                     </div>
                                     <div className="col-span-2">
-                                        <label className="text-xs font-medium text-[#334155]">Wilayah (region)</label>
-                                        <select value={form.region} onChange={(e)=>setForm({...form, region:e.target.value})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
-                                            {regions.map((r)=><option key={r} value={r}>{r}</option>)}
-                                        </select>
+                                        <label className="text-xs font-medium text-[#334155]">Wilayah (region) {isWilayah && <span className="text-[#94A3B8]">— terkunci own</span>}</label>
+                                        {isWilayah ? (
+                                            <div className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#0F172A] font-medium">{OWN_REGION}</div>
+                                        ) : (
+                                            <select value={form.region} onChange={(e)=>setForm({...form, region:e.target.value})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
+                                                {regions.map((r)=><option key={r} value={r}>{r}</option>)}
+                                            </select>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex gap-2 pt-2">

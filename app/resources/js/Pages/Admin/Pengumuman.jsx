@@ -1,5 +1,9 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
+
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
+const OWN_REGION = 'Kab. Gowa';
 
 const initial = [
     { id: 1, judul: 'Apel Pagi Senin — Pusat', konten: 'Apel pukul 07:30 di halaman kantor pusat.', scope: 'Global', region: '', pin: true, tgl: '24 Agu 2026', stat: 'Terkirim 24 kantor' },
@@ -10,19 +14,29 @@ const regions = ['','Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota P
 const empty = { judul:'', konten:'', scope:'Global', region:'', pin:false };
 
 export default function PengumumanAdmin() {
+    const { url } = usePage();
+    const base = getBase(url);
+    const isWilayah = base === '/admin' || base === '/wilayah';
     const [list, setList] = useState(initial);
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
-    const [form, setForm] = useState(empty);
+    const [form, setForm] = useState(isWilayah ? { ...empty, scope: 'Wilayah', region: OWN_REGION } : empty);
     const [toast, setToast] = useState(null);
 
-    const openAdd = () => { setEditing(null); setForm(empty); setOpen(true); };
-    const openEdit = (p) => { setEditing(p); setForm({ judul:p.judul, konten:p.konten, scope:p.scope, region:p.region||'', pin:p.pin }); setOpen(true); };
+    const openAdd = () => { setEditing(null); setForm(isWilayah ? { ...empty, scope: 'Wilayah', region: OWN_REGION } : empty); setOpen(true); };
+    const openEdit = (p) => {
+        if (isWilayah && p.scope === 'Global') { setToast('Admin Wilayah tidak bisa edit Global'); setTimeout(()=>setToast(null),2000); return; }
+        setEditing(p); setForm({ judul:p.judul, konten:p.konten, scope:p.scope, region:p.region||'', pin:p.pin }); setOpen(true);
+    };
     const close = () => setOpen(false);
 
     const save = () => {
+        if (isWilayah && form.scope === 'Global') { setToast('Admin Wilayah tidak boleh buat Global'); setTimeout(()=>setToast(null),2000); return; }
         if (!form.judul.trim() || !form.konten.trim()) { setToast('Judul & konten wajib'); setTimeout(()=>setToast(null),2000); return; }
-        if (form.scope==='Wilayah' && !form.region) { setToast('Pilih wilayah'); setTimeout(()=>setToast(null),2000); return; }
+        if (form.scope==='Wilayah') {
+            if (isWilayah && form.region !== OWN_REGION) { setToast(`Hanya boleh ${OWN_REGION}`); setTimeout(()=>setToast(null),2000); return; }
+            if (!form.region) { setToast('Pilih wilayah'); setTimeout(()=>setToast(null),2000); return; }
+        }
         const tgl = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
         if (editing) {
             setList((l)=>l.map((x)=>x.id===editing.id ? { ...x, judul: form.judul, konten: form.konten, scope: form.scope, region: form.scope==='Wilayah' ? form.region : '', pin: form.pin, tgl } : x));
@@ -33,15 +47,19 @@ export default function PengumumanAdmin() {
         }
         setOpen(false); setTimeout(()=>setToast(null),2000);
     };
-    const remove = (id) => { setList((l)=>l.filter((x)=>x.id!==id)); setToast('Dihapus (frontend only)'); setTimeout(()=>setToast(null),2000); };
+    const remove = (id) => {
+        const target = list.find((x)=>x.id===id);
+        if (isWilayah && target && target.scope === 'Global') { setToast('Tidak bisa hapus Global'); setTimeout(()=>setToast(null),2000); return; }
+        setList((l)=>l.filter((x)=>x.id!==id)); setToast('Dihapus (frontend only)'); setTimeout(()=>setToast(null),2000);
+    };
 
     return (
         <AdminLayout>
             <div className="space-y-5">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">Pengumuman</h1>
-                        <p className="text-sm text-[#64748B]">Super Admin broadcast Global • Admin Wilayah targeted region • Pinned</p>
+                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Pengumuman — ${OWN_REGION}` : 'Pengumuman'}</h1>
+                        <p className="text-sm text-[#64748B]">{isWilayah ? `Hanya Wilayah ${OWN_REGION} • tidak bisa Global atau wilayah lain` : 'Super Admin broadcast Global • Admin Wilayah targeted region • Pinned'}</p>
                     </div>
                     <button type="button" onClick={openAdd} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0">+ Buat Pengumuman</button>
                 </div>
@@ -89,19 +107,27 @@ export default function PengumumanAdmin() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs font-medium text-[#334155]">Scope</label>
-                                        <select value={form.scope} onChange={(e)=>setForm({...form, scope:e.target.value})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
-                                            <option value="Global">Global (semua kantor)</option>
-                                            <option value="Wilayah">Wilayah targeted</option>
-                                        </select>
+                                        <label className="text-xs font-medium text-[#334155]">Scope {isWilayah && <span className="text-[#94A3B8]">— Wilayah only</span>}</label>
+                                        {isWilayah ? (
+                                            <div className="mt-1.5 w-full rounded-xl bg-[#F1F5F9] px-3 py-2.5 text-sm text-[#0F172A] font-medium">Wilayah targeted — {OWN_REGION}</div>
+                                        ) : (
+                                            <select value={form.scope} onChange={(e)=>setForm({...form, scope:e.target.value})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
+                                                <option value="Global">Global (semua kantor)</option>
+                                                <option value="Wilayah">Wilayah targeted</option>
+                                            </select>
+                                        )}
                                     </div>
                                     {form.scope==='Wilayah' && (
                                         <div>
-                                            <label className="text-xs font-medium text-[#334155]">Wilayah</label>
-                                            <select value={form.region} onChange={(e)=>setForm({...form, region:e.target.value})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
-                                                <option value="">Pilih wilayah</option>
-                                                {regions.filter(Boolean).map((r)=><option key={r} value={r}>{r}</option>)}
-                                            </select>
+                                            <label className="text-xs font-medium text-[#334155]">Wilayah {isWilayah && <span className="text-[#94A3B8]">— terkunci</span>}</label>
+                                            {isWilayah ? (
+                                                <div className="mt-1.5 w-full rounded-xl bg-[#F1F5F9] px-3 py-2.5 text-sm text-[#0F172A] font-medium">{OWN_REGION}</div>
+                                            ) : (
+                                                <select value={form.region} onChange={(e)=>setForm({...form, region:e.target.value})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
+                                                    <option value="">Pilih wilayah</option>
+                                                    {regions.filter(Boolean).map((r)=><option key={r} value={r}>{r}</option>)}
+                                                </select>
+                                            )}
                                         </div>
                                     )}
                                 </div>

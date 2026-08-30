@@ -1,5 +1,9 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
+const OWN_REGION = 'Kab. Gowa';
 
 const wilayahList = ['Semua','Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
 
@@ -12,19 +16,24 @@ const dummy = [
 ];
 
 export default function LoveAdmin() {
+    const { url } = usePage();
+    const base = getBase(url);
+    const isWilayah = base === '/admin' || base === '/wilayah';
     const [claims, setClaims] = useState(dummy);
     const [previewDoc, setPreviewDoc] = useState(null);
     const [rejectNote, setRejectNote] = useState({ id: null, text: '' });
     const [q, setQ] = useState('');
-    const [wilayah, setWilayah] = useState('Semua');
+    const [wilayah, setWilayah] = useState(isWilayah ? OWN_REGION : 'Semua');
     const [status, setStatus] = useState('Semua');
 
-    const filtered = useMemo(() => claims.filter((c) => {
-        if (wilayah !== 'Semua' && c.wilayah !== wilayah) return false;
+    const baseClaims = isWilayah ? claims.filter((c) => c.wilayah === OWN_REGION) : claims;
+    const filtered = useMemo(() => baseClaims.filter((c) => {
+        if (!isWilayah && wilayah !== 'Semua' && c.wilayah !== wilayah) return false;
+        if (isWilayah && wilayah !== OWN_REGION) return false;
         if (status !== 'Semua' && c.status !== status) return false;
         if (q && !c.nama.toLowerCase().includes(q.toLowerCase()) && !c.kantor.toLowerCase().includes(q.toLowerCase())) return false;
         return true;
-    }), [claims, q, wilayah, status]);
+    }), [baseClaims, q, wilayah, status, isWilayah]);
 
     const counts = { pending: claims.filter((c)=>c.status==='pending').length, approved: claims.filter((c)=>c.status==='approved').length };
 
@@ -39,9 +48,9 @@ export default function LoveAdmin() {
             <div className="space-y-5">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">Love Claims — 4 Hati / bulan</h1>
+                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Love Claims — ${OWN_REGION}` : 'Love Claims — 4 Hati / bulan'}</h1>
                         <p className="text-sm text-[#64748B]">Hanya <span className="font-medium text-[#0F172A]">late bulan yang sama (hari beda boleh)</span> & dalam radius • Approval 1 level Admin Wilayah own region • 1 Love = 1 late</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">Di luar radius tidak bisa claim (422 out_of_radius) • Reset 1st 00:00 WITA • 0 Love tidak bisa excuse</p>
+                        <p className="text-xs text-[#94A3B8] mt-1">{isWilayah ? `Scope own region ${OWN_REGION} •` : ''} Di luar radius tidak bisa claim (422 out_of_radius) • Reset 1st 00:00 WITA • 0 Love tidak bisa excuse</p>
                     </div>
                     <span className="shrink-0 bg-[#FFF7E6] border border-[#FCB833]/30 text-[#92400E] text-xs font-medium px-3 py-1.5 rounded-full">{counts.pending} pending • {counts.approved} approved bulan ini</span>
                 </div>
@@ -53,9 +62,13 @@ export default function LoveAdmin() {
                 </div>
 
                 <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] flex flex-wrap gap-2 items-center">
-                    <select value={wilayah} onChange={(e)=>setWilayah(e.target.value)} className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none">
-                        {wilayahList.map((w)=><option key={w} value={w}>{w}</option>)}
-                    </select>
+                    {isWilayah ? (
+                        <span className="rounded-xl bg-[#F8FAFC] px-3 py-2 text-sm font-medium text-[#0F172A]">{OWN_REGION}</span>
+                    ) : (
+                        <select value={wilayah} onChange={(e)=>setWilayah(e.target.value)} className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none">
+                            {wilayahList.map((w)=><option key={w} value={w}>{w}</option>)}
+                        </select>
+                    )}
                     <select value={status} onChange={(e)=>setStatus(e.target.value)} className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none">
                         <option value="Semua">Semua status</option>
                         <option value="pending">Pending</option>
@@ -103,7 +116,7 @@ export default function LoveAdmin() {
                         </table>
                     </div>
                     {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada claim untuk filter ini</p>}
-                    <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">Super Admin lihat semua • Admin Wilayah lihat own region saja • Love habis (0) tidak bisa excuse • Klik dokumen untuk lihat • Bulan sama, hari beda boleh</div>
+                    <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">{isWilayah ? `Admin Wilayah: review & approve hanya ${OWN_REGION} — love habis 0 tidak bisa excuse` : 'Super Admin lihat semua • Admin Wilayah lihat own region saja • Love habis (0) tidak bisa excuse • Klik dokumen untuk lihat • Bulan sama, hari beda boleh'}</div>
                 </div>
 
                 {previewDoc && (

@@ -1,5 +1,9 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { usePage } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
+
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
+const OWN_REGION = 'Kab. Gowa';
 
 const wilayahList = ['Semua','Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
 
@@ -16,19 +20,24 @@ const statusLabel = { on_time: 'Tepat waktu', late: 'Terlambat', excused_love: '
 const statusTone = { on_time: 'bg-[#ECFDF5] text-[#065F46]', late: 'bg-[#FFF7E6] text-[#92400E]', excused_love: 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30', early_leave: 'bg-[#FEF2F2] text-[#991B1B]' };
 
 export default function Attendances() {
+    const { url } = usePage();
+    const base = getBase(url);
+    const isWilayah = base === '/admin' || base === '/wilayah';
     const [q, setQ] = useState('');
-    const [wilayah, setWilayah] = useState('Semua');
+    const [wilayah, setWilayah] = useState(isWilayah ? OWN_REGION : 'Semua');
     const [status, setStatus] = useState('Semua');
     const [tgl, setTgl] = useState('2026-08-24');
     const [detail, setDetail] = useState(null);
     const [toast, setToast] = useState(null);
 
-    const filtered = useMemo(() => initial.filter((r) => {
-        if (wilayah !== 'Semua' && r.wilayah !== wilayah) return false;
+    const baseList = isWilayah ? initial.filter((r) => r.wilayah === OWN_REGION) : initial;
+    const filtered = useMemo(() => baseList.filter((r) => {
+        if (!isWilayah && wilayah !== 'Semua' && r.wilayah !== wilayah) return false;
+        if (isWilayah && wilayah !== OWN_REGION) return false;
         if (status !== 'Semua' && r.status !== status) return false;
         if (q && !r.nama.toLowerCase().includes(q.toLowerCase()) && !r.email.toLowerCase().includes(q.toLowerCase())) return false;
         return true;
-    }), [q, wilayah, status]);
+    }), [q, wilayah, status, baseList, isWilayah]);
 
     const stats = { hadir: filtered.length, late: filtered.filter((r)=>r.status==='late').length, love: filtered.filter((r)=>r.love).length };
 
@@ -39,10 +48,10 @@ export default function Attendances() {
             <div className="space-y-5">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">Absensi</h1>
-                        <p className="text-sm text-[#64748B]">Filter per wilayah / tanggal / status • Di luar radius ditolak 422 (tidak tercatat) • 1–3 lokasi per wilayah</p>
+                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Absensi — ${OWN_REGION}` : 'Absensi'}</h1>
+                        <p className="text-sm text-[#64748B]">{isWilayah ? `Hanya own region • Export own saja • ${OWN_REGION}` : 'Filter per wilayah / tanggal / status • Di luar radius ditolak 422 (tidak tercatat) • 1–3 lokasi per wilayah'}</p>
                     </div>
-                    <button type="button" onClick={handleExport} className="bg-white border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-sm font-medium text-[#334155] shrink-0">⬇ Export CSV</button>
+                    <button type="button" onClick={handleExport} className="bg-white border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-sm font-medium text-[#334155] shrink-0">⬇ Export CSV{isWilayah ? ` ${OWN_REGION}` : ''}</button>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
@@ -53,9 +62,13 @@ export default function Attendances() {
 
                 <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] flex flex-wrap gap-2 items-center">
                     <input type="date" value={tgl} onChange={(e)=>setTgl(e.target.value)} className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
-                    <select value={wilayah} onChange={(e)=>setWilayah(e.target.value)} className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none">
-                        {wilayahList.map((w)=><option key={w} value={w}>{w}</option>)}
-                    </select>
+                    {isWilayah ? (
+                        <span className="rounded-xl bg-[#F8FAFC] px-3 py-2 text-sm font-medium text-[#0F172A]">{OWN_REGION}</span>
+                    ) : (
+                        <select value={wilayah} onChange={(e)=>setWilayah(e.target.value)} className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none">
+                            {wilayahList.map((w)=><option key={w} value={w}>{w}</option>)}
+                        </select>
+                    )}
                     <select value={status} onChange={(e)=>setStatus(e.target.value)} className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none">
                         <option value="Semua">Semua status</option>
                         <option value="on_time">Tepat waktu</option>
@@ -88,7 +101,7 @@ export default function Attendances() {
                     </div>
                     {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada data untuk filter ini</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
-                        <span>Super Admin lihat semua • Admin Wilayah lihat own region saja</span>
+                        <span>{isWilayah ? `Admin Wilayah: hanya ${OWN_REGION} • tidak bisa lihat wilayah lain` : 'Super Admin lihat semua • Admin Wilayah lihat own region saja'}</span>
                         <span>Selfie S3 /attendance/... • Jam global 07:30–16:00 WITA • Toleransi 15m</span>
                     </div>
                 </div>

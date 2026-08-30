@@ -1,5 +1,9 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+
+function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
+const OWN_REGION = 'Kab. Gowa';
 
 const dummy = [
     { id: 1, name: 'Kota Makassar', kantor: 'Kantor Pusat', tipe: 'pusat', locations: [{ nama_lokasi: 'Kantor Pusat', lat: -5.1477, lng: 119.4327, radius: 300 }], address: 'Jl. AP Pettarani No.1 — Makassar' },
@@ -31,6 +35,9 @@ const dummy = [
 const emptyForm = { name: '', kantor: '', tipe: 'cabang', address: '', locations: [{ nama_lokasi: '', lat: '', lng: '', radius: 200 }] };
 
 export default function Regions() {
+    const { url } = usePage();
+    const base = getBase(url);
+    const isWilayah = base === '/admin' || base === '/wilayah';
     const [regions, setRegions] = useState(dummy);
     const [q, setQ] = useState('');
     const [open, setOpen] = useState(false);
@@ -38,10 +45,16 @@ export default function Regions() {
     const [form, setForm] = useState(emptyForm);
     const [toast, setToast] = useState(null);
 
-    const filtered = regions.filter((r) => r.name.toLowerCase().includes(q.toLowerCase()) || r.kantor.toLowerCase().includes(q.toLowerCase()));
+    const ownRegion = dummy.find((r) => r.name === OWN_REGION) || dummy[1];
+    const displayRegions = isWilayah ? [ownRegion] : regions;
+    const filtered = displayRegions.filter((r) => r.name.toLowerCase().includes(q.toLowerCase()) || r.kantor.toLowerCase().includes(q.toLowerCase()));
 
-    const openAdd = () => { setEditing(null); setForm(emptyForm); setOpen(true); };
+    const openAdd = () => {
+        if (isWilayah) { setToast('Hanya Super Admin bisa tambah wilayah'); setTimeout(()=>setToast(null),2000); return; }
+        setEditing(null); setForm(emptyForm); setOpen(true);
+    };
     const openEdit = (r) => {
+        if (isWilayah && r.name !== OWN_REGION) return;
         setEditing(r);
         setForm({ name: r.name, kantor: r.kantor, tipe: r.tipe, address: r.address, locations: r.locations.map((l) => ({ ...l })) });
         setOpen(true);
@@ -86,12 +99,14 @@ export default function Regions() {
             <div className="space-y-5">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">Kantor Wilayah</h1>
-                        <p className="text-sm text-[#64748B]">24 Kantor — Kantor Pusat + 23 Wilayah • Tiap wilayah 1–3 lokasi (radius 50–1000m, fleksibel)</p>
+                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Kantor Wilayah — ${OWN_REGION}` : 'Kantor Wilayah'}</h1>
+                        <p className="text-sm text-[#64748B]">{isWilayah ? 'Read-only own region • Edit lokasi/radius own saja • radius 50–1000m' : '24 Kantor — Kantor Pusat + 23 Wilayah • Tiap wilayah 1–3 lokasi (radius 50–1000m, fleksibel)'}</p>
+                        {isWilayah && <span className="inline-block mt-1 text-xs font-medium bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full border border-[#FCB833]/20">Mode Admin Wilayah — own region</span>}
                     </div>
                     <div className="flex gap-2">
-                        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari Gowa, Bone, Parepare..." className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm w-[220px] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10" />
-                        <button type="button" onClick={openAdd} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0">+ Tambah</button>
+                        {!isWilayah && <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari Gowa, Bone, Parepare..." className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm w-[220px] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10" />}
+                        {isWilayah && <span className="text-xs text-[#94A3B8] self-center">{ownRegion.kantor} • {ownRegion.locations.length} lokasi</span>}
+                        {!isWilayah && <button type="button" onClick={openAdd} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0">+ Tambah</button>}
                     </div>
                 </div>
 
