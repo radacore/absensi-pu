@@ -11,6 +11,7 @@ export default function Profil() {
     const fileRef = useRef(null);
     const [pwd, setPwd] = useState({ old: '', next: '', confirm: '' });
     const [msg, setMsg] = useState(null);
+    const [confirmHapus, setConfirmHapus] = useState(false);
     const [regionsData, setRegionsData] = useState(() => loadRegions());
     const [employees, setEmployees] = useState(() => loadEmployees());
     useEffect(() => {
@@ -53,6 +54,9 @@ export default function Profil() {
         setPhotoPreview(null);
         try { localStorage.removeItem('bbws_mock_photo_v3'); } catch {}
         if (fileRef.current) fileRef.current.value = '';
+        setConfirmHapus(false);
+        setMsg({ type: 'success', text: 'Foto profil dihapus' });
+        setTimeout(() => setMsg(null), 2000);
     };
 
     const handleSaveProfile = () => {
@@ -79,11 +83,18 @@ export default function Profil() {
         <KaryawanLayout>
             <div className="space-y-5">
                 <div className="bg-white rounded-2xl p-6 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center">
-                    <div className="mx-auto w-20 h-20 rounded-full bg-[#F1F5F9] overflow-hidden flex items-center justify-center border-2 border-white shadow-sm">
-                        {photoPreview ? (
-                            <img src={photoPreview} alt="Foto profil" className="w-full h-full object-cover" />
-                        ) : (
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0116 0"/></svg>
+                    <div className="relative mx-auto w-20 h-20">
+                        <div className="w-20 h-20 rounded-full bg-[#F1F5F9] overflow-hidden flex items-center justify-center border-2 border-white shadow-sm">
+                            {photoPreview ? (
+                                <img src={photoPreview} alt="Foto profil" className="w-full h-full object-cover" />
+                            ) : (
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0116 0"/></svg>
+                            )}
+                        </div>
+                        {photoPreview && (
+                            <button type="button" onClick={() => setConfirmHapus(true)} aria-label="Hapus foto profil" className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-white border border-[#E2E8F0] shadow-sm flex items-center justify-center text-[#64748B] hover:bg-[#FEF2F2] hover:text-[#EF4444] hover:border-[#FECACA] transition">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+                            </button>
                         )}
                     </div>
                     <h2 className="font-semibold text-[16px] text-[#0F172A] mt-3">{me?.nama}</h2>
@@ -115,11 +126,8 @@ export default function Profil() {
                         </div>
                     </div>
                     <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
-                    <div className="grid grid-cols-2 gap-2 pt-2">
-                        <button type="button" onClick={() => fileRef.current?.click()} className="rounded-xl bg-[#F8FAFC] py-2.5 text-sm font-medium text-[#334155]">{photoPreview ? 'Ganti foto' : 'Upload foto'}</button>
-                        <button type="button" onClick={handleSaveProfile} className="rounded-xl bg-[#0F172A] text-white py-2.5 text-sm font-semibold">Simpan</button>
-                    </div>
-                    {photoPreview && <button type="button" onClick={clearPhoto} className="text-xs text-[#EF4444] font-medium">Hapus foto</button>}
+                    <button type="button" onClick={() => fileRef.current?.click()} className="w-full rounded-xl bg-white border border-[#E2E8F0] py-2.5 text-sm font-medium text-[#334155] hover:bg-[#F8FAFC] transition">{photoPreview ? 'Ganti foto' : 'Upload foto'}</button>
+                    <button type="button" onClick={handleSaveProfile} className="w-full rounded-xl bg-[#0F172A] text-white py-2.5 text-sm font-semibold hover:bg-[#1E3A8A] transition">Simpan</button>
                     {msg && msg.text.includes('Data pribadi') && <p className={`text-xs px-3 py-2 rounded-xl ${msg.type === 'success' ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{msg.text}</p>}
                 </div>
 
@@ -153,6 +161,19 @@ export default function Profil() {
 
                 <button type="button" onClick={() => setMsg({ type: 'success', text: 'Berhasil keluar' })} className="w-full rounded-xl bg-[#FEF2F2] text-[#991B1B] py-3 text-sm font-semibold">Keluar</button>
                 {msg && msg.text.includes('Keluar') && <p className="text-xs text-center bg-[#FEF2F2] text-[#991B1B] rounded-xl py-2">{msg.text}</p>}
+
+                {confirmHapus && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmHapus(false)}>
+                        <div className="bg-white rounded-2xl w-full max-w-[360px] p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="font-semibold text-sm text-[#0F172A]">Hapus foto profil?</h3>
+                            <p className="text-xs text-[#64748B] mt-1.5">Tindakan ini akan menghapus foto dan tidak dapat dibatalkan.</p>
+                            <div className="mt-5 grid grid-cols-2 gap-2">
+                                <button type="button" onClick={() => setConfirmHapus(false)} className="rounded-xl bg-[#F1F5F9] py-2.5 text-sm font-semibold text-[#64748B]">Batal</button>
+                                <button type="button" onClick={clearPhoto} className="rounded-xl bg-[#EF4444] text-white py-2.5 text-sm font-semibold hover:bg-[#DC2626]">Hapus</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </KaryawanLayout>
     );
