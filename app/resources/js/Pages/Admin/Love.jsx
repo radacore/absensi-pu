@@ -41,7 +41,7 @@ export default function LoveAdmin() {
             if (String(c.office_location_id) !== String(siteFilter)) return false;
         }
         if (status !== 'Semua' && c.status !== status) return false;
-        if (jenisFilter !== 'Semua' && (c.jenis || 'terlambat') !== jenisFilter) return false;
+        if (jenisFilter !== 'Semua' && (c.jenis || 'lupa_absen') !== jenisFilter) return false;
         if (approverQ && !String(c.approver_nama||'').toLowerCase().includes(approverQ.toLowerCase()) && !String(c.approver_nip||'').includes(approverQ)) return false;
         if (q && !c.nama.toLowerCase().includes(q.toLowerCase()) && !c.kantor?.toLowerCase().includes(q.toLowerCase())) return false;
         return true;
@@ -68,8 +68,8 @@ export default function LoveAdmin() {
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Klaim Toleransi — ${OWN_REGION}` : `Klaim Toleransi — kuota ${loveMax}/bulan`}</h1>
-                        <p className="text-sm text-[#64748B]">Hanya <span className="font-medium text-[#0F172A]">terlambat / lupa absen / lupa pulang bulan sama</span> & dalam radius <span className="font-medium text-[#0F172A]">titik penugasan</span> • Persetujuan 1 level Admin • 1 toleransi = 1 pengajuan • max {loveMax}/bulan</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">Terlambat cek jarak ≤ radius; lupa absen jam bebas 00–23:59 • 1 karyawan = 1 titik • Reset tgl 1 pukul 00:00 WITA</p>
+                        <p className="text-sm text-[#64748B]">Hanya <span className="font-medium text-[#0F172A]">lupa absen datang / lupa absen pulang bulan sama</span> • Persetujuan 1 level Admin • 1 toleransi = 1 pengajuan • max {loveMax}/bulan</p>
+                        <p className="text-xs text-[#94A3B8] mt-1">1 karyawan = 1 titik • Reset tgl 1 pukul 00:00 WITA</p>
                     </div>
                     <span className="shrink-0 bg-[#FFF7E6] border border-[#FCB833]/30 text-[#92400E] text-xs font-medium px-3 py-1.5 rounded-full">{counts.pending} pending • {counts.approved} approved bulan ini • max {loveMax}</span>
                 </div>
@@ -116,20 +116,18 @@ export default function LoveAdmin() {
                             <tbody className="divide-y divide-[#F1F5F9]">
                                 {filtered.map((c) => {
                                     const hit = siteById(c.office_location_id, regionsData);
-                                    const isLate = (c.jenis || 'terlambat') === 'terlambat';
-                                    const inRadius = isLate && c.office_location_id != null && c.radius != null ? c.jarak <= c.radius : true;
                                     return (
                                         <tr key={c.id} className="hover:bg-[#F8FAFC]/50">
                                             <td className="px-4 py-3"><p className="font-medium text-[#0F172A]">{c.nama}</p><p className="text-xs text-[#64748B]">{c.wilayah} • {c.kantor}</p></td>
-                                            <td className="px-4 py-3 text-xs">{hit ? <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className={`px-2 py-1 rounded-full font-medium ${inRadius ? 'bg-[#EFF6FF] text-[#1E3A8A]' : 'bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA]'} hover:opacity-80`}>{hit.site.nama_lokasi} • {hit.site.radius}m</Link> : <span className="bg-[#F1F5F9] text-[#64748B] px-2 py-1 rounded-full">—</span>}</td>
-                                            <td className="px-4 py-3 text-xs"><span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mr-1 ${c.jenis==='lupa_absen' ? 'bg-[#EFF6FF] text-[#1E3A8A]' : c.jenis==='lupa_pulang' ? 'bg-[#F5F3FF] text-[#6D28D9]' : 'bg-[#FFF7E6] text-[#92400E]'}`}>{loveJenisLabel(c.jenis)}</span><span title={hit && isLate ? `${c.jarak} m / ${c.radius} m • ${hit.site.nama_lokasi} • ${inRadius ? 'Dalam' : 'Di luar'}` : ''} className={isLate && !inRadius ? 'text-[#991B1B]' : 'text-[#0F172A]'}>{c.tgl || '—'} • {c.jam} {isLate && c.jarak != null ? `• ${c.jarak}m${c.radius ? `/${c.radius}m` : ''} ${hit ? (inRadius ? '• Dalam' : '• Di luar') : ''}` : ''}</span></td>
+                                            <td className="px-4 py-3 text-xs">{hit ? <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className="px-2 py-1 rounded-full font-medium bg-[#EFF6FF] text-[#1E3A8A] hover:opacity-80">{hit.site.nama_lokasi}</Link> : <span className="bg-[#F1F5F9] text-[#64748B] px-2 py-1 rounded-full">—</span>}</td>
+                                            <td className="px-4 py-3 text-xs"><span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mr-1 ${c.jenis==='lupa_absen' ? 'bg-[#EFF6FF] text-[#1E3A8A]' : c.jenis==='lupa_pulang' ? 'bg-[#F5F3FF] text-[#6D28D9]' : 'bg-[#FFF7E6] text-[#92400E]'}`}>{loveJenisLabel(c.jenis)}</span><span className="text-[#0F172A]">{c.tgl || '—'} • {c.jam}</span></td>
                                             <td className="px-4 py-3 text-xs"><p className="font-medium text-[#0F172A]">{c.approver_nama || '—'}</p><p className="text-xs text-[#64748B] font-mono">{c.approver_nip || ''}</p><p className="text-xs text-[#94A3B8]">{c.approver_scope || ''}</p></td>
                                             <td className="px-4 py-3 text-xs text-[#334155] max-w-[200px] truncate" title={c.alasan}>{c.alasan}</td>
                                             <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-1 rounded-full ${c.status === 'pending' ? 'bg-[#FFF7E6] text-[#92400E]' : c.status === 'approved' ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{c.status}{c.note ? ` • ${c.note}` : ''}</span></td>
                                             <td className="px-4 py-3 text-right">
                                                 {c.status === 'pending' ? (
                                                     <div className="flex gap-1 justify-end flex-wrap">
-                                                        <button type="button" onClick={() => handle(c.id, 'approved')} disabled={isLate && (!hit || !inRadius)} title={isLate && !hit ? 'Tidak ada titik' : isLate && !inRadius ? `${c.jarak} m / ${c.radius} m — di luar radius` : ''} className={`text-xs font-medium px-2.5 py-1.5 rounded-lg ${isLate && (!hit || !inRadius) ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#10B981] text-white hover:bg-[#059669]'}`}>Approve</button>
+                                                        <button type="button" onClick={() => handle(c.id, 'approved')} className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-[#10B981] text-white hover:bg-[#059669]">Approve</button>
                                                         {rejectNote.id === c.id ? (
                                                             <span className="flex gap-1">
                                                                 <input value={rejectNote.text} onChange={(e)=>setRejectNote({ id: c.id, text: e.target.value })} placeholder="Alasan reject..." className="w-28 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] px-2 py-1 text-xs outline-none" />

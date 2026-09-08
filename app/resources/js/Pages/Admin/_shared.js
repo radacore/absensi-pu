@@ -80,8 +80,8 @@ const LS_REGIONS = 'bbws_mock_regions_v3';
 const LS_EMPLOYEES = 'bbws_mock_employees_v3';
 export const LS_CUTI = 'bbws_mock_cuti_v3';
 export const LS_CUTI_OLD = 'bbws_mock_cuti_karyawan_v3';
-export const LS_LOVE = 'bbws_mock_love_v3';
-export const LS_ATTENDANCES = 'bbws_mock_attendances_v3';
+export const LS_LOVE = 'bbws_mock_love_v4';
+export const LS_ATTENDANCES = 'bbws_mock_attendances_v4';
 export const LS_SETTINGS = 'bbws_mock_settings_v3';
 export const LS_PENGUMUMAN = 'bbws_mock_pengumuman_v3';
 export const LS_READ = 'bbws_mock_pengumuman_read_v3';
@@ -96,15 +96,15 @@ export const DUMMY_CUTI = [
 ];
 
 export const DUMMY_LOVE = [
-    { id: 1, employee_id: 1, nama: 'Andi Saputra', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 201, jenis: 'terlambat', tgl: '2026-08-24', jam: '07:52', jarak: 42, radius: 200, alasan: 'Macet poros Gowa — perbaikan jalan', approver_id: 803, approver_nama: 'Jamaluddin S.T.', approver_nip: '198010052006041002', approver_scope: 'Bendungan Bili-Bili', status: 'pending', createdAt: '2026-08-24T07:52:00+08:00' },
-    { id: 2, employee_id: 4, nama: 'Rina Wati', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 201, jenis: 'lupa_absen', tgl: '2026-08-23', jam: '07:35', jarak: null, radius: 200, alasan: 'Lupa absen datang — hujan deras', approver_id: 801, approver_nama: 'H. Andi Faisal', approver_nip: '196805121992031005', approver_scope: 'Kantor Gowa', status: 'pending', createdAt: '2026-08-24T07:48:00+08:00' },
-    { id: 3, employee_id: 99, nama: 'Rudi Hartono', wilayah: 'Kab. Bone', kantor: 'Kantor Bone', office_location_id: 401, jenis: 'terlambat', tgl: '2026-08-23', jam: '07:55', jarak: 18, radius: 150, alasan: 'Ban bocor', approver_id: 805, approver_nama: 'Muh. Amin S.T.', approver_nip: '197909182006041004', approver_scope: 'Kantor Bone', status: 'approved', createdAt: '2026-08-23T07:55:00+08:00' },
-    { id: 4, employee_id: 5, nama: 'Dewi Lestari', wilayah: 'Kab. Takalar', kantor: 'Kantor Takalar', office_location_id: 2001, jenis: 'lupa_pulang', tgl: '2026-08-22', jam: '16:00', jarak: null, radius: 200, alasan: 'Lupa absen pulang — rapat di lapangan', approver_id: 801, approver_nama: 'H. Andi Faisal', approver_nip: '196805121992031005', approver_scope: 'Kantor Gowa', status: 'rejected', note: 'Alasan tidak cukup kuat', createdAt: '2026-08-22T08:05:00+08:00' },
-    { id: 5, employee_id: 3, nama: 'Budi Santoso', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 202, jenis: 'terlambat', tgl: '2026-08-24', jam: '07:44', jarak: 21, radius: 150, alasan: 'Keterlambatan KRL', approver_id: 804, approver_nama: 'Rahmat Hidayat', approver_nip: '198512102010011003', approver_scope: 'Jembatan Pampang', status: 'pending', createdAt: '2026-08-24T07:44:00+08:00' },
+    { id: 1, employee_id: 1, nama: 'Andi Saputra', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 201, jenis: 'lupa_absen', tgl: '2026-08-21', jam: '07:35', alasan: 'Lupa absen datang — persiapan rapat di site', approver_id: 803, approver_nama: 'Jamaluddin S.T.', approver_nip: '198010052006041002', approver_scope: 'Bendungan Bili-Bili', status: 'approved', createdAt: '2026-08-21T08:02:00+08:00' },
+    { id: 2, employee_id: 4, nama: 'Rina Wati', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 201, jenis: 'lupa_absen', tgl: '2026-08-23', jam: '07:35', alasan: 'Lupa absen datang — hujan deras', approver_id: 801, approver_nama: 'H. Andi Faisal', approver_nip: '196805121992031005', approver_scope: 'Kantor Gowa', status: 'pending', createdAt: '2026-08-24T07:48:00+08:00' },
+    { id: 3, employee_id: 99, nama: 'Rudi Hartono', wilayah: 'Kab. Bone', kantor: 'Kantor Bone', office_location_id: 401, jenis: 'lupa_absen', tgl: '2026-08-24', jam: '07:35', alasan: 'Lupa absen datang — menunggu tim di kantor', approver_id: 805, approver_nama: 'Muh. Amin S.T.', approver_nip: '197909182006041004', approver_scope: 'Kantor Bone', status: 'approved', createdAt: '2026-08-24T07:45:00+08:00' },
+    { id: 4, employee_id: 5, nama: 'Dewi Lestari', wilayah: 'Kab. Takalar', kantor: 'Kantor Takalar', office_location_id: 2001, jenis: 'lupa_pulang', tgl: '2026-08-22', jam: '16:00', alasan: 'Lupa absen pulang — rapat di lapangan', approver_id: 801, approver_nama: 'H. Andi Faisal', approver_nip: '196805121992031005', approver_scope: 'Kantor Gowa', status: 'rejected', note: 'Alasan tidak cukup kuat', createdAt: '2026-08-22T08:05:00+08:00' },
+    { id: 5, employee_id: 3, nama: 'Budi Santoso', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 202, jenis: 'lupa_pulang', tgl: '2026-08-24', jam: '16:10', alasan: 'Lupa absen pulang — koordinasi dengan kontraktor', approver_id: 804, approver_nama: 'Rahmat Hidayat', approver_nip: '198512102010011003', approver_scope: 'Jembatan Pampang', status: 'pending', createdAt: '2026-08-24T08:15:00+08:00' },
 ];
 
 export const DUMMY_ATTENDANCES = [
-    { id: 1, employee_id: 1, nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 201, tgl: '2026-08-24', datang: '07:52', pulang: '16:12', status: 'late', love: 'pending', jarak: 42, lat: -5.3114, lng: 119.42, foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face&auto=format' },
+    { id: 1, employee_id: 1, nama: 'Andi Saputra', email: 'andi@bbws-pj.go.id', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 201, tgl: '2026-08-24', datang: '07:52', pulang: '16:12', status: 'late', love: null, jarak: 42, lat: -5.3114, lng: 119.42, foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face&auto=format' },
     { id: 2, employee_id: 2, nama: 'Siti Rahma', email: 'siti@bbws-pj.go.id', wilayah: 'Kota Makassar', kantor: 'Kantor Pusat', office_location_id: 101, tgl: '2026-08-24', datang: '07:38', pulang: '16:05', status: 'on_time', love: null, jarak: 38, lat: -5.1477, lng: 119.4327, foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&crop=face&auto=format' },
     { id: 3, employee_id: 3, nama: 'Budi Santoso', email: 'budi@bbws-pj.go.id', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 202, tgl: '2026-08-24', datang: '07:40', pulang: '16:05', status: 'on_time', love: null, jarak: 21, lat: -5.32, lng: 119.45, foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face&auto=format' },
     { id: 4, employee_id: 4, nama: 'Rina Wati', email: 'rina@bbws-pj.go.id', wilayah: 'Kab. Gowa', kantor: 'Kantor Gowa', office_location_id: 201, tgl: '2026-08-24', datang: '07:48', pulang: '', status: 'late', love: null, jarak: 28, lat: -5.3114, lng: 119.42, foto: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face&auto=format', selfie: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face&auto=format' },
@@ -154,7 +154,6 @@ export function loadCuti() {
 }
 export function saveCuti(list) { try { localStorage.setItem(LS_CUTI, JSON.stringify(list)); } catch {} }
 export const LOVE_JENIS = [
-    { value: 'terlambat', label: 'Terlambat' },
     { value: 'lupa_absen', label: 'Lupa Absen Datang' },
     { value: 'lupa_pulang', label: 'Lupa Absen Pulang' },
 ];
@@ -168,7 +167,7 @@ function migrateLoveList(list) {
         if (c.jenis && c.approver_id) return c;
         changed = true;
         const next = { ...c };
-        if (!next.jenis) next.jenis = 'terlambat';
+        if (!next.jenis) next.jenis = 'lupa_absen';
         if (!next.tgl && next.createdAt) next.tgl = next.createdAt.slice(0,10);
         if (!next.tgl) next.tgl = new Date().toISOString().slice(0,10);
         if (!next.approver_id) {
