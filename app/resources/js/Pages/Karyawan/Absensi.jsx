@@ -175,29 +175,38 @@ export default function Absensi() {
                         <h3 className="font-medium text-sm text-[#0F172A]">Riwayat</h3>
                         <span className="text-xs text-[#64748B]">{myHistory.length} entri • {assigned.site.nama_lokasi}</span>
                     </div>
-                    <div className="divide-y divide-[#F1F5F9]">
-                        {myHistory.length===0 ? <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada absensi</p> : myHistory.map((r) => {
-                            const hit = assigned && r.office_location_id === assigned.site.id;
-                            const ok = assigned ? r.jarak <= assigned.site.radius : false;
-                            return (
-                                <div key={`${r.tgl}-${r.datang}-${r.id}`} className="px-5 py-3.5">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm font-medium text-[#0F172A]">{r.tgl} • {r.datang}{r.pulang ? ` → ${r.pulang}` : ''} • {r.status==='late' ? 'Terlambat' : r.status==='on_time' ? 'Tepat waktu' : r.status}</p>
-                                            <p className="text-xs text-[#64748B]">{r.jarak} m / {assigned.site.radius} m • {ok ? 'Dalam' : 'Di luar'} • {assigned.site.nama_lokasi} {hit ? '' : '• titik lain'}</p>
-                                        </div>
-                                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${r.status==='on_time' ? 'bg-[#ECFDF5] text-[#065F46]' : r.status==='excused_love' ? 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30' : 'bg-[#FFFBEB] text-[#92400E]'}`}>{r.status==='on_time' ? 'Tepat waktu' : r.status==='late' ? 'Terlambat' : r.status}</span>
-                                    </div>
-                                    {r.status === 'late' && (
-                                        <div className="mt-3 bg-[#FFF7E6] rounded-xl p-3 flex items-center justify-between">
-                                            <p className="text-xs text-[#92400E]">Terlambat • bisa pakai 1 Love • {assigned.site.nama_lokasi}</p>
-                                            <a href="/karyawan/love" className="bg-[#FCB833] text-[#0F172A] rounded-lg px-3 py-1.5 text-xs font-semibold">Gunakan Love</a>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+                    {myHistory.length===0 ? (
+                        <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada absensi</p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[420px] text-sm">
+                                <thead className="bg-[#F8FAFC] text-xs font-medium text-[#64748B]">
+                                    <tr>
+                                        <th className="text-left px-5 py-2.5">Tanggal</th>
+                                        <th className="text-left px-5 py-2.5">Masuk</th>
+                                        <th className="text-left px-5 py-2.5">Keluar</th>
+                                        <th className="text-left px-5 py-2.5">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[#F1F5F9]">
+                                    {myHistory.map((r) => (
+                                        <tr key={`${r.tgl}-${r.datang}-${r.id}`} className="hover:bg-[#F8FAFC]/50">
+                                            <td className="px-5 py-3">
+                                                <p className="font-medium text-[#0F172A] whitespace-nowrap">{new Date(r.tgl + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                                <p className="text-xs text-[#64748B]">{r.jarak} m • {r.office_location_id === assigned.site.id ? 'Titik assigned' : 'Titik lain'}</p>
+                                            </td>
+                                            <td className="px-5 py-3 font-mono text-[#0F172A] whitespace-nowrap">{r.datang}</td>
+                                            <td className="px-5 py-3 font-mono whitespace-nowrap">{r.pulang ? <span className="text-[#0F172A]">{r.pulang}</span> : <span className="text-[#CBD5E1]">—</span>}</td>
+                                            <td className="px-5 py-3">
+                                                <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${r.status==='on_time' ? 'bg-[#ECFDF5] text-[#065F46]' : r.status==='excused_love' ? 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30' : 'bg-[#FFFBEB] text-[#92400E]'}`}>{r.status==='on_time' ? 'Tepat waktu' : r.status==='late' ? 'Terlambat' : r.status}</span>
+                                                {r.status === 'late' && <a href="/karyawan/love" className="block mt-1.5 text-xs font-semibold text-[#1E3A8A] hover:underline">Gunakan Love →</a>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             </div>
         </KaryawanLayout>
