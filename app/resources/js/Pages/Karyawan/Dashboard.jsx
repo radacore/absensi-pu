@@ -78,7 +78,7 @@ export default function Dashboard() {
                             </span>
                         ))}
                     </Link>
-                    <p className="text-xs text-center text-[#64748B] mt-1">Sisa {sisaLove}/{loveMax} Love</p>
+                    <p className="text-xs text-center text-[#64748B] mt-1">Sisa {sisaLove}/{loveMax} Toleransi</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

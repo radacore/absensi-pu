@@ -86,18 +86,18 @@ export default function Dashboard() {
             { label: 'Total Karyawan', value: String(employees.filter((e)=>e.region===OWN_DASH).length), sub: `${OWN_DASH} • 1 kantor`, accent: 'gold', href: `${base}/employees` },
             { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late • ${OWN_DASH}`, accent: 'emerald', href: `${base}/attendances` },
             { label: 'Cuti pending', value: String(cutiPending), sub: `${OWN_DASH} • butuh approval`, accent: 'amber', href: `${base}/cuti` },
-            { label: 'Love pending', value: String(lovePending), sub: `${OWN_DASH} • claim hari ini`, accent: 'gold', href: `${base}/love` },
+            { label: 'Toleransi pending', value: String(lovePending), sub: `${OWN_DASH} • claim hari ini`, accent: 'gold', href: `${base}/love` },
           ]
         : [
             { label: 'Total Karyawan', value: wilayah === 'Semua' ? String(employees.length) : String(total), sub: wilayah === 'Semua' ? '24 wilayah' : `${wilayah}`, accent: 'gold', href: `${base}/employees` },
             { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late`, accent: 'emerald', href: `${base}/attendances` },
             { label: 'Cuti pending', value: String(cutiPending), sub: 'butuh approval • semua wilayah', accent: 'amber', href: `${base}/cuti` },
-            { label: 'Love pending', value: String(lovePending), sub: 'claim hari ini • semua wilayah', accent: 'gold', href: `${base}/love` },
+            { label: 'Toleransi pending', value: String(lovePending), sub: 'claim hari ini • semua wilayah', accent: 'gold', href: `${base}/love` },
           ];
 
     const wilayahActivities = [
         { t: '07:52 — Andi Saputra (Gowa) terlambat 7m — dalam radius 42m', tag: 'late', color: 'amber' },
-        { t: '08:10 — Love claim oleh Andi Saputra — menunggu Admin Gowa (bulan sama)', tag: 'love', color: 'gold' },
+        { t: '08:10 — Klaim toleransi oleh Andi Saputra — menunggu Admin Gowa (bulan sama)', tag: 'love', color: 'gold' },
         { t: '07:44 — Dewi Lestari (Gowa) hadir tepat waktu — 31m', tag: 'on_time', color: 'emerald' },
         { t: '09:05 — Cuti diajukan Nurul (Gowa) — Tahunan 2 hari — level 1', tag: 'cuti', color: 'sky' },
         { t: '07:38 — Rudi Hartono (Gowa) hadir — radius 27m — multi-lokasi terdekat', tag: 'on_time', color: 'emerald' },
@@ -105,7 +105,7 @@ export default function Dashboard() {
     const allActivities = [
         { t: '07:52 — Andi Saputra (Gowa) terlambat 7m — dalam radius 42m', tag: 'late', color: 'amber' },
         { t: '07:38 — Siti Rahma (Makassar) hadir tepat waktu — 38m', tag: 'on_time', color: 'emerald' },
-        { t: '08:10 — Love claim oleh Andi Saputra — menunggu Admin Gowa (bulan sama)', tag: 'love', color: 'gold' },
+        { t: '08:10 — Klaim toleransi oleh Andi Saputra — menunggu Admin Gowa (bulan sama)', tag: 'love', color: 'gold' },
         { t: '09:15 — Cuti diajukan Rudi (Bone) — Tahunan 3 hari — level 1', tag: 'cuti', color: 'sky' },
         { t: '07:40 — Budi Santoso (Maros) hadir — radius 21m — multi-lokasi terdekat', tag: 'on_time', color: 'emerald' },
     ];
@@ -209,16 +209,16 @@ export default function Dashboard() {
                         <p className="text-xs text-white/50 mt-1">{isWilayah ? `Kebijakan dari Pusat • read-only` : 'Hanya Super Admin bisa edit'}</p>
                         <div className="mt-4 space-y-3 text-sm">
                             <div className="flex justify-between"><span className="text-white/60">Jam kerja</span><span className="font-medium">{settings.jamMasuk}–{settings.jamPulang} WITA</span></div>
-                            <div className="flex justify-between"><span className="text-white/60">Toleransi</span><span className="font-medium">{settings.toleransi} menit</span></div>
-                            <div className="flex justify-between items-center"><span className="text-white/60">Love / bulan</span><span className="font-medium bg-[#FCB833] text-[#0F172A] px-2 py-0.5 rounded-full text-xs">{settings.loveMax}</span></div>
+                            <div className="flex justify-between"><span className="text-white/60">Kelonggaran</span><span className="font-medium">{settings.toleransi} menit</span></div>
+                            <div className="flex justify-between items-center"><span className="text-white/60">Toleransi / bulan</span><span className="font-medium bg-[#FCB833] text-[#0F172A] px-2 py-0.5 rounded-full text-xs">{settings.loveMax}</span></div>
                             <div className="flex justify-between"><span className="text-white/60">Hari kerja</span><span className="font-medium">Sen–Jum</span></div>
                             <div className="flex justify-between"><span className="text-white/60">Timezone</span><span className="font-medium">Asia/Makassar</span></div>
                         </div>
-                        <p className="text-xs text-white/50 mt-4">{isWilayah ? 'Diatur Pusat — lihat di Pengaturan (read-only)' : 'Super Admin atur di Pengaturan • Reset Love tgl 1 pukul 00:00 WITA'}</p>
+                        <p className="text-xs text-white/50 mt-4">{isWilayah ? 'Diatur Pusat — lihat di Pengaturan (read-only)' : 'Super Admin atur di Pengaturan • Reset Toleransi tgl 1 pukul 00:00 WITA'}</p>
                         <Link href={`${base}/settings`} className="mt-4 bg-white text-[#0F172A] rounded-xl py-2.5 text-sm font-semibold text-center">{isWilayah ? 'Lihat Pengaturan' : 'Buka Pengaturan'}</Link>
                         <div className="mt-4 grid grid-cols-2 gap-2">
                             <Link href={`${base}/cuti`} className="bg-white/10 rounded-xl py-2 text-xs font-medium text-center">{isWilayah ? `Cuti ${OWN_DASH.replace('Kab. ','')}` : 'Cuti berjenjang'}</Link>
-                            <Link href={`${base}/love`} className="bg-[#FCB833] text-[#0F172A] rounded-xl py-2 text-xs font-semibold text-center">Love claims</Link>
+                            <Link href={`${base}/love`} className="bg-[#FCB833] text-[#0F172A] rounded-xl py-2 text-xs font-semibold text-center">Klaim Toleransi</Link>
                         </div>
                     </div>
                 </div>

@@ -69,7 +69,7 @@ export default function Love() {
     const handleClaim = () => {
         if (!alasan.trim()) { setToast('Isi alasan'); setTimeout(()=>setToast(null),2200); return; }
         if (!approverId) { setToast('Pilih atasan untuk di-ACC'); setTimeout(()=>setToast(null),2200); return; }
-        if (sisa <= 0) { setToast('Sisa Love 0 — reset bulan depan'); setTimeout(()=>setToast(null),2200); return; }
+        if (sisa <= 0) { setToast('Sisa Toleransi 0 — reset bulan depan'); setTimeout(()=>setToast(null),2200); return; }
         const approver = approvers.find((a)=>a.id===approverId);
         if (!approver) { setToast('Atasan tidak valid — pilih dari daftar'); setTimeout(()=>setToast(null),2200); return; }
 
@@ -84,7 +84,7 @@ export default function Love() {
             const updated = [next, ...allLove];
             setAllLove(updated); saveLove(updated);
             setSelected(null); setAlasan('');
-            setToast('Love diajukan — menunggu persetujuan'); setTimeout(()=>setToast(null),2500);
+            setToast('Toleransi diajukan — menunggu persetujuan'); setTimeout(()=>setToast(null),2500);
             return;
         }
         if (!tgl) { setToast('Pilih tanggal'); setTimeout(()=>setToast(null),2200); return; }
@@ -99,7 +99,7 @@ export default function Love() {
         const updated = [next, ...allLove];
         setAllLove(updated); saveLove(updated);
         setAlasan('');
-        setToast('Love diajukan — menunggu persetujuan'); setTimeout(()=>setToast(null),2500);
+        setToast('Toleransi diajukan — menunggu persetujuan'); setTimeout(()=>setToast(null),2500);
     };
 
     if (!assigned) {
@@ -116,8 +116,8 @@ export default function Love() {
         <KaryawanLayout>
             <div className="space-y-5">
                 <div>
-                    <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Love</h2>
-                    <p className="text-sm text-[#64748B]">{max} Love/bulan • Sisa {sisa}/{max} • Reset 1 {new Date(new Date().getFullYear(), new Date().getMonth()+1, 1).toLocaleDateString('id-ID',{month:'short'})} 00:00 WITA • {assigned.site.nama_lokasi} • {assigned.site.radius} m</p>
+                    <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Toleransi</h2>
+                    <p className="text-sm text-[#64748B]">{max} toleransi/bulan • Sisa {sisa}/{max} • Reset 1 {new Date(new Date().getFullYear(), new Date().getMonth()+1, 1).toLocaleDateString('id-ID',{month:'short'})} 00:00 WITA • {assigned.site.nama_lokasi} • {assigned.site.radius} m</p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
@@ -133,12 +133,12 @@ export default function Love() {
                     <div className="mt-4 flex gap-2">
                         {Array.from({length: max}, (_,i) => (<span key={i} className={`flex-1 h-2.5 rounded-full ${i < sisa ? 'bg-[#FCB833]' : 'bg-[#F1F5F9]'}`}></span>))}
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3">Pakai 1 Love untuk <span className="font-medium text-[#0F172A]">terlambat / lupa absen / lupa pulang</span> dalam radius {assigned.site.nama_lokasi} {assigned.site.radius} m (bulan sama, cukup alasan) → persetujuan 1 level Admin {assigned.region.name} • kuota {max}/bulan</p>
+                    <p className="text-xs text-[#94A3B8] mt-3">Pakai 1 toleransi untuk <span className="font-medium text-[#0F172A]">terlambat / lupa absen / lupa pulang</span> dalam radius {assigned.site.nama_lokasi} {assigned.site.radius} m (bulan sama, cukup alasan) → persetujuan 1 level Admin {assigned.region.name} • kuota {max}/bulan</p>
                     {sisa === 0 && <p className="text-xs font-medium text-[#EF4444] mt-2">Sisa 0 — pengajuan berikutnya tidak bisa di-approve</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
-                    <h3 className="font-medium text-sm text-[#0F172A]">Ajukan Love</h3>
+                    <h3 className="font-medium text-sm text-[#0F172A]">Ajukan Toleransi</h3>
                     <p className="text-xs text-[#94A3B8] mt-1">Pilih jenis → isi alasan → pilih atasan</p>
 
                     <div className="mt-4 flex gap-2 flex-wrap">
@@ -149,10 +149,10 @@ export default function Love() {
 
                     {jenis === 'terlambat' ? (
                         <div className="mt-4 space-y-3">
-                            <p className="text-xs font-medium text-[#334155]">Terlambat yang bisa pakai Love</p>
+                            <p className="text-xs font-medium text-[#334155]">Terlambat yang bisa pakai toleransi</p>
                             <p className="text-xs text-[#94A3B8]">Hanya late bulan sama & dalam radius {assigned.site.nama_lokasi} {assigned.site.radius} m • Di luar radius ditolak 422</p>
                             {eligible.length === 0 ? (
-                                <p className="text-sm text-[#64748B] text-center py-4">Tidak ada keterlambatan yang bisa pakai Love (sudah diajukan atau tidak ada late hari ini)</p>
+                                <p className="text-sm text-[#64748B] text-center py-4">Tidak ada keterlambatan yang bisa pakai toleransi (sudah diajukan atau tidak ada late hari ini)</p>
                             ) : (
                                 eligible.map((l) => {
                                     const ok = l.jarak <= assigned.site.radius;
@@ -162,7 +162,7 @@ export default function Love() {
                                                 <p className="text-sm font-medium text-[#0F172A]">{l.tgl} • {l.jam}</p>
                                                 <p className={`text-xs ${ok ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{l.jarak} m / {assigned.site.radius} m • {assigned.site.nama_lokasi} • {ok ? 'dalam radius' : 'di luar radius — tidak bisa'}</p>
                                             </div>
-                                            <button type="button" onClick={() => ok && setSelected(l)} disabled={!ok} title={!ok ? `${l.jarak} m / ${assigned.site.radius} m — di luar radius titik assigned, tidak bisa pakai Love` : ''} className={`rounded-xl px-3 py-2 text-xs font-semibold shrink-0 ${!ok ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : selected?.id === l.id ? 'bg-[#0F172A] text-white' : 'bg-[#FCB833] text-[#0F172A]'}`}>
+                                            <button type="button" onClick={() => ok && setSelected(l)} disabled={!ok} title={!ok ? `${l.jarak} m / ${assigned.site.radius} m — di luar radius titik assigned, tidak bisa pakai toleransi` : ''} className={`rounded-xl px-3 py-2 text-xs font-semibold shrink-0 ${!ok ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : selected?.id === l.id ? 'bg-[#0F172A] text-white' : 'bg-[#FCB833] text-[#0F172A]'}`}>
                                                 {!ok ? 'Di luar' : selected?.id === l.id ? 'Dipilih' : 'Pilih'}
                                             </button>
                                         </div>
@@ -216,7 +216,7 @@ export default function Love() {
                             <textarea id="alasan" rows={2} value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder={jenis === 'terlambat' ? 'Contoh: Macet poros Gowa karena perbaikan jalan' : jenis === 'lupa_absen' ? 'Contoh: Lupa absen datang karena HP lowbat' : 'Contoh: Lupa absen pulang — rapat di lapangan'} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20"></textarea>
 
                         </div>
-                        <button type="button" onClick={handleClaim} disabled={!alasan.trim() || !approverId || sisa <= 0 || (jenis==='terlambat' && (!selected || selected.jarak > assigned.site.radius))} title={!alasan.trim() ? 'Isi alasan dulu' : !approverId ? 'Pilih atasan' : sisa <= 0 ? 'Sisa Love 0 — reset 1 bulan depan' : jenis==='terlambat' && !selected ? 'Pilih keterlambatan' : ''} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 Love — Kirim ke {selectedApprover ? selectedApprover.nama : 'atasan'}</button>
+                        <button type="button" onClick={handleClaim} disabled={!alasan.trim() || !approverId || sisa <= 0 || (jenis==='terlambat' && (!selected || selected.jarak > assigned.site.radius))} title={!alasan.trim() ? 'Isi alasan dulu' : !approverId ? 'Pilih atasan' : sisa <= 0 ? 'Sisa Toleransi 0 — reset 1 bulan depan' : jenis==='terlambat' && !selected ? 'Pilih keterlambatan' : ''} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 toleransi — Kirim ke {selectedApprover ? selectedApprover.nama : 'atasan'}</button>
 
                     </div>
                     {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2 mt-3">{toast}</p>}
@@ -224,11 +224,11 @@ export default function Love() {
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="px-5 py-4 flex items-center justify-between">
-                        <h3 className="font-medium text-sm text-[#0F172A]">Riwayat Love saya</h3>
+                        <h3 className="font-medium text-sm text-[#0F172A]">Riwayat Toleransi saya</h3>
                         <span className="text-xs text-[#94A3B8]">Bulan ini • {myClaims.length}</span>
                     </div>
                     <div className="divide-y divide-[#F1F5F9]">
-                        {myClaims.length === 0 ? <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada Love — ajukan saat terlambat/lupa absen</p> : myClaims.map((c) => (
+                        {myClaims.length === 0 ? <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada Toleransi — ajukan saat terlambat/lupa absen</p> : myClaims.map((c) => (
                             <div key={c.id} className="px-5 py-3.5 flex items-start justify-between gap-3">
                                 <div>
                                     <p className="text-sm font-medium text-[#0F172A]">{loveJenisLabel(c.jenis)} • {c.tgl || new Date(c.createdAt).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})} • {c.jam} {c.jarak != null ? `• ${c.jarak}m/${c.radius ?? '?'}m` : `• ${c.approver_scope || ''}`}</p>

@@ -86,9 +86,9 @@ export default function Rekap() {
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Rekap kehadiran</h2>
-                        <p className="text-sm text-[#64748B] capitalize">{monthName} • {assigned.region.name} • {assigned.site.nama_lokasi} • {assigned.site.radius} m • Love {sisa}/{loveMax}</p>
+                        <p className="text-sm text-[#64748B] capitalize">{monthName} • {assigned.region.name} • {assigned.site.nama_lokasi} • {assigned.site.radius} m • Toleransi {sisa}/{loveMax}</p>
                     </div>
-                    <span className="bg-[#FCB833] text-[#0F172A] text-xs font-semibold px-3 py-1.5 rounded-full">{loveMax} Love</span>
+                    <span className="bg-[#FCB833] text-[#0F172A] text-xs font-semibold px-3 py-1.5 rounded-full">{loveMax} Toleransi</span>
                 </div>
                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-3 flex items-center justify-between">
                     <span className="text-xs font-medium text-[#1E3A8A]">{assigned.site.nama_lokasi} • {assigned.site.lat.toFixed(4)}, {assigned.site.lng.toFixed(4)}</span>
@@ -142,7 +142,7 @@ export default function Rekap() {
                                 ${d.status === 'hadir' ? 'bg-[#FCB833] text-[#0F172A]' : d.status === 'terlambat' ? 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]' : d.status === 'cuti' ? 'bg-[#ECFDF5] text-[#065F46]' : d.status === 'future' ? 'text-[#CBD5E1]' : 'bg-[#F8FAFC] text-[#94A3B8]'}`}>{d.d}</span>
                         ))}
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-4">Jam {settings.jamMasuk}–{settings.jamPulang} WITA • Toleransi {settings.toleransi}m • Di luar {assigned.site.radius} m titik {assigned.site.nama_lokasi} tidak tercatat</p>
+                    <p className="text-xs text-[#94A3B8] mt-4">Jam {settings.jamMasuk}–{settings.jamPulang} WITA • Kelonggaran {settings.toleransi}m • Di luar {assigned.site.radius} m titik {assigned.site.nama_lokasi} tidak tercatat</p>
                 </div>
 
                 <div className="flex gap-2">

@@ -95,7 +95,7 @@ export default function Absensi() {
         const updated = [next, ...attendances];
         setAttendances(updated); saveAttendances(updated);
         setCaptured(false);
-        setToast(isLate ? 'Absen tercatat — Terlambat (bisa pakai Love)' : 'Absen tercatat — Tepat waktu'); setTimeout(()=>setToast(null),2500);
+        setToast(isLate ? 'Absen tercatat — Terlambat (bisa pakai Toleransi)' : 'Absen tercatat — Tepat waktu'); setTimeout(()=>setToast(null),2500);
     };
 
     const handlePulang = () => {
@@ -114,7 +114,7 @@ export default function Absensi() {
                 <div>
                     <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Absensi</h2>
                     <p className="text-sm text-[#64748B] mt-1">{assigned.region.name} • {assigned.site.nama_lokasi} • Radius {assigned.site.radius} m • 1 karyawan = 1 titik</p>
-                    <p className="text-xs text-[#94A3B8] mt-1">Valid hanya di titik assigned dalam radius titiknya — di luar / titik lain ditolak 422 • Jam {settings.jamMasuk}–{settings.jamPulang} WITA toleransi {settings.toleransi}m</p>
+                    <p className="text-xs text-[#94A3B8] mt-1">Valid hanya di titik assigned dalam radius titiknya — di luar / titik lain ditolak 422 • Jam {settings.jamMasuk}–{settings.jamPulang} WITA kelonggaran {settings.toleransi}m</p>
                 </div>
 
                 {assigned && (
@@ -206,8 +206,8 @@ export default function Absensi() {
                                             <td className="px-5 py-3 font-mono text-[#0F172A] whitespace-nowrap tabular-nums">{r.datang}</td>
                                             <td className="px-5 py-3 font-mono whitespace-nowrap tabular-nums">{r.pulang ? <span className="text-[#0F172A]">{r.pulang}</span> : <span className="text-[#CBD5E1]">—</span>}</td>
                                             <td className="px-5 py-3">
-                                                <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${r.status==='on_time' ? 'bg-[#ECFDF5] text-[#065F46]' : r.status==='excused_love' ? 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30' : 'bg-[#FFFBEB] text-[#92400E]'}`}>{r.status==='on_time' ? 'Tepat waktu' : r.status==='late' ? 'Terlambat' : r.status}</span>
-                                                {r.status === 'late' && <a href="/karyawan/love" className="block mt-1.5 text-xs font-semibold text-[#1E3A8A] hover:underline">Gunakan Love →</a>}
+                                                <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${r.status==='on_time' ? 'bg-[#ECFDF5] text-[#065F46]' : r.status==='excused_love' ? 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30' : r.status==='late' ? 'bg-[#FFFBEB] text-[#92400E]' : 'bg-[#F1F5F9] text-[#334155]'}`}>{r.status==='on_time' ? 'Tepat waktu' : r.status==='late' ? 'Terlambat' : r.status==='excused_love' ? 'Toleransi' : r.status}</span>
+                                                {r.status === 'late' && <a href="/karyawan/love" className="block mt-1.5 text-xs font-semibold text-[#1E3A8A] hover:underline">Gunakan Toleransi →</a>}
                                             </td>
                                         </tr>
                                     ))}

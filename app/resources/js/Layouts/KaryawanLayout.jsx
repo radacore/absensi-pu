@@ -11,7 +11,7 @@ const navItems = [
     { href: '/karyawan/cuti', label: 'Cuti', icon: (active) => (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? '#1E3A8A' : '#6B7280'} strokeWidth="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
     ) },
-    { href: '/karyawan/love', label: 'Love', icon: (active) => (
+    { href: '/karyawan/love', label: 'Toleransi', icon: (active) => (
         <svg width="20" height="20" viewBox="0 0 24 24" fill={active ? '#FCB833' : 'none'} stroke={active ? '#FCB833' : '#6B7280'} strokeWidth="1.7"><path d="M12 21s-6.5-4.2-8.5-8.5A4.5 4.5 0 0112 5a4.5 4.5 0 018.5 7.5C18.5 16.8 12 21 12 21z"/></svg>
     ) },
     { href: '/karyawan/pengumuman', label: 'Info', icon: (active) => (

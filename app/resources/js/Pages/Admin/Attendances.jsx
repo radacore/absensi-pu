@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { loadRegions, loadEmployees, loadAttendances, saveAttendances, getBase, OWN_REGION, WILAYAH_LIST as wilayahList, getSitesForWilayah, getValidSiteIds, siteById } from './_shared';
 
-const statusLabel = { on_time: 'Tepat waktu', late: 'Terlambat', excused_love: 'Love', early_leave: 'Pulang awal' };
+const statusLabel = { on_time: 'Tepat waktu', late: 'Terlambat', excused_love: 'Toleransi', early_leave: 'Pulang awal' };
 const statusTone = { on_time: 'bg-[#ECFDF5] text-[#065F46]', late: 'bg-[#FFF7E6] text-[#92400E]', excused_love: 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30', early_leave: 'bg-[#FEF2F2] text-[#991B1B]' };
 
 export default function Attendances() {
@@ -76,7 +76,7 @@ export default function Attendances() {
                 <div className="grid grid-cols-3 gap-3">
                     <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center"><p className="text-xl font-semibold text-[#0F172A]">{stats.hadir}</p><p className="text-xs text-[#64748B]">Hadir (filter)</p><span className="mt-1 inline-block w-6 h-1 rounded-full bg-[#10B981]"></span></div>
                     <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center"><p className="text-xl font-semibold text-[#0F172A]">{stats.late}</p><p className="text-xs text-[#64748B]">Terlambat</p><span className="mt-1 inline-block w-6 h-1 rounded-full bg-[#FCB833]"></span></div>
-                    <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center"><p className="text-xl font-semibold text-[#0F172A]">{stats.love}</p><p className="text-xs text-[#64748B]">Pakai Love</p><span className="mt-1 inline-block w-6 h-1 rounded-full bg-[#FCB833]"></span></div>
+                    <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] text-center"><p className="text-xl font-semibold text-[#0F172A]">{stats.love}</p><p className="text-xs text-[#64748B]">Pakai Toleransi</p><span className="mt-1 inline-block w-6 h-1 rounded-full bg-[#FCB833]"></span></div>
                 </div>
 
                 <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] flex flex-wrap gap-2 items-center">
@@ -97,7 +97,7 @@ export default function Attendances() {
                         <option value="Semua">Semua status</option>
                         <option value="on_time">Tepat waktu</option>
                         <option value="late">Terlambat</option>
-                        <option value="excused_love">Love (excused)</option>
+                        <option value="excused_love">Toleransi (excused)</option>
                         <option value="early_leave">Pulang awal</option>
                     </select>
                     <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Cari nama / email..." className="flex-1 min-w-[160px] rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
@@ -172,7 +172,7 @@ export default function Attendances() {
                                         </Link>
                                     )}
                                     <div className="bg-[#FFF7E6] rounded-xl p-3 flex items-center justify-between">
-                                        <p className="text-xs text-[#92400E]">Status: {statusLabel[detail.status]} {detail.love ? `• Love ${detail.love}` : ''}</p>
+                                        <p className="text-xs text-[#92400E]">Status: {statusLabel[detail.status]} {detail.love ? `• ${detail.love}` : ''}</p>
                                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusTone[detail.status]}`}>{statusLabel[detail.status]}</span>
                                     </div>
                                     <div className="flex gap-2">

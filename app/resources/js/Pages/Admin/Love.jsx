@@ -58,7 +58,7 @@ export default function LoveAdmin() {
         setToast(nextStatus === 'approved' ? 'Disetujui' : 'Ditolak'); setTimeout(()=>setToast(null),2000);
     };
     const handleDelete = (id) => {
-        if (!confirm('Hapus Love claim ini?')) return;
+        if (!confirm('Hapus klaim toleransi ini?')) return;
         const next = claims.filter((c) => c.id !== id); setClaims(next); saveLove(next);
     };
 
@@ -67,8 +67,8 @@ export default function LoveAdmin() {
             <div className="space-y-5">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Love Claims — ${OWN_REGION}` : `Love Claims — ${loveMax} Hati / bulan`}</h1>
-                        <p className="text-sm text-[#64748B]">Hanya <span className="font-medium text-[#0F172A]">terlambat / lupa absen / lupa pulang bulan sama</span> & dalam radius <span className="font-medium text-[#0F172A]">titik penugasan</span> • Persetujuan 1 level Admin • 1 Love = 1 pengajuan • max {loveMax}/bulan</p>
+                        <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Klaim Toleransi — ${OWN_REGION}` : `Klaim Toleransi — kuota ${loveMax}/bulan`}</h1>
+                        <p className="text-sm text-[#64748B]">Hanya <span className="font-medium text-[#0F172A]">terlambat / lupa absen / lupa pulang bulan sama</span> & dalam radius <span className="font-medium text-[#0F172A]">titik penugasan</span> • Persetujuan 1 level Admin • 1 toleransi = 1 pengajuan • max {loveMax}/bulan</p>
                         <p className="text-xs text-[#94A3B8] mt-1">Terlambat cek jarak ≤ radius; lupa absen jam bebas 00–23:59 • 1 karyawan = 1 titik • Reset tgl 1 pukul 00:00 WITA</p>
                     </div>
                     <span className="shrink-0 bg-[#FFF7E6] border border-[#FCB833]/30 text-[#92400E] text-xs font-medium px-3 py-1.5 rounded-full">{counts.pending} pending • {counts.approved} approved bulan ini • max {loveMax}</span>
@@ -78,7 +78,7 @@ export default function LoveAdmin() {
                 <div className="grid grid-cols-3 gap-3">
                     <div className="bg-white rounded-2xl p-4 text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]"><p className="text-xl font-semibold text-[#0F172A]">{counts.pending}</p><p className="text-xs text-[#64748B]">Pending</p><span className="mt-1 inline-block w-6 h-1 rounded-full bg-[#FCB833]"></span></div>
                     <div className="bg-white rounded-2xl p-4 text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]"><p className="text-xl font-semibold text-[#0F172A]">{claims.filter(c=>c.status==='approved').length}</p><p className="text-xs text-[#64748B]">Disetujui bulan ini</p></div>
-                    <div className="bg-white rounded-2xl p-4 text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]"><p className="text-xl font-semibold text-[#0F172A]">{loveMax}</p><p className="text-xs text-[#64748B]">Love max (global)</p></div>
+                    <div className="bg-white rounded-2xl p-4 text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]"><p className="text-xl font-semibold text-[#0F172A]">{loveMax}</p><p className="text-xs text-[#64748B]">Toleransi max (global)</p></div>
                 </div>
 
                 <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] flex flex-wrap gap-2 items-center">
