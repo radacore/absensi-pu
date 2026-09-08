@@ -171,32 +171,40 @@ export default function Absensi() {
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
-                    <div className="px-5 py-4 flex items-center justify-between">
-                        <h3 className="font-medium text-sm text-[#0F172A]">Riwayat</h3>
-                        <span className="text-xs text-[#64748B]">{myHistory.length} entri • {assigned.site.nama_lokasi}</span>
+                    <div className="px-5 pt-5 pb-4 border-b border-[#F1F5F9] flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                            <span className="w-8 h-8 rounded-xl bg-[#F1F5F9] flex items-center justify-center">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M3 10h18"/></svg>
+                            </span>
+                            <div>
+                                <h3 className="font-semibold text-sm text-[#0F172A] leading-tight">Riwayat Absensi</h3>
+                                <p className="text-xs text-[#64748B]">{myHistory.length} entri</p>
+                            </div>
+                        </div>
+                        <span className="text-xs text-[#64748B] bg-[#F8FAFC] rounded-full px-3 py-1.5 whitespace-nowrap">{assigned.site.nama_lokasi}</span>
                     </div>
                     {myHistory.length===0 ? (
                         <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada absensi</p>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[420px] text-sm">
-                                <thead className="bg-[#F8FAFC] text-xs font-medium text-[#64748B]">
-                                    <tr>
-                                        <th className="text-left px-5 py-2.5">Tanggal</th>
-                                        <th className="text-left px-5 py-2.5">Masuk</th>
-                                        <th className="text-left px-5 py-2.5">Keluar</th>
-                                        <th className="text-left px-5 py-2.5">Status</th>
+                            <table className="w-full min-w-[440px] text-sm border-collapse">
+                                <thead>
+                                    <tr className="border-b border-[#E2E8F0]">
+                                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Tanggal</th>
+                                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Jam masuk<span className="normal-case font-normal text-[#94A3B8]"> WITA</span></th>
+                                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Jam keluar<span className="normal-case font-normal text-[#94A3B8]"> WITA</span></th>
+                                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[#F1F5F9]">
                                     {myHistory.map((r) => (
-                                        <tr key={`${r.tgl}-${r.datang}-${r.id}`} className="hover:bg-[#F8FAFC]/50">
+                                        <tr key={`${r.tgl}-${r.datang}-${r.id}`} className={`hover:bg-[#F8FAFC]/50 ${r.tgl === todayISO ? 'bg-[#F0F7FF]' : ''}`}>
                                             <td className="px-5 py-3">
                                                 <p className="font-medium text-[#0F172A] whitespace-nowrap">{new Date(r.tgl + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                                                <p className="text-xs text-[#64748B]">{r.jarak} m • {r.office_location_id === assigned.site.id ? 'Titik assigned' : 'Titik lain'}</p>
+                                                <p className="text-xs text-[#64748B]">{r.jarak} m {r.tgl === todayISO && <span className="text-[#1E3A8A] font-medium">• Hari ini</span>}</p>
                                             </td>
-                                            <td className="px-5 py-3 font-mono text-[#0F172A] whitespace-nowrap">{r.datang}</td>
-                                            <td className="px-5 py-3 font-mono whitespace-nowrap">{r.pulang ? <span className="text-[#0F172A]">{r.pulang}</span> : <span className="text-[#CBD5E1]">—</span>}</td>
+                                            <td className="px-5 py-3 font-mono text-[#0F172A] whitespace-nowrap tabular-nums">{r.datang}</td>
+                                            <td className="px-5 py-3 font-mono whitespace-nowrap tabular-nums">{r.pulang ? <span className="text-[#0F172A]">{r.pulang}</span> : <span className="text-[#CBD5E1]">—</span>}</td>
                                             <td className="px-5 py-3">
                                                 <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${r.status==='on_time' ? 'bg-[#ECFDF5] text-[#065F46]' : r.status==='excused_love' ? 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30' : 'bg-[#FFFBEB] text-[#92400E]'}`}>{r.status==='on_time' ? 'Tepat waktu' : r.status==='late' ? 'Terlambat' : r.status}</span>
                                                 {r.status === 'late' && <a href="/karyawan/love" className="block mt-1.5 text-xs font-semibold text-[#1E3A8A] hover:underline">Gunakan Love →</a>}
