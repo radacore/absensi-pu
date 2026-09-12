@@ -1,0 +1,74 @@
+@startuml 01-login-admin
+!theme plain
+title Login Admin — Super Admin dan Admin Wilayah
+
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityBorderColor #334155
+skinparam ActivityBorderThickness 1.5
+skinparam ActivityDiamondBackgroundColor #FEF3C7
+skinparam ActivityDiamondBorderColor #F59E0B
+skinparam ArrowColor #334155
+skinparam ArrowThickness 1.5
+skinparam DefaultFontName "Inter"
+skinparam DefaultFontSize 12
+skinparam Padding 6
+skinparam RoundCorner 4
+skinparam PartitionBackgroundColor #F8FAFC
+skinparam PartitionBorderColor #1E3A8A
+skinparam PartitionBorderThickness 1.5
+skinparam PartitionFontStyle bold
+skinparam PartitionFontColor #0F172A
+skinparam NoteBackgroundColor #FEF3C7
+skinparam NoteBorderColor #F59E0B
+
+|ADMIN|
+start
+:Buka halaman login
+super-admin atau admin;
+:Isi email dan
+kata sandi;
+:Klik tombol Masuk;
+
+|SISTEM|
+if (Field email atau
+kata sandi kosong?) then (Ya)
+  :Kembalikan error
+  Email atau kata sandi salah;
+  |ADMIN|
+  :Lihat toast error
+  di pojok bawah;
+  :Ulangi input;
+  stop
+else (Tidak)
+  :Cari user by email
+  is_active = true;
+  if (Kredensial valid?) then (Tidak)
+    :Kembalikan error
+    Email atau kata sandi salah;
+    |ADMIN|
+    :Lihat toast error;
+    stop
+  else (Ya)
+    |SISTEM|
+    :Regenerate session;
+    if (Role sesuai area?) then (Tidak)
+      :Auth::guard(web)::logout;
+      :Kembalikan error
+      Tidak ada akses;
+      |ADMIN|
+      :Lihat toast error;
+      stop
+    else (Ya)
+      |SISTEM|
+      :Redirect ke area
+      /super-admin atau /admin;
+      |DASHBOARD|
+      :Tampilkan Dashboard Admin
+      dengan sidebar dan
+      aktivitas terbaru;
+      stop
+    endif
+  endif
+endif
+
+@enduml
