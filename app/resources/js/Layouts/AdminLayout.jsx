@@ -1,5 +1,10 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+
+function initials(name) {
+    if (!name) return 'A';
+    return name.trim().split(/\s+/).slice(0, 2).map((s) => s[0]?.toUpperCase() ?? '').join('') || 'A';
+}
 
 function getAdminBase(url) {
     if (url.startsWith('/super-admin')) return '/super-admin';
@@ -29,6 +34,8 @@ export default function AdminLayout({ children }) {
     const visibleDefs = isWilayah ? menuDefs.filter((m) => !m.superOnly) : menuDefs;
     const menu = visibleDefs.map((m) => ({ ...m, href: `${base}${m.path}` }));
     const [open, setOpen] = useState(false);
+    const logoutUrl = `${base}/logout`;
+    const doLogout = () => router.post(logoutUrl);
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex">
             {/* Sidebar — desktop */}
@@ -55,14 +62,18 @@ export default function AdminLayout({ children }) {
                         );
                     })}
                 </nav>
-                <div className="p-4 border-t border-white/10">
+                <div className="p-4 border-t border-white/10 space-y-2">
                     <div className="bg-white/5 rounded-xl p-3 flex items-center gap-3">
-                        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face&auto=format" alt="admin" className="w-9 h-9 rounded-full object-cover" />
+                        <span className="w-9 h-9 rounded-full bg-[#FCB833] text-[#0F172A] font-semibold text-sm flex items-center justify-center shrink-0">{initials(usr?.name)}</span>
                         <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{usr?.name || (isWilayah ? 'Admin Wilayah' : 'Super Admin')}</p>
                             <p className="text-xs text-white/60 truncate">{usr?.email || (isWilayah ? 'wilayah@bbws-pj.go.id' : 'pusat@bbws-pj.go.id')}</p>
                         </div>
                     </div>
+                    <button type="button" onClick={doLogout} className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-sm font-medium py-2.5 transition">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Keluar
+                    </button>
                 </div>
             </aside>
 
@@ -80,7 +91,14 @@ export default function AdminLayout({ children }) {
                 </header>
                 {open && (
                     <div className="lg:hidden fixed inset-0 z-30 bg-black/40" onClick={() => setOpen(false)}>
-                        <div className="w-[280px] h-full bg-[#0F172A] p-4 space-y-1 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="w-[280px] h-full bg-[#0F172A] p-4 flex flex-col gap-1 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                            <div className="px-1 py-2 flex items-center gap-2.5 border-b border-white/10 mb-2 pb-3">
+                                <span className="w-9 h-9 rounded-full bg-[#FCB833] text-[#0F172A] font-semibold text-sm flex items-center justify-center shrink-0">{initials(usr?.name)}</span>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-white truncate">{usr?.name || (isWilayah ? 'Admin Wilayah' : 'Super Admin')}</p>
+                                    <p className="text-xs text-white/60 truncate">{usr?.email || ''}</p>
+                                </div>
+                            </div>
                             {menu.map((m) => {
                                 const active = m.exact ? url === m.href : url.startsWith(m.href);
                                 return (
@@ -89,6 +107,10 @@ export default function AdminLayout({ children }) {
                                     </Link>
                                 );
                             })}
+                            <button type="button" onClick={() => { setOpen(false); doLogout(); }} className="mt-auto flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-sm font-medium py-2.5 transition">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                                Keluar
+                            </button>
                         </div>
                     </div>
                 )}

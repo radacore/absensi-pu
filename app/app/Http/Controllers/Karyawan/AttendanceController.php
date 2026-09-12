@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Karyawan;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\AttendanceSetting;
+use App\Models\Leave;
 use App\Models\Site;
 use App\Support\AdminPresenter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -164,13 +166,34 @@ class AttendanceController extends Controller
         $now = now('Asia/Makassar');
         $year = (int) $now->format('Y');
         $month = (int) $now->format('n');
+        $startOfMonth = Carbon::create($year, $month, 1, 0, 0, 0, 'Asia/Makassar');
+        $endOfMonth = $startOfMonth->copy()->endOfMonth();
 
         $rows = Attendance::where('employee_id', $me->id)
             ->whereYear('work_date', $year)
             ->whereMonth('work_date', $month)
             ->get();
 
-        // also need cuti/love counts — placeholder 0 until Fase 3 (keeps UI stable)
+        $approvedLeaves = Leave::where('employee_id', $me->id)
+            ->where('status', 'Disetujui')
+            ->where(function ($q) use ($startOfMonth, $endOfMonth) {
+                $q->whereBetween('mulai', [$startOfMonth, $endOfMonth])
+                    ->orWhereBetween('selesai', [$startOfMonth, $endOfMonth])
+                    ->orWhere(function ($qq) use ($startOfMonth, $endOfMonth) {
+                        $qq->where('mulai', '<', $startOfMonth)->where('selesai', '>', $endOfMonth);
+                    });
+            })->get();
+
+        $cutiDates = [];
+        foreach ($approvedLeaves as $leave) {
+            $start = Carbon::parse($leave->mulai)->max($startOfMonth);
+            $end = Carbon::parse($leave->selesai)->min($endOfMonth);
+            for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+                $cutiDates[$d->toDateString()] = true;
+            }
+        }
+        $cutiDays = count($cutiDates);
+
         $assigned = $me->site ? [
             'id' => $me->site->id,
             'nama_lokasi' => $me->site->nama_lokasi,
@@ -189,11 +212,14 @@ class AttendanceController extends Controller
                 'jamPulang' => $jamPulang,
                 'toleransi' => $settings ? (int) $settings->toleransi_late_menit : 15,
                 'loveMax' => $loveMax,
+                'loveQuota' => AdminPresenter::loveQuota($me->id, $loveMax),
             ],
             'monthRows' => $rows->map(fn (Attendance $a) => [
-                'tgl' => $a->work_date instanceof \Illuminate\Support\Carbon ? $a->work_date->format('Y-m-d') : (string) $a->work_date,
+                'tgl' => $a->work_date instanceof Carbon ? $a->work_date->format('Y-m-d') : (string) $a->work_date,
                 'status' => $a->status,
             ])->values()->all(),
+            'cutiDates' => array_keys($cutiDates),
+            'cutiDays' => $cutiDays,
             'hadir' => $rows->count(),
             'terlambat' => $rows->where('status', 'late')->count(),
         ]);

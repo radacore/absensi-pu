@@ -72,8 +72,14 @@ export default function Absensi() {
     };
 
     const handlePulang = () => {
-        if (tanpaTitik || jarak == null || !inRadius) { showToast(jarak == null ? 'Lokasi belum siap' : 'Di luar radius — tidak bisa pulang', false); return; }
+        if (tanpaTitik) { showToast('Titik belum di-assign', false); return; }
         if (!history.some((h) => h.tgl === todayISO && !h.pulang)) { showToast('Belum absen masuk hari ini', false); return; }
+        if (jarak == null) {
+            if (!captured) { setCaptured(true); requestPos(); }
+            showToast('Aktifkan GPS lalu tekan Absen pulang lagi', false);
+            return;
+        }
+        if (!inRadius) { showToast(`${jarak} m / ${assigned.radius} m — di luar radius`, false); return; }
         router.post('/karyawan/absensi/clock-out', { lat: myPos.lat, lng: myPos.lng }, {
             preserveScroll: true,
             onError: (e) => showToast(Object.values(e).flat().join(' ') || 'Gagal absen pulang', false),

@@ -80,21 +80,7 @@ export default function Dashboard() {
             { label: 'Toleransi pending', value: String(lovePending), sub: 'claim hari ini • semua wilayah', accent: 'gold', href: `${base}/love` },
         ];
 
-    const wilayahActivities = [
-        { t: '07:52 — Andi Saputra (Gowa) terlambat 7m — dalam radius 42m', tag: 'late', color: 'amber' },
-        { t: '08:10 — Klaim toleransi oleh Andi Saputra — menunggu Admin Gowa (bulan sama)', tag: 'love', color: 'gold' },
-        { t: '07:44 — Dewi Lestari (Gowa) hadir tepat waktu — 31m', tag: 'on_time', color: 'emerald' },
-        { t: '09:05 — Cuti diajukan Nurul (Gowa) — Tahunan 2 hari — level 1', tag: 'cuti', color: 'sky' },
-        { t: '07:38 — Rudi Hartono (Gowa) hadir — radius 27m — multi-lokasi terdekat', tag: 'on_time', color: 'emerald' },
-    ];
-    const allActivities = [
-        { t: '07:52 — Andi Saputra (Gowa) terlambat 7m — dalam radius 42m', tag: 'late', color: 'amber' },
-        { t: '07:38 — Siti Rahma (Makassar) hadir tepat waktu — 38m', tag: 'on_time', color: 'emerald' },
-        { t: '08:10 — Klaim toleransi oleh Andi Saputra — menunggu Admin Gowa (bulan sama)', tag: 'love', color: 'gold' },
-        { t: '09:15 — Cuti diajukan Rudi (Bone) — Tahunan 3 hari — level 1', tag: 'cuti', color: 'sky' },
-        { t: '07:40 — Budi Santoso (Maros) hadir — radius 21m — multi-lokasi terdekat', tag: 'on_time', color: 'emerald' },
-    ];
-    const activities = isWilayah ? wilayahActivities : allActivities;
+    const activities = props.activities ?? [];
 
     return (
         <AdminLayout>
@@ -214,8 +200,9 @@ export default function Dashboard() {
                         <span className="text-xs text-[#94A3B8]">Hari ini • {hadir} hadir {isWilayah ? `• ${OWN_DASH}` : ''}</span>
                     </div>
                     <div className="divide-y divide-[#F1F5F9]">
+                        {activities.length === 0 && <p className="px-5 py-6 text-sm text-[#94A3B8] text-center">Belum ada aktivitas hari ini</p>}
                         {activities.map((a, i) => (
-                            <div key={`${a.tag}-${i}`} className="px-5 py-3 flex items-center gap-3">
+                            <div key={`${a.tag}-${i}-${a.t}`} className="px-5 py-3 flex items-center gap-3">
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${a.color === 'gold' ? 'bg-[#FCB833]' : a.color === 'emerald' ? 'bg-[#10B981]' : a.color === 'amber' ? 'bg-[#F59E0B]' : 'bg-[#0EA5E9]'}`}></span>
                                 <p className="text-sm text-[#334155] flex-1 min-w-0 truncate">{a.t}</p>
                                 <span className="text-xs font-medium px-2 py-1 rounded-full bg-[#F8FAFC] text-[#64748B] shrink-0">{a.tag}</span>

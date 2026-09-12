@@ -4,8 +4,10 @@ import { Link, usePage } from '@inertiajs/react';
 export default function Rekap() {
     const { props } = usePage();
     const assigned = props.assigned ?? null;
-    const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4 };
+    const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, loveQuota: null };
     const monthRows = props.monthRows ?? [];
+    const cutiDates = props.cutiDates ?? [];
+    const cutiDays = props.cutiDays ?? 0;
     const hadir = props.hadir ?? 0;
     const terlambat = props.terlambat ?? 0;
 
@@ -18,32 +20,28 @@ export default function Rekap() {
     const today = now.getDate();
 
     const loveMax = settings.loveMax ?? 4;
-    // Fase 3 belum ada: cuti/love masih 0
-    const cutiDays = 0;
-    const sisa = loveMax;
+    const sisa = settings.loveQuota?.sisa ?? loveMax;
 
     const statusByDay = new Map();
     monthRows.forEach((r) => {
         const d = new Date(r.tgl + 'T00:00:00').getDate();
         if (new Date(r.tgl).getMonth() === month) statusByDay.set(d, r.status);
     });
-    const terlambatSet = new Set([...statusByDay.entries()].filter(([, s]) => s === 'late').map(([d]) => d));
+    const cutiSet = new Set(cutiDates.map((s) => new Date(s + 'T00:00:00').getDate()));
 
     const days = Array.from({ length: daysInMonth }, (_, i) => {
         const d = i + 1;
         const dow = new Date(year, month, d).getDay();
         const isWeekend = dow === 0 || dow === 6;
         if (isWeekend) return { d, status: 'libur' };
-        if (d > today) return { d, status: 'future' };
+        if (cutiSet.has(d)) return { d, status: 'cuti' };
         if (statusByDay.has(d)) {
             const s = statusByDay.get(d);
             if (s === 'late') return { d, status: 'terlambat' };
-            if (s === 'excused_love') return { d, status: 'hadir' };
             return { d, status: 'hadir' };
         }
-        // fallback demo only if no real data at all
-        if (monthRows.length === 0 && terlambatSet.size === 0 && d <= Math.min(today, 3)) return { d, status: 'hadir' };
-        return { d, status: d <= today ? 'hadir' : 'future' };
+        if (d > today) return { d, status: 'future' };
+        return { d, status: 'kosong' };
     });
 
     const offset = firstDow === 0 ? 6 : firstDow - 1;
@@ -110,6 +108,7 @@ export default function Rekap() {
                         <div className="flex items-center gap-2 text-xs">
                             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FCB833]"></span> Hadir</span>
                             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#F59E0B]"></span> Terlambat</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#0D9488]"></span> Cuti</span>
                             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#E2E8F0]"></span> Libur</span>
                         </div>
                     </div>
@@ -126,10 +125,7 @@ export default function Rekap() {
                     <p className="text-xs text-[#94A3B8] mt-4">Jam {settings.jamMasuk}–{settings.jamPulang} WITA • Kelonggaran {settings.toleransi}m • Di luar {assigned.radius} m titik {assigned.nama_lokasi} tidak tercatat</p>
                 </div>
 
-                <div className="flex gap-2">
-                    <Link href="/karyawan/absensi" className="flex-1 bg-white rounded-xl py-3 text-sm font-medium text-[#334155] text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]">Lihat absensi</Link>
-                    <button type="button" onClick={() => alert('Unduh rekap PDF')} className="flex-1 bg-[#FCB833] text-[#0F172A] rounded-xl py-3 text-sm font-semibold">Unduh rekap PDF</button>
-                </div>
+                <Link href="/karyawan/absensi" className="block w-full bg-white rounded-xl py-3 text-sm font-medium text-[#334155] text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]">Lihat absensi</Link>
             </div>
         </KaryawanLayout>
     );
