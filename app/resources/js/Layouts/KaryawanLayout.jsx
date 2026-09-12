@@ -13,6 +13,9 @@ const navItems = [
     { href: '/karyawan/love', label: 'Toleransi', icon: (active) => (
         <svg width="20" height="20" viewBox="0 0 24 24" fill={active ? '#FCB833' : 'none'} stroke={active ? '#FCB833' : '#6B7280'} strokeWidth="1.7"><path d="M12 21s-6.5-4.2-8.5-8.5A4.5 4.5 0 0112 5a4.5 4.5 0 018.5 7.5C18.5 16.8 12 21 12 21z"/></svg>
     ) },
+    { href: '/karyawan/dinas', label: 'Dinas', icon: (active) => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? '#1E3A8A' : '#6B7280'} strokeWidth="1.7"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    ) },
     { href: '/karyawan/pengumuman', label: 'Info', icon: (active) => (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? '#1E3A8A' : '#6B7280'} strokeWidth="1.7"><path d="M15 17h5l-1.5-1.5A6 6 0 0118 9V7a6 6 0 00-6-6 6 6 0 00-6 6v2a6 6 0 01-.5 5.5L4 16h5"/><path d="M9 17a3 3 0 006 0"/></svg>
     ) },
@@ -63,7 +66,7 @@ export default function KaryawanLayout({ children }) {
                         <Link
                             key={it.href}
                             href={it.href}
-                            className={`relative flex flex-col items-center justify-center min-w-[56px] min-h-[44px] rounded-xl px-2 py-1 transition ${active ? 'text-[#1E3A8A]' : 'text-[#6B7280]'}`}
+                            className={`relative flex flex-col items-center justify-center min-w-[44px] min-h-[44px] rounded-xl px-1.5 py-1 transition ${active ? 'text-[#1E3A8A]' : 'text-[#6B7280]'}`}
                         >
                             <span className={`relative p-1.5 rounded-lg ${active ? 'bg-[#E0F2FE]' : 'bg-transparent'}`}>
                                 {it.icon(active)}

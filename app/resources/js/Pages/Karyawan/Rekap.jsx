@@ -125,7 +125,10 @@ export default function Rekap() {
                     <p className="text-xs text-[#94A3B8] mt-4">Jam {settings.jamMasuk}–{settings.jamPulang} WITA • Kelonggaran {settings.toleransi}m • Di luar {assigned.radius} m titik {assigned.nama_lokasi} tidak tercatat</p>
                 </div>
 
-                <Link href="/karyawan/absensi" className="block w-full bg-white rounded-xl py-3 text-sm font-medium text-[#334155] text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]">Lihat absensi</Link>
+                <div className="grid grid-cols-2 gap-2">
+                    <Link href="/karyawan/absensi" className="bg-white rounded-xl py-3 text-sm font-medium text-[#334155] text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]">Lihat absensi</Link>
+                    <Link href="/karyawan/rekap/detail" className="bg-[#0F172A] rounded-xl py-3 text-sm font-semibold text-white text-center">Rekap Detail &amp; PDF</Link>
+                </div>
             </div>
         </KaryawanLayout>
     );

@@ -197,7 +197,8 @@ export default function Employees() {
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-right">
-                                                <div className="flex gap-1 justify-end">
+                                                <div className="flex gap-1 justify-end flex-wrap">
+                                                    <Link href={`${base}/employees/${e.id}/rekap`} className="text-xs font-medium text-[#065F46] bg-[#DCFCE7] px-3 py-1.5 rounded-lg hover:bg-[#BBF7D0]">Rekap</Link>
                                                     <button type="button" onClick={()=>openEdit(e)} className="text-xs font-medium text-[#1E3A8A] bg-[#EFF6FF] px-3 py-1.5 rounded-lg">Edit</button>
                                                     <button type="button" onClick={()=>handleReset(e)} className="text-xs font-medium bg-[#FFF7E6] text-[#92400E] px-2 py-1.5 rounded-lg">Reset</button>
                                                     <button type="button" onClick={()=>remove(e.id)} className="text-xs font-medium text-[#991B1B] bg-[#FEF2F2] px-3 py-1.5 rounded-lg">Hapus</button>

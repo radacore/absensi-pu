@@ -5,7 +5,10 @@ use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CutiController as AdminCutiController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DinasController as AdminDinasController;
 use App\Http\Controllers\Admin\EmployeeController;
+use App\Http\Controllers\Admin\EmployeeRekapController;
+use App\Http\Controllers\Admin\HolidayController;
 use App\Http\Controllers\Admin\LoveController as AdminLoveController;
 use App\Http\Controllers\Admin\PengumumanController as AdminPengumumanController;
 use App\Http\Controllers\Admin\RegionController;
@@ -16,7 +19,9 @@ use App\Http\Controllers\Auth\EmployeeAuthController;
 use App\Http\Controllers\Karyawan\AttendanceController as KaryawanAttendanceController;
 use App\Http\Controllers\Karyawan\CutiController as KaryawanCutiController;
 use App\Http\Controllers\Karyawan\DashboardController as KaryawanDashboardController;
+use App\Http\Controllers\Karyawan\DinasController as KaryawanDinasController;
 use App\Http\Controllers\Karyawan\LoveController as KaryawanLoveController;
+use App\Http\Controllers\Karyawan\RekapDetailController as KaryawanRekapDetailController;
 use App\Http\Controllers\Karyawan\PengumumanController as KaryawanPengumumanController;
 use App\Http\Controllers\Karyawan\ProfilController as KaryawanProfilController;
 use Illuminate\Support\Facades\Route;
@@ -41,11 +46,15 @@ Route::prefix('karyawan')->group(function () {
         Route::post('/absensi/clock-in', [KaryawanAttendanceController::class, 'clockIn'])->name('karyawan.absensi.clock_in');
         Route::post('/absensi/clock-out', [KaryawanAttendanceController::class, 'clockOut'])->name('karyawan.absensi.clock_out');
         Route::get('/rekap', [KaryawanAttendanceController::class, 'rekap'])->name('karyawan.rekap');
+        Route::get('/rekap/detail', [KaryawanRekapDetailController::class, 'show'])->name('karyawan.rekap.detail');
         Route::get('/cuti', [KaryawanCutiController::class, 'index'])->name('karyawan.cuti');
         Route::post('/cuti', [KaryawanCutiController::class, 'store'])->name('karyawan.cuti.store');
         Route::delete('/cuti/{cuti}', [KaryawanCutiController::class, 'destroy'])->name('karyawan.cuti.destroy');
         Route::get('/love', [KaryawanLoveController::class, 'index'])->name('karyawan.love');
         Route::post('/love', [KaryawanLoveController::class, 'store'])->name('karyawan.love.store');
+        Route::get('/dinas', [KaryawanDinasController::class, 'index'])->name('karyawan.dinas');
+        Route::post('/dinas', [KaryawanDinasController::class, 'store'])->name('karyawan.dinas.store');
+        Route::delete('/dinas/{dinas}', [KaryawanDinasController::class, 'destroy'])->name('karyawan.dinas.destroy');
         Route::get('/pengumuman', [KaryawanPengumumanController::class, 'index'])->name('karyawan.pengumuman');
         Route::post('/pengumuman/{pengumuman}/read', [KaryawanPengumumanController::class, 'markRead'])->name('karyawan.pengumuman.read');
         Route::post('/pengumuman/read-all', [KaryawanPengumumanController::class, 'markAllRead'])->name('karyawan.pengumuman.readAll');
@@ -78,6 +87,10 @@ function adminMasterRoutes(string $prefix, string $role, string $label): void
         Route::put('/love/{love}/approve', [AdminLoveController::class, 'approve'])->name("{$label}.love.approve");
         Route::put('/love/{love}/reject', [AdminLoveController::class, 'reject'])->name("{$label}.love.reject");
         Route::delete('/love/{love}', [AdminLoveController::class, 'destroy'])->name("{$label}.love.destroy");
+        Route::get('/dinas', [AdminDinasController::class, 'index'])->name("{$label}.dinas");
+        Route::put('/dinas/{dinas}/approve', [AdminDinasController::class, 'approve'])->name("{$label}.dinas.approve");
+        Route::put('/dinas/{dinas}/reject', [AdminDinasController::class, 'reject'])->name("{$label}.dinas.reject");
+        Route::delete('/dinas/{dinas}', [AdminDinasController::class, 'destroy'])->name("{$label}.dinas.destroy");
         Route::get('/pengumuman', [AdminPengumumanController::class, 'index'])->name("{$label}.pengumuman");
         Route::post('/pengumuman', [AdminPengumumanController::class, 'store'])->name("{$label}.pengumuman.store");
         Route::put('/pengumuman/{pengumuman}', [AdminPengumumanController::class, 'update'])->name("{$label}.pengumuman.update");
@@ -104,10 +117,17 @@ function adminMasterRoutes(string $prefix, string $role, string $label): void
         Route::post('/employees', [EmployeeController::class, 'store'])->name("{$label}.employees.store");
         Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->name("{$label}.employees.update");
         Route::post('/employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name("{$label}.employees.reset-password");
+        Route::get('/employees/{employee}/rekap', [EmployeeRekapController::class, 'show'])->name("{$label}.employees.rekap");
         Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->name("{$label}.employees.destroy");
 
         // Audit log (super admin only via controller guard)
         Route::get('/audit-log', [AuditLogController::class, 'index'])->name("{$label}.audit-log");
+
+        // Holidays (super admin only via controller guard)
+        Route::get('/holidays', [HolidayController::class, 'index'])->name("{$label}.holidays");
+        Route::post('/holidays', [HolidayController::class, 'store'])->name("{$label}.holidays.store");
+        Route::put('/holidays/{holiday}', [HolidayController::class, 'update'])->name("{$label}.holidays.update");
+        Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name("{$label}.holidays.destroy");
 
         // Admin Wilayah (super admin only via controller guard)
         Route::get('/admin-wilayah', [AdminWilayahController::class, 'index'])->name("{$label}.admin-wilayah");

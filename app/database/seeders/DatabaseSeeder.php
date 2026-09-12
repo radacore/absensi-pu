@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             EmployeeSeeder::class,
             AdminUserSeeder::class,
             AttendanceSettingSeeder::class,
+            HolidaySeeder::class,
         ]);
     }
 }
