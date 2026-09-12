@@ -1,74 +1,107 @@
 # 09 — Clock-Out (Absen Pulang)
 
-Alur karyawan absen pulang. Harus sudah clock-in hari ini dan berada dalam radius.
+Alur karyawan absen pulang. Harus sudah clock-in hari ini dan berada dalam radius titik penugasan. Kalau GPS belum siap, sistem otomatis buka kamera dan minta izin lokasi.
 
 ## Aktor
-- **Karyawan** — sudah clock-in hari ini.
-- **Sistem** — `Karyawan\AttendanceController::clockOut`.
+- **Karyawan** — sudah clock-in hari yang sama.
+- **Sistem** — `Karyawan\AttendanceController::clockOut` + `AdminPresenter::haversineM`.
 
-## Alur
+## Flowchart
 
 ```mermaid
 flowchart TD
-    Start((Mulai)) --> K1
+    START([MULAI]):::se
 
-    subgraph Karyawan[Karyawan]
-        K1[Klik tombol Absen pulang]
-        K2{Sudah clock-in hari ini?}
-        K3[/Toast: Belum absen masuk hari ini/]
-        K4{GPS + kamera sudah aktif?}
-        K5[Auto-buka kamera + minta GPS<br/>tampil toast 'Aktifkan GPS lalu tekan Absen pulang lagi']
-        K6[/User aktifkan GPS lalu klik lagi/]
-        K7{Dalam radius?}
-        K8[/Toast: X m di luar radius/]
-        K9[Kirim POST /karyawan/absensi/clock-out]
-    end
+    A1["1. Klik tombol<br/>Absen pulang"]:::user
+    D1{"Sudah clock-in<br/>hari ini?"}:::dec
+    E1["ERROR<br/>Belum absen masuk hari ini"]:::err
 
-    subgraph Sistem[Sistem]
-        S1[Validate lat, lng]
-        S2{Ada attendance work_date hari ini?}
-        S3[422 belum absen masuk]
-        S4{clock_out_at masih null?}
-        S5[422 sudah absen pulang]
-        S6[Hitung haversineM ke site]
-        S7{Jarak <= radius_m?}
-        S8[422 X m di luar radius]
-        S9[Attendance::update<br/>clock_out_at, lat_out, lng_out]
-        S10[[Flash success: Absen pulang tercatat]]
-    end
+    D2{"GPS + kamera<br/>sudah aktif?"}:::dec
+    A2["2. Auto buka kamera<br/>+ minta izin GPS"]:::user
+    A3["3. Aktifkan GPS<br/>lalu klik lagi"]:::user
 
-    K1 --> K2
-    K2 -->|Tidak| K3
-    K3 --> End((Selesai))
-    K2 -->|Ya| K4
-    K4 -->|Tidak| K5
-    K5 --> K6
-    K6 --> K4
-    K4 -->|Ya| K7
-    K7 -->|Tidak| K8
-    K8 --> End
-    K7 -->|Ya| K9
-    K9 --> S1
-    S1 --> S2
-    S2 -->|Tidak| S3
-    S2 -->|Ya| S4
-    S4 -->|Tidak| S5
-    S4 -->|Ya| S6
-    S6 --> S7
-    S7 -->|Tidak| S8
-    S7 -->|Ya| S9
-    S9 --> S10
-    S10 --> End
-    S3 --> End
-    S5 --> End
+    D3{"Dalam radius?"}:::dec
+    E2["ERROR<br/>X m di luar radius"]:::err
 
-    classDef actor fill:#EFF6FF,stroke:#1E3A8A,stroke-width:1px,color:#0F172A
-    classDef system fill:#F1F5F9,stroke:#64748B,stroke-width:1px,color:#0F172A
-    class Karyawan actor
-    class Sistem system
+    A4["4. Kirim POST<br/>/karyawan/absensi/clock-out"]:::user
+    S1["5. Validate lat, lng"]:::sys
+    D4{"Ada attendance<br/>work_date hari ini?"}:::dec
+    E3["ERROR 422<br/>Belum absen masuk"]:::err
+
+    D5{"clock_out_at<br/>masih null?"}:::dec
+    E4["ERROR 422<br/>Sudah absen pulang"]:::err
+
+    S2["6. Hitung haversineM<br/>ke site"]:::sys
+    D6{"Jarak <= radius_m?"}:::dec
+    E5["ERROR 422<br/>X m di luar radius"]:::err
+
+    S3["7. Attendance::update<br/>clock_out_at, lat_out, lng_out"]:::sys
+    OK["SUKSES<br/>Absen pulang tercatat"]:::ok
+    END([SELESAI]):::se
+
+    START --> A1
+    A1 --> D1
+    D1 -->|tidak| E1
+    D1 -->|ya| D2
+    D2 -->|tidak| A2
+    A2 --> A3
+    A3 --> D2
+    D2 -->|ya| D3
+    D3 -->|tidak| E2
+    D3 -->|ya| A4
+    A4 --> S1
+    S1 --> D4
+    D4 -->|tidak| E3
+    D4 -->|ya| D5
+    D5 -->|tidak| E4
+    D5 -->|ya| S2
+    S2 --> D6
+    D6 -->|tidak| E5
+    D6 -->|ya| S3
+    S3 --> OK
+    OK --> END
+
+    E2 -->|ulangi| A1
+    E5 -->|ulangi| A1
+
+    classDef se fill:#0F172A,stroke:#0F172A,color:#fff,stroke-width:2px
+    classDef user fill:#EFF6FF,stroke:#1E3A8A,color:#1E3A8A,stroke-width:1.5px
+    classDef sys fill:#F8FAFC,stroke:#334155,color:#0F172A,stroke-width:1.5px
+    classDef dec fill:#FEF3C7,stroke:#F59E0B,color:#92400E,stroke-width:1.5px
+    classDef err fill:#FEE2E2,stroke:#EF4444,color:#991B1B,stroke-width:1.5px
+    classDef ok fill:#DCFCE7,stroke:#10B981,color:#065F46,stroke-width:1.5px
+
+    linkStyle default stroke:#334155,stroke-width:1.5px
 ```
 
+## Legenda Warna Node
+
+| Warna | Jenis |
+|---|---|
+| Hitam pekat | Start / End |
+| Biru muda | Aksi Aktor (Karyawan) |
+| Abu-abu putih | Proses Sistem |
+| Kuning | Keputusan (kondisi if/else) |
+| Merah muda | Jalur error |
+| Hijau muda | Hasil sukses |
+
+## Langkah-Langkah Detail
+
+1. Karyawan menekan tombol Absen pulang di halaman `/karyawan/absensi`.
+2. Kalau GPS/kamera belum aktif, UI otomatis membuka kamera dan memancing izin GPS, lalu menampilkan toast "Aktifkan GPS lalu tekan Absen pulang lagi".
+3. Karyawan aktifkan GPS di browser dan menekan tombol Absen pulang sekali lagi.
+4. UI kirim POST `/karyawan/absensi/clock-out` dengan `lat` + `lng`.
+5. `AttendanceController::clockOut` validasi input `lat` dan `lng`.
+6. Sistem hitung jarak `haversineM` dari koordinat karyawan ke koordinat site — bandingkan dengan `site.radius_m`.
+7. Kalau semua guard lolos, `Attendance` di-update dengan `clock_out_at`, `lat_out`, `lng_out`. Flash success "Absen pulang tercatat".
+
+### Guard yang dicek server
+
+- `D4` — harus ada baris `Attendance` untuk `work_date` hari ini (karyawan sudah clock-in).
+- `D5` — `clock_out_at` harus masih `null` (idempoten: sekali clock-out per hari).
+- `D6` — jarak <= radius; kalau di luar, 422 dengan jarak aktual.
+
 ## Catatan implementasi
-- Tombol "Absen pulang" di UI Karyawan mengecek dulu apakah GPS sudah aktif. Kalau belum, otomatis membuka kamera + memancing izin GPS lalu meminta user menekan tombol lagi (UX ramah).
-- Server tidak menghitung status "early_leave" otomatis; itu keputusan admin lewat filter waktu di UI absensi.
-- Idempoten: kedua kali clock-out di hari yang sama akan ditolak 422.
+- Tombol Absen pulang di UI Karyawan mengecek dulu state GPS/kamera. Kalau belum aktif, otomatis membuka kamera dan memancing izin GPS lalu meminta user menekan tombol lagi (UX ramah, hindari toast error mentah).
+- Server tidak menghitung status `early_leave` otomatis; itu keputusan admin lewat filter waktu di UI absensi admin.
+- Idempoten: request clock-out kedua di hari yang sama akan ditolak dengan 422.

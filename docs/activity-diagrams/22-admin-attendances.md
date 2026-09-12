@@ -5,71 +5,114 @@ Halaman `/admin/attendances` untuk Admin lihat, filter, ekspor CSV, dan hapus ca
 ## Aktor
 - **Super Admin** — akses semua data attendance.
 - **Admin Wilayah** — hanya `region_id` sendiri.
-- **Sistem** — `Admin\AttendanceController::index`, `destroy`.
+- **Sistem** — `Admin\AttendanceController::index` + `destroy`.
 
-## Alur
+## Flowchart
 
 ```mermaid
 flowchart TD
-    Start((Mulai)) --> A1
+    START([MULAI]):::se
 
-    subgraph Admin[Admin]
-        A1[Buka /super-admin/attendances atau /admin/attendances]
-        A2[/Lihat daftar kehadiran dengan filter:<br/>tanggal, wilayah, titik proyek, status,<br/>cari nama/email/]
-        A3[/Lihat ringkasan: hadir, terlambat, pakai toleransi/]
-        A4{Aksi?}
-        A5[Klik baris untuk lihat detail]
-        A6[/Lihat foto selfie + lokasi lat lng + jarak/]
-        A7[Klik Export CSV]
-        A8[/Download file CSV filter aktif/]
-        A9[Klik Hapus baris]
-        A10[ConfirmDialog danger:<br/>Hapus catatan absensi nama + tanggal?]
-        A11{Yakin?}
-    end
+    A1["1. Buka halaman<br/>/super-admin/attendances<br/>atau /admin/attendances"]:::user
+    S1["2. AttendanceController::index<br/>attendancesFor(scope), max 500 baris"]:::sys
+    S2["3. Load regions untuk<br/>dropdown filter"]:::sys
+    A2["4. Terapkan filter:<br/>tanggal, wilayah, titik,<br/>status, cari nama/email"]:::user
+    A3["5. Lihat ringkasan:<br/>hadir, terlambat,<br/>pakai toleransi"]:::user
+    D1{"Pilih aksi?"}:::dec
 
-    subgraph Sistem[Sistem]
-        S1[AttendanceController::index<br/>AdminPresenter::attendancesFor scope]
-        S2[Load regions untuk filter dropdown]
-        S3[Generate CSV client-side dari data terfilter]
-        S4[DELETE /attendances/id]
-        S5{Region_id attendance = scope user?}
-        S6[403 Forbidden]
-        S7[Attendance::delete]
-        S8[[Flash success: Absensi dihapus]]
-    end
+    A4a["6a. Klik baris untuk detail"]:::user
+    A5a["7a. Lihat foto selfie +<br/>lokasi lat/lng + jarak"]:::user
 
+    A4b["6b. Klik Export CSV"]:::user
+    S3["7b. Generate CSV client-side<br/>via Blob + URL.createObjectURL"]:::sys
+    A5b["8b. Download file CSV<br/>filter aktif"]:::user
+
+    A4c["6c. Klik Hapus baris"]:::user
+    A5c["7c. ConfirmDialog danger<br/>Hapus catatan absensi<br/>{nama} + {tanggal}?"]:::user
+    D2{"8c. Yakin?"}:::dec
+    S4["9c. DELETE /attendances/{id}"]:::sys
+    D3{"10c. region_id attendance<br/>= scope user?"}:::dec
+    S5["11c. Attendance::delete()"]:::sys
+
+    E1["ERROR<br/>403 Forbidden"]:::err
+    CANCEL["BATAL<br/>Tidak dihapus"]:::ok
+    OK["SUKSES<br/>Flash: Absensi dihapus /<br/>File CSV terunduh"]:::ok
+    END([SELESAI]):::se
+
+    START --> A1
     A1 --> S1
     S1 --> S2
     S2 --> A2
     A2 --> A3
-    A3 --> A4
-    A4 -->|Detail| A5
-    A5 --> A6
-    A6 --> End((Selesai))
-    A4 -->|Export| A7
-    A7 --> S3
-    S3 --> A8
-    A8 --> End
-    A4 -->|Hapus| A9
-    A9 --> A10
-    A10 --> A11
-    A11 -->|Tidak| End
-    A11 -->|Ya| S4
-    S4 --> S5
-    S5 -->|Tidak| S6
-    S5 -->|Ya| S7
-    S7 --> S8
-    S8 --> End
-    S6 --> End
+    A3 --> D1
 
-    classDef actor fill:#EFF6FF,stroke:#1E3A8A,stroke-width:1px,color:#0F172A
-    classDef system fill:#F1F5F9,stroke:#64748B,stroke-width:1px,color:#0F172A
-    class Admin actor
-    class Sistem system
+    D1 -->|detail| A4a
+    A4a --> A5a
+    A5a --> END
+
+    D1 -->|export| A4b
+    A4b --> S3
+    S3 --> A5b
+    A5b --> OK
+
+    D1 -->|hapus| A4c
+    A4c --> A5c
+    A5c --> D2
+    D2 -->|tidak| CANCEL
+    D2 -->|ya| S4
+    S4 --> D3
+    D3 -->|tidak| E1
+    D3 -->|ya| S5
+    S5 --> OK
+
+    OK --> END
+    CANCEL --> END
+    E1 --> END
+
+    classDef se fill:#0F172A,stroke:#0F172A,color:#fff,stroke-width:2px
+    classDef user fill:#EFF6FF,stroke:#1E3A8A,color:#1E3A8A,stroke-width:1.5px
+    classDef sys fill:#F8FAFC,stroke:#334155,color:#0F172A,stroke-width:1.5px
+    classDef dec fill:#FEF3C7,stroke:#F59E0B,color:#92400E,stroke-width:1.5px
+    classDef err fill:#FEE2E2,stroke:#EF4444,color:#991B1B,stroke-width:1.5px
+    classDef ok fill:#DCFCE7,stroke:#10B981,color:#065F46,stroke-width:1.5px
+
+    linkStyle default stroke:#334155,stroke-width:1.5px
 ```
+
+## Legenda Warna Node
+
+| Warna | Jenis |
+|---|---|
+| Hitam pekat | Start / End |
+| Biru muda | Aksi Aktor (Admin) |
+| Abu-abu putih | Proses Sistem |
+| Kuning | Keputusan (kondisi if/else) |
+| Merah muda | Jalur error |
+| Hijau muda | Hasil sukses / batal |
+
+## Langkah-Langkah Detail
+
+1. Admin membuka halaman daftar attendance.
+2. `AttendanceController::index` memanggil `AdminPresenter::attendancesFor($scope)` — max 500 baris terakhir.
+3. Controller juga load daftar wilayah untuk dropdown filter.
+4. Admin bisa memfilter data berdasarkan tanggal, wilayah, titik proyek, status (hadir/terlambat/pakai toleransi), atau cari nama/email.
+5. Admin melihat ringkasan angka di header: total hadir, total terlambat, total pakai toleransi.
+6. Admin memilih salah satu aksi:
+   - **6a.** Klik baris untuk lihat detail.
+   - **6b.** Export data ke CSV.
+   - **6c.** Hapus catatan absensi tertentu.
+7. Sistem/user menjalankan langkah berikutnya sesuai aksi:
+   - **7a.** Panel detail muncul dengan foto selfie, koordinat lat/lng, dan jarak ke titik proyek.
+   - **7b.** FE generate CSV dari data terfilter menggunakan `Blob` + `URL.createObjectURL`.
+   - **7c.** `ConfirmDialog` tone danger meminta konfirmasi dengan nama karyawan + tanggal absensi.
+8. Untuk hapus: user konfirmasi lewat dialog.
+9. Kalau konfirmasi, browser kirim `DELETE /attendances/{id}`.
+10. Controller cek scope: `region_id` attendance harus sesuai scope user.
+11. Kalau lolos, `Attendance::delete()` dieksekusi dan flash success ditampilkan.
 
 ## Catatan implementasi
 - Data attendance dibatasi 500 baris terakhir untuk performa; filter dilakukan client-side.
 - Export CSV pakai `Blob` + `URL.createObjectURL` di FE, tidak melalui server.
-- Hanya Admin yang punya akses hapus. Kalau Admin Wilayah coba hapus baris di luar region → 403.
+- Hanya Admin yang punya akses hapus. Kalau Admin Wilayah coba hapus baris di luar `region_id`-nya → 403.
 - Foto selfie ditampilkan dari `attendance.selfie_url` (fallback avatar default).
+- Filter dropdown wilayah untuk Admin Wilayah hanya menampilkan wilayahnya sendiri (auto-select).
