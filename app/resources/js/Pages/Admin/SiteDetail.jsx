@@ -1,4 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
+import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { getBase } from './_shared';
@@ -11,16 +13,15 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 export default function SiteDetail({ regionId, siteId }) {
     const { url, props } = usePage();
-    const { regions, employees, readOnly, flash, errors } = props;
+    const { regions, employees, readOnly } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
-    const [toast, setToast] = useState(null);
+    const confirm = useConfirm();
     const [editOpen, setEditOpen] = useState(false);
     const [moveOpen, setMoveOpen] = useState(null); // employee to move
     const [addOpen, setAddOpen] = useState(false);
     const [addQ, setAddQ] = useState('');
     const [selectedIds, setSelectedIds] = useState(() => new Set());
-    const [confirmRemove, setConfirmRemove] = useState(null);
     const mapRef = useRef(null);
     const leafletRef = useRef(null);
 
@@ -40,17 +41,6 @@ export default function SiteDetail({ regionId, siteId }) {
         if (!q) return pool;
         return pool.filter((e) => e.nama.toLowerCase().includes(q) || e.email.toLowerCase().includes(q) || e.nik.includes(q));
     }, [employees, region, addQ, siteId]);
-
-    const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
-
-    // toast dari server (flash + error validasi pertama)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => {
-        const serverMsg = flash?.success || flash?.error;
-        if (serverMsg) { showToast(serverMsg, !!flash?.success); return; }
-        const firstErr = errors && Object.values(errors)[0];
-        if (firstErr) showToast(firstErr, false);
-    }, [flash, errors]);
 
     // Leaflet map per titik
     useEffect(() => {
@@ -101,24 +91,31 @@ export default function SiteDetail({ regionId, siteId }) {
     }, [form.lat, form.lng]);
 
     const handleSaveSite = () => {
-        if (!canEdit) { showToast('Hanya own region bisa edit titik', false); return; }
+        if (!canEdit) { toast.error('Hanya boleh mengedit titik di wilayah Anda sendiri'); return; }
         const namaTrim = form.nama_lokasi.trim();
-        if (!namaTrim) { showToast('Nama titik wajib', false); return; }
+        if (!namaTrim) { toast.error('Nama titik wajib diisi'); return; }
         const dup = region.locations.some((s) => s.id !== site.id && s.nama_lokasi.trim().toLowerCase() === namaTrim.toLowerCase());
-        if (dup) { showToast('Nama titik sudah ada di wilayah ini', false); return; }
+        if (dup) { toast.error('Nama titik sudah ada di wilayah ini'); return; }
         const lat = Number(form.lat), lng = Number(form.lng), radius = Number(form.radius);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) { showToast('Lat/Lng tidak valid', false); return; }
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { showToast('Lat -90..90, Lng -180..180', false); return; }
-        if (radius < 50 || radius > 1000) { showToast('Radius 50–1000m', false); return; }
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) { toast.error('Latitude dan longitude tidak valid'); return; }
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { toast.error('Latitude harus -90..90 dan Longitude -180..180'); return; }
+        if (radius < 50 || radius > 1000) { toast.error('Radius harus antara 50–1000 meter'); return; }
         router.put(`${base}/sites/${site.id}`, {
             nama_lokasi: namaTrim, lat, lng, radius, address: form.address.trim(),
         }, { preserveScroll: true });
         setEditOpen(false);
     };
 
-    const handleRemoveFromSite = () => {
-        showToast('Tidak bisa keluarkan — 1 karyawan wajib punya 1 titik. Gunakan Pindah.', false);
-        setConfirmRemove(null);
+    const handleRemove = async (emp) => {
+        const ok = await confirm({
+            title: `Keluarkan ${emp.nama} dari titik ini?`,
+            description: `1 karyawan wajib punya 1 titik — gunakan Pindah ke titik lain di ${region.name}. Tidak bisa tanpa titik. Tekan lanjut untuk membuka dialog Pindah.`,
+            confirmLabel: 'Buka Pindah titik',
+            cancelLabel: 'Batal',
+            tone: 'warning',
+        });
+        if (!ok) return;
+        setMoveOpen(emp);
     };
 
     const handleAssign = (empId) => {
@@ -144,9 +141,6 @@ export default function SiteDetail({ regionId, siteId }) {
         router.post(`${base}/sites/${site.id}/employees`, { employee_ids: ids }, { preserveScroll: true });
         setSelectedIds(new Set());
         setAddOpen(false); setAddQ('');
-    };
-    const handleConfirmRemove = () => {
-        if (confirmRemove) handleRemoveFromSite(confirmRemove.id);
     };
 
     const handleMove = (targetSiteId) => {
@@ -251,7 +245,7 @@ export default function SiteDetail({ regionId, siteId }) {
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex gap-1 justify-end">
                                                 <button type="button" onClick={() => setMoveOpen(e)} className="text-xs font-medium text-[#1E3A8A] bg-[#EFF6FF] px-3 py-1.5 rounded-lg">Pindah</button>
-                                                <button type="button" onClick={() => setConfirmRemove(e)} title="Keluarkan — wajib pindah titik" className="text-xs font-medium text-[#991B1B] bg-[#FEF2F2] px-3 py-1.5 rounded-lg">Keluarkan</button>
+                                                <button type="button" onClick={() => handleRemove(e)} title="Keluarkan — wajib pindah titik" className="text-xs font-medium text-[#991B1B] bg-[#FEF2F2] px-3 py-1.5 rounded-lg">Keluarkan</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -262,8 +256,6 @@ export default function SiteDetail({ regionId, siteId }) {
                     {anggota.length === 0 && <p className="text-center text-sm text-[#94A3B8] py-8">Belum ada anggota di titik ini — tambah karyawan own region.</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">1 karyawan = 1 titik — dipindah lewat tombol Pindah • Di luar titik assigned ditolak 422.</div>
                 </div>
-
-                {toast && <p className={`text-xs text-center rounded-xl py-2 px-3 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
 
                 {editOpen && (
                     <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={() => setEditOpen(false)}>
@@ -344,22 +336,6 @@ export default function SiteDetail({ regionId, siteId }) {
                             <div className="px-4 py-3 flex items-center justify-between gap-2 border-t bg-white shrink-0">
                                 <p className="text-xs text-[#64748B]">{selectedIds.size === 0 ? 'Centang beberapa, atau +1 per baris' : `${selectedIds.size} akan ditambah ke ${site.nama_lokasi}`}</p>
                                 <button type="button" onClick={handleBulkAssign} disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? 'Pilih minimal 1 karyawan' : `Tambah ${selectedIds.size} ke titik`} className={`text-sm font-semibold px-4 py-2 rounded-xl shrink-0 ${selectedIds.size === 0 ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Tambah ({selectedIds.size})</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {confirmRemove && (
-                    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmRemove(null)}>
-                        <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
-                            <div className="px-6 py-4">
-                                <h3 className="font-semibold text-[#0F172A]">Keluarkan {confirmRemove.nama}?</h3>
-                                <p className="text-sm text-[#64748B] mt-2">1 karyawan wajib punya 1 titik — gunakan <span className="font-semibold">Pindah</span> ke titik lain di {region.name}. Tidak bisa tanpa titik.</p>
-                                <p className="text-xs text-[#94A3B8] mt-2">Dari: {site.nama_lokasi} • {site.radius} m</p>
-                            </div>
-                            <div className="px-6 pb-5 flex gap-2">
-                                <button type="button" onClick={() => setConfirmRemove(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
-                                <button type="button" onClick={() => { setConfirmRemove(null); if (confirmRemove) setMoveOpen(confirmRemove); }} className="flex-1 rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Pindah titik</button>
                             </div>
                         </div>
                     </div>

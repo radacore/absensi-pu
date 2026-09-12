@@ -1,4 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
+import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -10,7 +12,7 @@ export default function CutiAdmin(){
     const isWilayah = base === '/admin' || base === '/wilayah';
     const regionsData = props.regions ?? [];
     const list = props.list ?? [];
-    const flash = props.flash;
+    const confirm = useConfirm();
     const [q,setQ]=useState('');
     const ownRegion = regionsData[0]?.name || 'Kab. Gowa';
     const wilayahNames = useMemo(()=> regionsData.map((r)=>r.name),[regionsData]);
@@ -18,8 +20,6 @@ export default function CutiAdmin(){
     const [wilayah,setWilayah]=useState(isWilayah ? ownRegion : 'Semua');
     const [siteFilter,setSiteFilter]=useState('Semua');
     const [status,setStatus]=useState('Semua');
-    const [toast,setToast]=useState(null);
-    useEffect(()=>{ if(flash?.success) { setToast(flash.success); setTimeout(()=>setToast(null),2000); } if(flash?.error){ setToast(flash.error); setTimeout(()=>setToast(null),2000); } },[flash?.success, flash?.error]);
     useEffect(()=>{ if(isWilayah) setWilayah(ownRegion); },[ownRegion, isWilayah]);
 
     const sitesForWilayah = useMemo(()=>{
@@ -32,15 +32,31 @@ export default function CutiAdmin(){
         return r ? r.locations : [];
     },[regionsData,wilayah,isWilayah,ownRegion]);
 
-    const handleApprove=(id)=>{
-        router.put(`${base}/cuti/${id}/approve`, {}, { preserveScroll:true, onError:(e)=>{ setToast(Object.values(e).flat().join(' ')||'Gagal'); setTimeout(()=>setToast(null),2000); }});
+    const handleApprove=async (id)=>{
+        const target = list.find((x)=>x.id===id);
+        const ok = await confirm({
+            title: target ? `Setujui cuti ${target.nama}?` : 'Setujui cuti ini?',
+            description: target ? `${target.jenis} • ${target.tgl} • ${target.wilayah}. Cuti akan naik ke level berikutnya.` : 'Cuti akan naik ke level berikutnya sesuai kewenangan.',
+            confirmLabel: 'Ya, setujui',
+            cancelLabel: 'Batal',
+            tone: 'warning',
+        });
+        if (!ok) return;
+        router.put(`${base}/cuti/${id}/approve`, {}, { preserveScroll:true });
     };
     const handleReject=(id)=>{
         const note = prompt('Catatan penolakan (opsional):') || '';
-        router.put(`${base}/cuti/${id}/reject`, { note }, { preserveScroll:true, onError:(e)=>{ setToast(Object.values(e).flat().join(' ')||'Gagal'); setTimeout(()=>setToast(null),2000); }});
+        router.put(`${base}/cuti/${id}/reject`, { note }, { preserveScroll:true });
     };
-    const handleDelete=(id, nama)=>{
-        if(!confirm(`Hapus cuti ${nama}?`)) return;
+    const handleDelete=async (id, nama)=>{
+        const ok = await confirm({
+            title: `Hapus cuti ${nama}?`,
+            description: 'Data pengajuan cuti akan dihapus permanen dan tidak dapat dikembalikan.',
+            confirmLabel: 'Ya, hapus',
+            cancelLabel: 'Batal',
+            tone: 'danger',
+        });
+        if (!ok) return;
         router.delete(`${base}/cuti/${id}`, { preserveScroll:true });
     };
 
@@ -96,7 +112,6 @@ export default function CutiAdmin(){
                     <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Cari nama / email / jenis..." className="flex-1 min-w-[180px] rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
                     <span className="text-xs text-[#94A3B8]">{filtered.length} dari {list.length}</span>
                 </div>
-                {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2">{toast}</p>}
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">

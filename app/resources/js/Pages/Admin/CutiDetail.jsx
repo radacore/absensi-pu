@@ -1,6 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
 import { Link, router, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 function getBase(url){ if(url.startsWith('/super-admin')) return '/super-admin'; if(url.startsWith('/admin')) return '/admin'; if(url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
@@ -12,17 +13,23 @@ export default function CutiDetail(){
     const list = props.list ?? [];
     const fallback = useMemo(()=> list.find((c)=>String(c.id)===String(id)) || list[0] || item || null,[list,id,item]);
     const data = item || fallback;
+    const confirm = useConfirm();
     const [showDoc,setShowDoc]=useState(false);
     const [note,setNote]=useState('');
-    const [toast,setToast]=useState(null);
-    const flash = props.flash;
-    useEffect(()=>{ if(flash?.success){ setToast(flash.success); setTimeout(()=>setToast(null),2000);} if(flash?.error){ setToast(flash.error); setTimeout(()=>setToast(null),2000);} },[flash?.success,flash?.error]);
     if(!data) return <AdminLayout><p className="text-sm text-[#94A3B8]">Cuti tidak ditemukan</p></AdminLayout>;
-    const approve=()=>{
-        router.put(`${base}/cuti/${data.id}/approve`, {}, { preserveScroll:true, onError:(e)=>{ setToast(Object.values(e).flat().join(' ')||'Gagal'); setTimeout(()=>setToast(null),2000);} });
+    const approve=async ()=>{
+        const ok = await confirm({
+            title: `Setujui cuti ${data.nama}?`,
+            description: `${data.jenis} • ${data.tgl} • ${data.wilayah}. Level akan naik ke ${Math.min(3, data.level+1)}/3.`,
+            confirmLabel: 'Ya, setujui',
+            cancelLabel: 'Batal',
+            tone: 'warning',
+        });
+        if (!ok) return;
+        router.put(`${base}/cuti/${data.id}/approve`, {}, { preserveScroll:true });
     };
     const reject=()=>{
-        router.put(`${base}/cuti/${data.id}/reject`, { note: note.trim() || undefined }, { preserveScroll:true, onError:(e)=>{ setToast(Object.values(e).flat().join(' ')||'Gagal'); setTimeout(()=>setToast(null),2000);} });
+        router.put(`${base}/cuti/${data.id}/reject`, { note: note.trim() || undefined }, { preserveScroll:true });
     };
     return (
         <AdminLayout>
@@ -31,7 +38,6 @@ export default function CutiDetail(){
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M15 18l-6-6 6-6"/></svg>
                     Kembali ke daftar cuti
                 </Link>
-                {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2">{toast}</p>}
                 <div className="bg-white rounded-2xl p-6 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <div className="flex items-start gap-4">
                         <div className="w-14 h-14 rounded-full bg-[#F1F5F9] flex items-center justify-center text-sm font-semibold text-[#334155]">{String(data.nama||'—').split(' ').map((w)=>w[0]).join('').slice(0,2)}</div>

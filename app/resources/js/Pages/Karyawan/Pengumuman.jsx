@@ -1,6 +1,7 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
 import { router, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 export default function Pengumuman(){
     const { props } = usePage();
@@ -8,9 +9,7 @@ export default function Pengumuman(){
     const raw = props.list ?? [];
     const readIds = new Set(props.readIds ?? []);
     const [tab,setTab]=useState('Semua');
-    const [toast,setToast]=useState(null);
-    const flash = props.flash;
-    useEffect(()=>{ if(flash?.success) { setToast(flash.success); setTimeout(()=>setToast(null),2000); } },[flash?.success]);
+    const confirm = useConfirm();
 
     const visible = useMemo(()=>{
         let list = raw;
@@ -22,7 +21,14 @@ export default function Pengumuman(){
     const markRead=(id)=>{
         router.post(`/karyawan/pengumuman/${id}/read`, {}, { preserveScroll:true, onError:()=>{} });
     };
-    const markAll=()=>{
+    const markAll=async ()=>{
+        const ok = await confirm({
+            title: 'Tandai semua pengumuman sebagai dibaca?',
+            confirmLabel: 'Ya, tandai',
+            cancelLabel: 'Batal',
+            tone: 'default',
+        });
+        if(!ok) return;
         router.post('/karyawan/pengumuman/read-all', {}, { preserveScroll:true, onError:()=>{} });
     };
     const unreadCount = visible.filter((p)=> !readIds.has(p.id)).length;
@@ -43,7 +49,6 @@ export default function Pengumuman(){
                     ))}
                     <span className="ml-auto text-xs text-[#94A3B8] self-center">{visible.length} pengumuman</span>
                 </div>
-                {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2">{toast}</p>}
                 {visible.length===0 ? (
                     <p className="text-sm text-[#94A3B8] bg-white rounded-2xl p-6 text-center">Belum ada pengumuman{me ? ` untuk ${me.region}` : ''}</p>
                 ) : (

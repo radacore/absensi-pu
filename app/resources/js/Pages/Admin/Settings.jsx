@@ -1,4 +1,5 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -13,29 +14,17 @@ export default function Settings() {
     const [jamPulang, setJamPulang] = useState(init.jamPulang);
     const [toleransi, setToleransi] = useState(init.toleransi);
     const [loveMax, setLoveMax] = useState(init.loveMax);
-    const [err, setErr] = useState(null);
-    const [toast, setToast] = useState(null);
 
-    useEffect(() => {
-        if (props.flash?.success) { setToast({ msg: props.flash.success, ok: true }); setTimeout(() => setToast(null), 2200); }
-        if (props.flash?.error) { setToast({ msg: props.flash.error, ok: false }); setTimeout(() => setToast(null), 2200); }
-    }, [props.flash?.success, props.flash?.error]); // eslint-disable-line react-hooks/exhaustive-deps
-    useEffect(() => {
-        if (props.errors && Object.keys(props.errors).length) { setErr(Object.values(props.errors).flat().join(' ')); setTimeout(() => setErr(null), 2500); }
-    }, [props.errors]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => {
         setJamMasuk(init.jamMasuk); setJamPulang(init.jamPulang); setToleransi(init.toleransi); setLoveMax(init.loveMax);
     }, [init.jamMasuk, init.jamPulang, init.toleransi, init.loveMax]);
 
     const handleSave = () => {
         if (readOnly) return;
-        if (jamMasuk >= jamPulang) { setErr('Jam masuk harus sebelum jam pulang'); setTimeout(() => setErr(null), 2500); return; }
-        if (toleransi < 0 || toleransi > 60) { setErr('Kelonggaran 0–60 menit'); setTimeout(() => setErr(null), 2500); return; }
-        if (loveMax < 1 || loveMax > 10) { setErr('Toleransi 1–10'); setTimeout(() => setErr(null), 2500); return; }
-        router.put(`${base}/settings`, { jamMasuk, jamPulang, toleransi, loveMax }, {
-            preserveScroll: true,
-            onError: (e) => { setErr(Object.values(e).flat().join(' ')); setTimeout(() => setErr(null), 2500); },
-        });
+        if (jamMasuk >= jamPulang) { toast.error('Jam masuk harus lebih awal dari jam pulang'); return; }
+        if (toleransi < 0 || toleransi > 60) { toast.error('Kelonggaran harus antara 0–60 menit'); return; }
+        if (loveMax < 1 || loveMax > 10) { toast.error('Kuota toleransi harus antara 1–10 per bulan'); return; }
+        router.put(`${base}/settings`, { jamMasuk, jamPulang, toleransi, loveMax }, { preserveScroll: true });
     };
 
     return (
@@ -96,8 +85,6 @@ export default function Settings() {
                 </div>
 
                 <button type="button" onClick={handleSave} disabled={readOnly} className={`w-full rounded-xl py-3 text-sm font-semibold transition ${readOnly ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white hover:bg-[#1E3A8A]'}`}>{readOnly ? 'Read-only — hanya Super Admin bisa simpan' : 'Simpan pengaturan'}</button>
-                {err && <p className="text-xs text-center text-[#991B1B] bg-[#FEF2F2] rounded-xl py-2">{err}</p>}
-                {toast && <p className={`text-xs text-center rounded-xl py-2 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
                 {readOnly && <p className="text-xs text-center text-[#94A3B8]">Wilayah lihat saja — perubahan hanya di /super-admin/settings oleh Super Admin</p>}
             </div>
         </AdminLayout>

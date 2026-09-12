@@ -1,4 +1,5 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
+import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -14,8 +15,6 @@ export default function Love(){
     const settings = props.settings ?? { loveMax:4, loveQuota:{ sisa:4, max:4, approved:0, pending:0 } };
     const claims0 = props.claims ?? [];
     const approvers = props.approvers ?? [];
-    const flash = props.flash;
-    const errors = props.errors;
 
     const max = settings.loveMax ?? 4;
     const quota = settings.loveQuota ?? { sisa: max, max, approved:0, pending:0 };
@@ -28,10 +27,6 @@ export default function Love(){
     const [qApprover,setQApprover]=useState('');
     const [approverId,setApproverId]=useState(approvers[0]?.id ?? null);
     const [openApprover,setOpenApprover]=useState(false);
-    const [toast,setToast]=useState(null);
-    const show=(msg,ok=true)=>{ setToast({msg,ok}); setTimeout(()=>setToast(null),2500); };
-    useEffect(()=>{ if(flash?.success) show(flash.success,true); if(flash?.error) show(flash.error,false); },[flash?.success, flash?.error]); // eslint-disable-line react-hooks/exhaustive-deps
-    useEffect(()=>{ if(errors && Object.keys(errors).length) show(Object.values(errors).flat().join(' '),false); },[errors]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(()=>{ if(approvers.length && approverId==null) setApproverId(approvers[0].id); },[approvers,approverId]);
 
     const filteredApprovers=useMemo(()=>{
@@ -42,17 +37,16 @@ export default function Love(){
     const selectedApprover=useMemo(()=> approvers.find((a)=>a.id===approverId)||null,[approvers,approverId]);
 
     const handleClaim=()=>{
-        if(!alasan.trim()){ show('Isi alasan',false); return; }
-        if(!approverId){ show('Pilih atasan untuk di-ACC',false); return; }
-        if(sisa<=0){ show('Sisa Toleransi 0 — reset bulan depan',false); return; }
-        if(!tgl){ show('Pilih tanggal',false); return; }
-        if(tgl>todayISO()){ show('Tanggal tidak boleh melebihi hari ini',false); return; }
-        if(isWeekend(tgl)){ show('Tanggal tidak boleh weekend',false); return; }
-        if(!jam || !/^\d{2}:\d{2}$/.test(jam)){ show('Jam wajib format HH:MM',false); return; }
+        if(!alasan.trim()){ toast.error('Isi alasan'); return; }
+        if(!approverId){ toast.error('Pilih atasan untuk di-ACC'); return; }
+        if(sisa<=0){ toast.error('Sisa Toleransi 0 — reset bulan depan'); return; }
+        if(!tgl){ toast.error('Pilih tanggal'); return; }
+        if(tgl>todayISO()){ toast.error('Tanggal tidak boleh melebihi hari ini'); return; }
+        if(isWeekend(tgl)){ toast.error('Tanggal tidak boleh weekend'); return; }
+        if(!jam || !/^\d{2}:\d{2}$/.test(jam)){ toast.error('Jam wajib format HH:MM'); return; }
         router.post('/karyawan/love',{ jenis, tgl, jam, alasan: alasan.trim(), approver_id: approverId },{
             preserveScroll:true,
             onSuccess:()=> setAlasan(''),
-            onError:(e)=> show(Object.values(e).flat().join(' ') || 'Gagal',false),
         });
     };
 
@@ -134,7 +128,6 @@ export default function Love(){
                         </div>
                         <button type="button" onClick={handleClaim} disabled={!alasan.trim() || !approverId || sisa<=0} title={!alasan.trim() ? 'Isi alasan dulu' : !approverId ? 'Pilih atasan' : sisa<=0 ? 'Sisa Toleransi 0 — reset 1 bulan depan' : ''} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 toleransi — Kirim ke {selectedApprover ? selectedApprover.nama : 'atasan'}</button>
                     </div>
-                    {toast && <p className={`text-xs text-center rounded-xl py-2 mt-3 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">

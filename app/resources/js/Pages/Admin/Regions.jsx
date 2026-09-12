@@ -1,4 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
+import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getBase, OWN_REGION, MAX_SITES } from './_shared';
@@ -11,11 +13,11 @@ const emptySite = { nama_lokasi: '', lat: '', lng: '', radius: 200, address: '' 
 
 export default function Regions() {
     const { url, props } = usePage();
-    const { regions, employees, flash, errors } = props;
+    const { regions, employees } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
+    const confirm = useConfirm();
     const [q, setQ] = useState('');
-    const [toast, setToast] = useState(null);
 
     // wilayah modal (super admin only for add, own edit for admin wilayah)
     const [wilayahOpen, setWilayahOpen] = useState(false);
@@ -25,27 +27,15 @@ export default function Regions() {
     // tambah titik per 1 — dedicated single-site flow with maps
     const [addSiteFor, setAddSiteFor] = useState(null); // region id
     const [siteForm, setSiteForm] = useState(emptySite);
-    const [confirmDeleteSite, setConfirmDeleteSite] = useState(null);
-    const [confirmDeleteWilayah, setConfirmDeleteWilayah] = useState(null);
     const siteMapRef = useRef(null);
     const siteLeafletRef = useRef(null);
-
-    const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
-
-    // toast dari server (flash success/error + error validasi pertama)
-    useEffect(() => {
-        const serverMsg = flash?.success || flash?.error;
-        if (serverMsg) { showToast(serverMsg, !!flash?.success); return; }
-        const firstErr = errors && Object.values(errors)[0];
-        if (firstErr) showToast(firstErr, false);
-    }, [flash, errors]);
 
     const liveOwn = useMemo(() => regions.find((r) => r.name === OWN_REGION) || regions.find((r) => r.id === 2) || regions[0], [regions]);
     const displayRegions = isWilayah ? (liveOwn ? [liveOwn] : []) : regions;
     const filtered = displayRegions.filter((r) => r.name.toLowerCase().includes(q.toLowerCase()) || r.kantor.toLowerCase().includes(q.toLowerCase()));
 
     const openAddWilayah = () => {
-        if (isWilayah) { showToast('Hanya Super Admin bisa tambah wilayah'); return; }
+        if (isWilayah) { toast.error('Hanya Super Admin yang bisa menambah wilayah'); return; }
         setEditingWilayah(null); setWilayahForm(emptyWilayah); setWilayahOpen(true);
     };
     const openEditWilayah = (r) => {
@@ -59,11 +49,11 @@ export default function Regions() {
     const handleSaveWilayah = () => {
         const nameTrim = wilayahForm.name.trim();
         const kantorTrim = wilayahForm.kantor.trim();
-        if (!nameTrim || !kantorTrim) { showToast('Nama wilayah & kantor wajib', false); return; }
+        if (!nameTrim || !kantorTrim) { toast.error('Nama wilayah dan nama kantor wajib diisi'); return; }
         const nameLower = nameTrim.toLowerCase();
         const dup = regions.some((r) => r.name.trim().toLowerCase() === nameLower && r.id !== editingWilayah?.id);
-        if (dup) { showToast('Nama wilayah sudah ada', false); return; }
-        if (wilayahForm.tipe === 'pusat' && regions.some((r) => r.tipe === 'pusat' && r.id !== editingWilayah?.id)) { showToast('Hanya 1 Kantor Pusat — Makassar sudah Pusat', false); return; }
+        if (dup) { toast.error('Nama wilayah sudah terdaftar'); return; }
+        if (wilayahForm.tipe === 'pusat' && regions.some((r) => r.tipe === 'pusat' && r.id !== editingWilayah?.id)) { toast.error('Hanya boleh ada 1 Kantor Pusat — Makassar sudah menjadi Pusat'); return; }
         const payload = { name: nameTrim, kantor: kantorTrim, tipe: wilayahForm.tipe, address: wilayahForm.address.trim() };
         if (editingWilayah) {
             router.put(`${base}/regions/${editingWilayah.id}`, payload, { preserveScroll: true });
@@ -72,26 +62,29 @@ export default function Regions() {
         }
         setWilayahOpen(false);
     };
-    const handleDeleteWilayah = (id) => {
-        if (isWilayah) { showToast('Admin Wilayah tidak bisa hapus wilayah', false); return; }
+    const handleDeleteWilayah = async (id) => {
+        if (isWilayah) { toast.error('Admin Wilayah tidak dapat menghapus wilayah'); return; }
         const r = regions.find((x) => x.id === id);
         if (!r) return;
         const nEmp = employees.filter((e) => e.region === r.name).length;
         const nSites = r.locations.length;
-        setConfirmDeleteWilayah({ id, name: r.name, nEmp, nSites });
-    };
-    const confirmDeleteWilayahAction = () => {
-        if (!confirmDeleteWilayah) return;
-        const id = confirmDeleteWilayah.id;
+        const desc = `${nSites} titik proyek${nEmp > 0 ? ` dan ${nEmp} karyawan akan ikut terhapus` : ' akan ikut terhapus (tidak ada karyawan)'}. Tindakan ini tidak dapat dibatalkan.`;
+        const ok = await confirm({
+            title: `Hapus wilayah ${r.name}?`,
+            description: desc,
+            confirmLabel: 'Ya, hapus wilayah',
+            cancelLabel: 'Batal',
+            tone: 'danger',
+        });
+        if (!ok) return;
         router.delete(`${base}/regions/${id}`, { preserveScroll: true });
-        setConfirmDeleteWilayah(null);
     };
 
     // tambah 1 titik saja — with maps picker
     const openAddSite = (region) => {
         const can = isWilayah ? region.name === OWN_REGION : true;
-        if (!can) { showToast('Hanya own region'); return; }
-        if (region.locations.length >= MAX_SITES) { showToast(`Maksimal ${MAX_SITES} titik per wilayah`); return; }
+        if (!can) { toast.error('Hanya boleh mengelola titik di wilayah Anda sendiri'); return; }
+        if (region.locations.length >= MAX_SITES) { toast.error(`Maksimal ${MAX_SITES} titik per wilayah`); return; }
         setAddSiteFor(region);
         setSiteForm(emptySite);
     };
@@ -160,13 +153,13 @@ export default function Regions() {
     const handleSaveSite = () => {
         if (!addSiteFor) return;
         const namaTrim = siteForm.nama_lokasi.trim();
-        if (!namaTrim) { showToast('Nama titik wajib', false); return; }
+        if (!namaTrim) { toast.error('Nama titik wajib diisi'); return; }
         const dupSite = addSiteFor.locations.some((s) => s.nama_lokasi.trim().toLowerCase() === namaTrim.toLowerCase());
-        if (dupSite) { showToast('Nama titik sudah ada di wilayah ini', false); return; }
+        if (dupSite) { toast.error('Nama titik sudah ada di wilayah ini'); return; }
         const lat = Number(siteForm.lat), lng = Number(siteForm.lng), radius = Number(siteForm.radius);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) { showToast('Pilih titik di peta / isi lat lng', false); return; }
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { showToast('Lat -90..90, Lng -180..180', false); return; }
-        if (radius < 50 || radius > 1000) { showToast('Radius 50–1000m', false); return; }
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) { toast.error('Pilih titik di peta atau isi Lat/Lng terlebih dahulu'); return; }
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { toast.error('Latitude harus -90..90 dan Longitude -180..180'); return; }
+        if (radius < 50 || radius > 1000) { toast.error('Radius harus antara 50–1000 meter'); return; }
         const regionId = addSiteFor.id;
         router.post(`${base}/regions/${regionId}/sites`, {
             nama_lokasi: namaTrim,
@@ -178,20 +171,23 @@ export default function Regions() {
         closeAddSite();
     };
 
-    const handleDeleteSite = (regionId, siteId) => {
+    const handleDeleteSite = async (regionId, siteId) => {
         const region = regions.find((r) => r.id === regionId);
         if (!region) return;
-        if (isWilayah && region.name !== OWN_REGION) { showToast('Hanya own region', false); return; }
-        if (region.locations.length <= 1) { showToast('Minimal 1 titik per wilayah', false); return; }
+        if (isWilayah && region.name !== OWN_REGION) { toast.error('Hanya boleh mengelola titik di wilayah Anda sendiri'); return; }
+        if (region.locations.length <= 1) { toast.error('Minimal harus ada 1 titik per wilayah'); return; }
         const nAnggota = employees.filter((e) => e.office_location_id === siteId).length;
         const siteName = region.locations.find((s) => s.id === siteId)?.nama_lokasi || 'titik ini';
-        setConfirmDeleteSite({ regionId, siteId, siteName, nAnggota, regionName: region.name });
-    };
-    const confirmDeleteSiteAction = () => {
-        if (!confirmDeleteSite) return;
-        const { siteId } = confirmDeleteSite;
+        const desc = `${region.name} • ${nAnggota > 0 ? `${nAnggota} anggota akan otomatis dipindah ke titik lain di wilayah ini.` : 'Tidak ada anggota di titik ini.'}`;
+        const ok = await confirm({
+            title: `Hapus ${siteName}?`,
+            description: desc,
+            confirmLabel: 'Ya, hapus titik',
+            cancelLabel: 'Batal',
+            tone: 'danger',
+        });
+        if (!ok) return;
         router.delete(`${base}/sites/${siteId}`, { preserveScroll: true });
-        setConfirmDeleteSite(null);
     };
 
     const countForSite = (siteId) => employees.filter((e) => e.office_location_id === siteId).length;
@@ -274,8 +270,6 @@ export default function Regions() {
                     </div>
                 </div>
 
-                {toast && <p className={`text-xs text-center rounded-xl py-2 px-3 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
-
                 {wilayahOpen && (
                     <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={closeWilayah}>
                         <div className="bg-white rounded-2xl w-full max-w-[520px] shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -349,36 +343,6 @@ export default function Regions() {
                     </div>
                 )}
 
-                {confirmDeleteSite && (
-                    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDeleteSite(null)}>
-                        <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
-                            <div className="px-6 py-4">
-                                <h3 className="font-semibold text-[#0F172A]">Hapus {confirmDeleteSite.siteName}?</h3>
-                                <p className="text-sm text-[#64748B] mt-2">{confirmDeleteSite.regionName} • {confirmDeleteSite.nAnggota > 0 ? <span className="font-semibold text-[#92400E]">{confirmDeleteSite.nAnggota} anggota akan dipindah ke titik lain di wilayah ini</span> : 'Tidak ada anggota di titik ini.'}</p>
-                            </div>
-                            <div className="px-6 pb-5 flex gap-2">
-                                <button type="button" onClick={() => setConfirmDeleteSite(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
-                                <button type="button" onClick={confirmDeleteSiteAction} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus titik</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {confirmDeleteWilayah && (
-                    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDeleteWilayah(null)}>
-                        <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
-                            <div className="px-6 py-4">
-                                <h3 className="font-semibold text-[#0F172A]">Hapus wilayah {confirmDeleteWilayah.name}?</h3>
-                                <p className="text-sm text-[#64748B] mt-2">{confirmDeleteWilayah.nSites} titik • {confirmDeleteWilayah.nEmp > 0 ? <span className="font-semibold text-[#991B1B]">{confirmDeleteWilayah.nEmp} karyawan akan ikut terhapus</span> : 'Tidak ada karyawan di wilayah ini.'}</p>
-                                <p className="text-xs text-[#94A3B8] mt-1">Titik di wilayah ini juga terhapus.</p>
-                            </div>
-                            <div className="px-6 pb-5 flex gap-2">
-                                <button type="button" onClick={() => setConfirmDeleteWilayah(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
-                                <button type="button" onClick={confirmDeleteWilayahAction} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus wilayah</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </AdminLayout>
     );

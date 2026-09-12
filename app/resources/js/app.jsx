@@ -1,16 +1,27 @@
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
+import { ConfirmProvider } from './Components/ConfirmDialog';
+import ToastHost from './Components/ToastHost';
 import '../css/app.css';
 
 createInertiaApp({
-    resolve: (name) => {
+    resolve: async (name) => {
         const pages = import.meta.glob('./Pages/**/*.jsx', { eager: true });
-        const page = pages[`./Pages/${name}.jsx`];
-        if (!page) {
+        const module = pages[`./Pages/${name}.jsx`];
+        if (!module) {
             console.error(`Page not found: ./Pages/${name}.jsx`);
-            // fallback to welcome
+            return module;
         }
-        return page;
+        const page = module.default;
+        // wrap tiap page dengan providers global (toast + confirm) di dalam
+        // Inertia context supaya usePage bisa dipakai di ToastHost.
+        page.layout = page.layout || ((children) => (
+            <ConfirmProvider>
+                <ToastHost position="top" />
+                {children}
+            </ConfirmProvider>
+        ));
+        return module;
     },
     setup({ el, App, props }) {
         createRoot(el).render(<App {...props} />);

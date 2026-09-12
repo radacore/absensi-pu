@@ -1,47 +1,31 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
+import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { getBase, OWN_REGION, REGION_LIST as regionsList, siteById } from './_shared';
 
 export default function Employees() {
     const { url, props } = usePage();
-    const { regions, employees, flash, errors } = props;
+    const { regions, employees } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     const regionsData = regions;
     const list = employees;
+    const confirm = useConfirm();
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
-    const [toast, setToast] = useState(null);
     const [filterRegion, setFilterRegion] = useState(isWilayah ? OWN_REGION : 'Semua');
     const [filterSite, setFilterSite] = useState('Semua');
     const [filterStatus, setFilterStatus] = useState('Semua');
     const [photo, setPhoto] = useState(null);
     const [preview, setPreview] = useState(null);
-    const [confirmDelete, setConfirmDelete] = useState(null);
-    const [confirmReset, setConfirmReset] = useState(null);
 
     const [form, setForm] = useState({
         nik: '', nip: '', nama: '', email: '', gol: '-', jabatan: '', unit: '', status: 'PNS',
         region: isWilayah ? OWN_REGION : regionsList[1],
         office_location_id: null,
     });
-
-    const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
-
-    // toast dari server (flash + error validasi pertama)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => {
-        const serverMsg = flash?.success || flash?.error;
-        if (serverMsg) { showToast(serverMsg, !!flash?.success); return; }
-        const firstErr = errors && Object.values(errors)[0];
-        if (firstErr) showToast(firstErr, false);
-    }, [flash, errors]);
-
-    // tutup modal konfirmasi begitu reset sukses (server flash reset_password)
-    useEffect(() => {
-        if (flash?.reset_password) setConfirmReset(null);
-    }, [flash?.reset_password]);
 
     // keep form office_location_id valid when region changes
     const sitesForFormRegion = useMemo(() => {
@@ -88,17 +72,17 @@ export default function Employees() {
     };
 
     const save = () => {
-        if (isWilayah && form.region !== OWN_REGION) { showToast(`Admin Wilayah hanya boleh di ${OWN_REGION}`, false); return; }
-        if (!form.nama.trim() || !form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { showToast('Nama & email valid wajib', false); return; }
-        if (!/^\d{16}$/.test(form.nik)) { showToast('NIK 16 digit', false); return; }
-        if (form.office_location_id == null || form.office_location_id === '') { showToast('Titik proyek wajib dipilih — 1 karyawan = 1 titik', false); return; }
+        if (isWilayah && form.region !== OWN_REGION) { toast.error(`Admin Wilayah hanya boleh di ${OWN_REGION}`); return; }
+        if (!form.nama.trim() || !form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { toast.error('Nama dan email valid wajib diisi'); return; }
+        if (!/^\d{16}$/.test(form.nik)) { toast.error('NIK harus 16 digit'); return; }
+        if (form.office_location_id == null || form.office_location_id === '') { toast.error('Titik proyek wajib dipilih (1 karyawan = 1 titik)'); return; }
         const regionObj = regionsData.find((r) => r.name === form.region);
-        if (!regionObj) { showToast('Wilayah tidak ditemukan', false); return; }
+        if (!regionObj) { toast.error('Wilayah tidak ditemukan'); return; }
         const ok = regionObj.locations.some((s) => s.id === Number(form.office_location_id));
-        if (!ok) { showToast('Titik tidak sesuai wilayah', false); return; }
+        if (!ok) { toast.error('Titik tidak sesuai wilayah'); return; }
         if (!editing) {
-            if (list.some((x)=>x.nik===form.nik)) { showToast('NIK sudah ada', false); return; }
-            if (list.some((x)=>x.email===form.email)) { showToast('Email sudah ada', false); return; }
+            if (list.some((x)=>x.nik===form.nik)) { toast.error('NIK sudah terdaftar'); return; }
+            if (list.some((x)=>x.email===form.email)) { toast.error('Email sudah terdaftar'); return; }
         }
         const payload = {
             nik: form.nik, nip: form.nip || '', nama: form.nama, email: form.email, gol: form.gol,
@@ -106,7 +90,7 @@ export default function Employees() {
             region: form.region, office_location_id: Number(form.office_location_id),
         };
         if (editing) {
-            if (isWilayah && editing.region !== OWN_REGION) { showToast('Tidak bisa edit karyawan luar wilayah', false); return; }
+            if (isWilayah && editing.region !== OWN_REGION) { toast.error('Tidak bisa mengedit karyawan luar wilayah'); return; }
             router.put(`${base}/employees/${editing.id}`, payload, { preserveScroll: true });
         } else {
             router.post(`${base}/employees`, payload, { preserveScroll: true });
@@ -114,27 +98,31 @@ export default function Employees() {
         setOpen(false);
     };
 
-    const handleReset = (e) => {
-        if (isWilayah && e.region !== OWN_REGION) { showToast('Hanya own region', false); return; }
-        setConfirmReset(e);
-    };
-    const confirmResetPassword = () => {
-        if (!confirmReset) return;
-        router.post(`${base}/employees/${confirmReset.id}/reset-password`, {}, {
-            preserveScroll: true,
-            onError: (errs) => showToast(Object.values(errs)[0] || 'Gagal reset password', false),
+    const handleReset = async (e) => {
+        if (isWilayah && e.region !== OWN_REGION) { toast.error('Hanya karyawan di wilayah Anda yang bisa direset'); return; }
+        const ok = await confirm({
+            title: `Reset kata sandi ${e.nama}?`,
+            description: `${e.email} • ${e.region}. Kata sandi baru akan disamakan dengan NIK karyawan (${e.nik}) dan karyawan wajib menggantinya saat login berikutnya.`,
+            confirmLabel: 'Reset ke NIK',
+            cancelLabel: 'Batal',
+            tone: 'warning',
         });
+        if (!ok) return;
+        router.post(`${base}/employees/${e.id}/reset-password`, {}, { preserveScroll: true });
     };
-    const remove = (id) => {
+
+    const remove = async (id) => {
         const target = list.find((x)=>x.id===id);
         if (!target) return;
-        if (isWilayah && target.region !== OWN_REGION) { showToast('Hanya own region', false); return; }
-        setConfirmDelete(target);
-    };
-    const confirmRemove = () => {
-        if (!confirmDelete) return;
-        router.delete(`${base}/employees/${confirmDelete.id}`, { preserveScroll: true });
-        setConfirmDelete(null);
+        if (isWilayah && target.region !== OWN_REGION) { toast.error('Hanya karyawan di wilayah Anda yang bisa dihapus'); return; }
+        const ok = await confirm({
+            title: `Hapus ${target.nama}?`,
+            description: `${target.email} • ${target.region}. Data karyawan akan dihapus permanen dan tidak dapat dikembalikan.`,
+            confirmLabel: 'Ya, hapus',
+            tone: 'danger',
+        });
+        if (!ok) return;
+        router.delete(`${base}/employees/${target.id}`, { preserveScroll: true });
     };
 
     return (
@@ -228,46 +216,7 @@ export default function Employees() {
                     </div>
                 </div>
 
-                {toast && <p className={`text-xs text-center rounded-xl py-2 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
 
-                {confirmReset && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmReset(null)}>
-                        <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
-                            <div className="px-6 py-4">
-                                <h3 className="font-semibold text-[#0F172A]">Reset kata sandi {confirmReset.nama}?</h3>
-                                <p className="text-sm text-[#64748B] mt-1">{confirmReset.email} • {confirmReset.region}</p>
-                                <div className="mt-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] p-4 space-y-2">
-                                    <div>
-                                        <p className="text-xs font-medium text-[#94A3B8] uppercase tracking-wider">Kata sandi baru</p>
-                                        <p className="mt-1 font-mono text-base text-[#0F172A] tracking-wider select-all">{confirmReset.nik}</p>
-                                        <p className="text-xs text-[#94A3B8] mt-1">Sesuai NIK karyawan</p>
-                                    </div>
-                                </div>
-                                <p className="text-xs text-[#92400E] bg-[#FEF3C7] rounded-lg px-3 py-2 mt-3">Karyawan wajib mengganti kata sandi saat login berikutnya. Password lama tidak dapat dipakai lagi.</p>
-                            </div>
-                            <div className="px-6 pb-5 flex gap-2">
-                                <button type="button" onClick={() => setConfirmReset(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
-                                <button type="button" onClick={confirmResetPassword} className="flex-1 rounded-xl bg-[#FCB833] text-[#0F172A] py-3 text-sm font-semibold">Reset sekarang</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {confirmDelete && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
-                        <div className="bg-white rounded-2xl w-full max-w-[400px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
-                            <div className="px-6 py-4">
-                                <h3 className="font-semibold text-[#0F172A]">Hapus {confirmDelete.nama}?</h3>
-                                <p className="text-sm text-[#64748B] mt-1">{confirmDelete.email} • {confirmDelete.region}</p>
-                                <p className="text-xs text-[#94A3B8] mt-2">Karyawan akan dihapus dari daftar. Tidak dapat dibatalkan.</p>
-                            </div>
-                            <div className="px-6 pb-5 flex gap-2">
-                                <button type="button" onClick={() => setConfirmDelete(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
-                                <button type="button" onClick={confirmRemove} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {open && (
                     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={close}>

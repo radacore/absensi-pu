@@ -1,4 +1,5 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
+import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -19,19 +20,13 @@ export default function Absensi() {
     const history = props.history ?? [];
     const alreadyToday = !!props.alreadyToday;
     const todayISO = props.todayISO ?? new Date().toISOString().slice(0, 10);
-    const flash = props.flash;
-    const errors = props.errors;
 
     const [captured, setCaptured] = useState(false);
     const [photoPreview, setPhotoPreview] = useState(me.foto || null);
-    const [toast, setToast] = useState(null);
     const [myPos, setMyPos] = useState(null);
     const [geoError, setGeoError] = useState(null);
     const [geoLoading, setGeoLoading] = useState(false);
 
-    const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
-    useEffect(() => { if (flash?.success) showToast(flash.success, true); if (flash?.error) showToast(flash.error, false); }, [flash?.success, flash?.error]); // eslint-disable-line react-hooks/exhaustive-deps
-    useEffect(() => { if (errors && Object.keys(errors).length) showToast(Object.values(errors).flat().join(' '), false); }, [errors]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => { if (me.foto) setPhotoPreview(me.foto); }, [me.foto]);
 
     const jarak = useMemo(() => {
@@ -56,33 +51,31 @@ export default function Absensi() {
     const handleOpenCapture = () => { setCaptured(true); requestPos(); };
 
     const handleKirim = () => {
-        if (tanpaTitik) { showToast('Titik belum di-assign — tidak bisa absen', false); return; }
-        if (jarak == null) { showToast(geoLoading ? 'Menunggu GPS...' : 'Lokasi belum siap — aktifkan GPS', false); return; }
-        if (!inRadius) { showToast(`${jarak} m / ${assigned.radius} m — di luar radius`, false); return; }
-        if (alreadyToday) { showToast('Sudah absen hari ini', false); return; }
+        if (tanpaTitik) { toast.error('Titik belum di-assign — tidak bisa absen'); return; }
+        if (jarak == null) { toast.error(geoLoading ? 'Menunggu GPS...' : 'Lokasi belum siap — aktifkan GPS'); return; }
+        if (!inRadius) { toast.error(`${jarak} m / ${assigned.radius} m — di luar radius`); return; }
+        if (alreadyToday) { toast.error('Sudah absen hari ini'); return; }
         router.post('/karyawan/absensi/clock-in', {
             lat: myPos.lat,
             lng: myPos.lng,
             selfie_url: photoPreview || null,
         }, {
             preserveScroll: true,
-            onError: (e) => showToast(Object.values(e).flat().join(' ') || 'Gagal absen', false),
             onSuccess: () => setCaptured(false),
         });
     };
 
     const handlePulang = () => {
-        if (tanpaTitik) { showToast('Titik belum di-assign', false); return; }
-        if (!history.some((h) => h.tgl === todayISO && !h.pulang)) { showToast('Belum absen masuk hari ini', false); return; }
+        if (tanpaTitik) { toast.error('Titik belum di-assign'); return; }
+        if (!history.some((h) => h.tgl === todayISO && !h.pulang)) { toast.error('Belum absen masuk hari ini'); return; }
         if (jarak == null) {
             if (!captured) { setCaptured(true); requestPos(); }
-            showToast('Aktifkan GPS lalu tekan Absen pulang lagi', false);
+            toast.error('Aktifkan GPS lalu tekan Absen pulang lagi');
             return;
         }
-        if (!inRadius) { showToast(`${jarak} m / ${assigned.radius} m — di luar radius`, false); return; }
+        if (!inRadius) { toast.error(`${jarak} m / ${assigned.radius} m — di luar radius`); return; }
         router.post('/karyawan/absensi/clock-out', { lat: myPos.lat, lng: myPos.lng }, {
             preserveScroll: true,
-            onError: (e) => showToast(Object.values(e).flat().join(' ') || 'Gagal absen pulang', false),
         });
     };
 
@@ -153,7 +146,6 @@ export default function Absensi() {
                         <button type="button" onClick={handleOpenCapture} disabled={captured && jarak != null && !inRadius} title={captured && jarak != null && !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : ''} className={`rounded-xl py-3 text-sm font-semibold ${captured && jarak != null && !inRadius ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
                     </div>
                     <p className="text-xs text-[#94A3B8] mt-3 text-center">{captured && jarak != null && !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius ${assigned.nama_lokasi}` : `Absen hanya dapat dilakukan di dalam radius titik penugasan`}</p>
-                    {toast && <p className={`text-xs text-center rounded-xl py-2 mt-3 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
                     {alreadyToday && <p className="text-xs text-center text-[#92400E] mt-2">Sudah absen hari ini ({todayISO}) — lihat riwayat</p>}
                 </div>
 

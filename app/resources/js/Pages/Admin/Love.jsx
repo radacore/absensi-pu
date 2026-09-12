@@ -1,4 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
+import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -13,11 +15,10 @@ export default function LoveAdmin(){
     const regionsData = props.regions ?? [];
     const claims = props.claims ?? [];
     const settings = props.settings ?? { loveMax:4 };
-    const flash = props.flash;
-    const errors = props.errors;
     const ownRegion = regionsData[0]?.name || 'Kab. Gowa';
     const wilayahNames = useMemo(()=> regionsData.map((r)=>r.name),[regionsData]);
     const allWilayahOpts=['Semua', ...wilayahNames];
+    const confirm = useConfirm();
     const [q,setQ]=useState('');
     const [wilayah,setWilayah]=useState(isWilayah ? ownRegion : 'Semua');
     const [siteFilter,setSiteFilter]=useState('Semua');
@@ -25,9 +26,6 @@ export default function LoveAdmin(){
     const [jenisFilter,setJenisFilter]=useState('Semua');
     const [approverQ,setApproverQ]=useState('');
     const [rejectNote,setRejectNote]=useState({ id:null, text:'' });
-    const [toast,setToast]=useState(null);
-    useEffect(()=>{ if(flash?.success){ setToast({msg:flash.success, ok:true}); setTimeout(()=>setToast(null),2000);} if(flash?.error){ setToast({msg:flash.error, ok:false}); setTimeout(()=>setToast(null),2000);} },[flash?.success,flash?.error]);
-    useEffect(()=>{ if(errors && Object.keys(errors).length){ setToast({msg:Object.values(errors).flat().join(' '), ok:false}); setTimeout(()=>setToast(null),2500);} },[errors]);
     useEffect(()=>{ if(isWilayah) setWilayah(ownRegion); },[ownRegion,isWilayah]);
 
     const sitesForWilayah = useMemo(()=>{
@@ -41,15 +39,31 @@ export default function LoveAdmin(){
         for(const r of regionsData){ const s=r.locations.find((x)=>String(x.id)===String(id)); if(s) return { site:s, region:r }; }
         return null;
     };
-    const handleApprove=(id)=>{
-        router.put(`${base}/love/${id}/approve`, {}, { preserveScroll:true, onError:(e)=>{ setToast({msg:Object.values(e).flat().join(' ')||'Gagal', ok:false}); setTimeout(()=>setToast(null),2000);} });
+    const handleApprove=async (id)=>{
+        const target = claims.find((c)=>c.id===id);
+        const ok = await confirm({
+            title: target ? `Setujui toleransi ${target.nama}?` : 'Setujui klaim toleransi ini?',
+            description: target ? `${loveJenisLabel(target.jenis)} • ${target.tgl || ''} ${target.jam || ''}. Absensi karyawan akan ditandai sebagai toleransi (excused).` : 'Klaim toleransi akan disetujui dan menandai absensi sebagai excused.',
+            confirmLabel: 'Ya, setujui',
+            cancelLabel: 'Batal',
+            tone: 'warning',
+        });
+        if (!ok) return;
+        router.put(`${base}/love/${id}/approve`, {}, { preserveScroll:true });
     };
     const handleReject=(id)=>{
-        if(!rejectNote.text.trim()){ setToast({msg:'Isi alasan reject (min 3 huruf)', ok:false}); setTimeout(()=>setToast(null),2000); return; }
-        router.put(`${base}/love/${id}/reject`, { note: rejectNote.text.trim() }, { preserveScroll:true, onSuccess:()=> setRejectNote({id:null,text:''}), onError:(e)=>{ setToast({msg:Object.values(e).flat().join(' ')||'Gagal', ok:false}); setTimeout(()=>setToast(null),2000);} });
+        if(!rejectNote.text.trim()){ toast.error('Isi alasan penolakan minimal 3 karakter'); return; }
+        router.put(`${base}/love/${id}/reject`, { note: rejectNote.text.trim() }, { preserveScroll:true, onSuccess:()=> setRejectNote({id:null,text:''}) });
     };
-    const handleDelete=(id)=>{
-        if(!confirm('Hapus klaim toleransi ini?')) return;
+    const handleDelete=async (id)=>{
+        const ok = await confirm({
+            title: 'Hapus klaim toleransi ini?',
+            description: 'Data klaim toleransi akan dihapus permanen dan tidak dapat dikembalikan.',
+            confirmLabel: 'Ya, hapus',
+            cancelLabel: 'Batal',
+            tone: 'danger',
+        });
+        if (!ok) return;
         router.delete(`${base}/love/${id}`, { preserveScroll:true });
     };
 
@@ -78,7 +92,6 @@ export default function LoveAdmin(){
                     </div>
                     <span className="shrink-0 bg-[#FFF7E6] border border-[#FCB833]/30 text-[#92400E] text-xs font-medium px-3 py-1.5 rounded-full">{counts.pending} pending • {counts.approved} approved bulan ini • max {loveMax}</span>
                 </div>
-                {toast && <p className={`text-xs text-center rounded-xl py-2 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
                 <div className="grid grid-cols-3 gap-3">
                     <div className="bg-white rounded-2xl p-4 text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]"><p className="text-xl font-semibold text-[#0F172A]">{counts.pending}</p><p className="text-xs text-[#64748B]">Pending</p><span className="mt-1 inline-block w-6 h-1 rounded-full bg-[#FCB833]"></span></div>
                     <div className="bg-white rounded-2xl p-4 text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]"><p className="text-xl font-semibold text-[#0F172A]">{claims.filter(c=>c.status==='approved').length}</p><p className="text-xs text-[#64748B]">Disetujui bulan ini</p></div>

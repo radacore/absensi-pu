@@ -1,4 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
+import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -12,31 +14,26 @@ export default function PengumumanAdmin(){
     const list = props.list ?? [];
     const regions = props.regions ?? [];
     const ownRegion = props.ownRegion || regions[0]?.name || 'Kab. Gowa';
-    const flash = props.flash;
-    const errors = props.errors;
     const regionOpts = regions.map((r)=>r.name);
+    const confirm = useConfirm();
     const [open,setOpen]=useState(false);
     const [editing,setEditing]=useState(null);
     const [form,setForm]=useState(isWilayah ? {...empty, scope:'Wilayah', region: ownRegion} : empty);
-    const [toast,setToast]=useState(null);
-    const [confirmDelete,setConfirmDelete]=useState(null);
-    useEffect(()=>{ if(flash?.success){ setToast({msg:flash.success,ok:true}); setTimeout(()=>setToast(null),2500);} if(flash?.error){ setToast({msg:flash.error,ok:false}); setTimeout(()=>setToast(null),2500);} },[flash?.success, flash?.error]);
-    useEffect(()=>{ if(errors && Object.keys(errors).length){ setToast({msg:Object.values(errors).flat().join(' '),ok:false}); setTimeout(()=>setToast(null),2500);} },[errors]);
     useEffect(()=>{ if(isWilayah) setForm((f)=> ({...f, scope:'Wilayah', region: ownRegion})); },[isWilayah, ownRegion]);
 
     const regionIdByName=(name)=> regions.find((r)=>r.name===name)?.id ?? null;
     const openAdd=()=>{ setEditing(null); setForm(isWilayah ? {...empty, scope:'Wilayah', region: ownRegion} : empty); setOpen(true); };
     const openEdit=(p)=>{
-        if(isWilayah && p.scope==='Global'){ setToast({msg:'Admin Wilayah tidak bisa edit Global',ok:false}); setTimeout(()=>setToast(null),2000); return; }
+        if(isWilayah && p.scope==='Global'){ toast.error('Admin Wilayah tidak dapat mengedit pengumuman Global'); return; }
         setEditing(p); setForm({ judul:p.judul, konten:p.konten, scope:p.scope, region:p.region||'', pin: !!p.pin }); setOpen(true);
     };
     const close=()=> setOpen(false);
     const save=()=>{
-        if(isWilayah && form.scope==='Global'){ setToast({msg:'Admin Wilayah tidak boleh buat Global',ok:false}); setTimeout(()=>setToast(null),2000); return; }
-        if(!form.judul.trim() || !form.konten.trim()){ setToast({msg:'Judul & konten wajib',ok:false}); setTimeout(()=>setToast(null),2000); return; }
+        if(isWilayah && form.scope==='Global'){ toast.error('Admin Wilayah tidak dapat membuat pengumuman Global'); return; }
+        if(!form.judul.trim() || !form.konten.trim()){ toast.error('Judul dan konten pengumuman wajib diisi'); return; }
         if(form.scope==='Wilayah'){
-            if(isWilayah && form.region!==ownRegion){ setToast({msg:`Hanya boleh ${ownRegion}`,ok:false}); setTimeout(()=>setToast(null),2000); return; }
-            if(!form.region){ setToast({msg:'Pilih wilayah',ok:false}); setTimeout(()=>setToast(null),2000); return; }
+            if(isWilayah && form.region!==ownRegion){ toast.error(`Admin Wilayah hanya boleh menerbitkan untuk ${ownRegion}`); return; }
+            if(!form.region){ toast.error('Pilih wilayah terlebih dahulu'); return; }
         }
         const payload={
             judul: form.judul.trim(),
@@ -46,35 +43,33 @@ export default function PengumumanAdmin(){
             pin: !!form.pin,
         };
         if(!payload.region_id && payload.scope==='Wilayah' && !isWilayah){
-            setToast({msg:'Wilayah tidak valid',ok:false}); setTimeout(()=>setToast(null),2000); return;
+            toast.error('Wilayah yang dipilih tidak valid'); return;
         }
         if(editing){
             router.put(`${base}/pengumuman/${editing.id}`, payload, {
                 preserveScroll:true,
                 onSuccess:()=> setOpen(false),
-                onError:(e)=>{ setToast({msg:Object.values(e).flat().join(' ')||'Gagal',ok:false}); setTimeout(()=>setToast(null),2500); },
             });
         } else {
             router.post(`${base}/pengumuman`, payload, {
                 preserveScroll:true,
                 onSuccess:()=> setOpen(false),
-                onError:(e)=>{ setToast({msg:Object.values(e).flat().join(' ')||'Gagal',ok:false}); setTimeout(()=>setToast(null),2500); },
             });
         }
     };
-    const remove=(id)=>{
+    const remove=async (id)=>{
         const target=list.find((x)=>x.id===id);
         if(!target) return;
-        if(isWilayah && target.scope==='Global'){ setToast({msg:'Tidak bisa hapus Global',ok:false}); setTimeout(()=>setToast(null),2000); return; }
-        setConfirmDelete(target);
-    };
-    const confirmRemove=()=>{
-        if(!confirmDelete) return;
-        router.delete(`${base}/pengumuman/${confirmDelete.id}`, {
-            preserveScroll:true,
-            onSuccess:()=> setConfirmDelete(null),
-            onError:(e)=>{ setToast({msg:Object.values(e).flat().join(' ')||'Gagal',ok:false}); setTimeout(()=>setToast(null),2500); },
+        if(isWilayah && target.scope==='Global'){ toast.error('Admin Wilayah tidak dapat menghapus pengumuman Global'); return; }
+        const ok = await confirm({
+            title: 'Hapus pengumuman ini?',
+            description: `“${target.judul}” — ${target.scope}${target.region ? ` • ${target.region}` : ''}. Pengumuman akan dihapus permanen dan tidak dapat dikembalikan.`,
+            confirmLabel: 'Ya, hapus',
+            cancelLabel: 'Batal',
+            tone: 'danger',
         });
+        if (!ok) return;
+        router.delete(`${base}/pengumuman/${target.id}`, { preserveScroll:true });
     };
 
     return (
@@ -87,7 +82,6 @@ export default function PengumumanAdmin(){
                     </div>
                     <button type="button" onClick={openAdd} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0">+ Buat Pengumuman</button>
                 </div>
-                {toast && <p className={`text-xs text-center rounded-xl py-2 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -112,21 +106,6 @@ export default function PengumumanAdmin(){
                     </div>
                     {list.length===0 && <p className="text-sm text-[#94A3B8] text-center py-8">Belum ada pengumuman</p>}
                 </div>
-                {confirmDelete && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={()=>setConfirmDelete(null)}>
-                        <div className="bg-white rounded-2xl w-full max-w-[400px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
-                            <div className="px-6 py-4">
-                                <h3 className="font-semibold text-[#0F172A]">Hapus pengumuman?</h3>
-                                <p className="text-sm text-[#64748B] mt-1">“{confirmDelete.judul}” — {confirmDelete.scope}{confirmDelete.region ? ` • ${confirmDelete.region}` : ''}</p>
-                                <p className="text-xs text-[#94A3B8] mt-2">Pengumuman akan dihapus. Tidak dapat dibatalkan.</p>
-                            </div>
-                            <div className="px-6 pb-5 flex gap-2">
-                                <button type="button" onClick={()=>setConfirmDelete(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
-                                <button type="button" onClick={confirmRemove} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
                 {open && (
                     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={close}>
                         <div className="bg-white rounded-2xl w-full max-w-[560px] shadow-xl" onClick={(e)=>e.stopPropagation()}>

@@ -1,43 +1,41 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
+import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export default function Cuti() {
     const { props } = usePage();
     const me = props.me ?? { nama: '—', region: '' };
     const assigned = props.assigned ?? null;
     const list = props.list ?? [];
-    const flash = props.flash;
-    const errors = props.errors;
+    const confirm = useConfirm();
 
     const [showForm, setShowForm] = useState(false);
     const [jenis, setJenis] = useState('Tahunan');
     const [mulai, setMulai] = useState('');
     const [selesai, setSelesai] = useState('');
     const [alasan, setAlasan] = useState('');
-    const [toast, setToast] = useState(null);
-    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-
-    const show = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
-    useEffect(() => { if (flash?.success) show(flash.success, true); if (flash?.error) show(flash.error, false); }, [flash?.success, flash?.error]); // eslint-disable-line react-hooks/exhaustive-deps
-    useEffect(() => { if (errors && Object.keys(errors).length) show(Object.values(errors).flat().join(' '), false); }, [errors]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSubmit = () => {
-        if (!mulai || !selesai) { show('Tanggal mulai & selesai wajib', false); return; }
-        if (mulai > selesai) { show('Tanggal mulai tidak boleh setelah selesai', false); return; }
-        if (!alasan.trim()) { show('Alasan wajib diisi', false); return; }
+        if (!mulai || !selesai) { toast.error('Tanggal mulai & selesai wajib'); return; }
+        if (mulai > selesai) { toast.error('Tanggal mulai tidak boleh setelah selesai'); return; }
+        if (!alasan.trim()) { toast.error('Alasan wajib diisi'); return; }
         router.post('/karyawan/cuti', { jenis, mulai, selesai, alasan: alasan.trim() }, {
             preserveScroll: true,
             onSuccess: () => { setJenis('Tahunan'); setMulai(''); setSelesai(''); setAlasan(''); setShowForm(false); },
-            onError: (e) => show(Object.values(e).flat().join(' ') || 'Gagal ajukan', false),
         });
     };
-    const handleCancel = (id) => {
-        router.delete(`/karyawan/cuti/${id}`, {
-            preserveScroll: true,
-            onSuccess: () => setConfirmDeleteId(null),
-            onError: (e) => show(Object.values(e).flat().join(' ') || 'Gagal batalkan', false),
+    const handleCancel = async (id) => {
+        const ok = await confirm({
+            title: 'Batalkan pengajuan cuti?',
+            description: 'Pengajuan cuti akan dihapus permanen dan tidak dapat dikembalikan.',
+            confirmLabel: 'Ya, batalkan',
+            cancelLabel: 'Tidak',
+            tone: 'danger',
         });
+        if (!ok) return;
+        router.delete(`/karyawan/cuti/${id}`, { preserveScroll: true });
     };
 
     const tone = (s) => s === 'Disetujui' ? 'bg-[#ECFDF5] text-[#065F46]' : s === 'Menunggu' ? 'bg-[#FFFBEB] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]';
@@ -78,11 +76,8 @@ export default function Cuti() {
                             <textarea id="alasan" rows={2} value={alasan} onChange={(e)=>setAlasan(e.target.value)} placeholder="Tuliskan alasan cuti" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#94A3B8] outline-none"></textarea>
                         </div>
                         <button type="button" onClick={handleSubmit} className="w-full bg-[#0F172A] text-white rounded-xl py-3 text-sm font-semibold hover:bg-[#1E3A8A] transition">Kirim pengajuan</button>
-                        {toast && <p className={`text-xs text-center rounded-xl py-2 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>{toast.msg}</p>}
                     </div>
                 )}
-
-                {!showForm && toast && <p className={`text-xs text-center rounded-xl py-2 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
 
                 <div className="space-y-3">
                     {list.length === 0 ? (
@@ -106,24 +101,12 @@ export default function Cuti() {
                                 ))}
                             </div>
                             {r.status === 'Menunggu' && r.level === 0 && (
-                                <button type="button" onClick={()=>setConfirmDeleteId(r.id)} className="mt-3 text-xs font-medium text-[#991B1B] bg-[#FEF2F2] px-3 py-1.5 rounded-lg">Batalkan pengajuan</button>
+                                <button type="button" onClick={()=>handleCancel(r.id)} className="mt-3 text-xs font-medium text-[#991B1B] bg-[#FEF2F2] px-3 py-1.5 rounded-lg">Batalkan pengajuan</button>
                             )}
                             {r.status === 'Ditolak' && r.note && <p className="text-xs text-[#991B1B] bg-[#FEF2F2] rounded-lg px-3 py-1.5 mt-2">Catatan: {r.note}</p>}
                         </div>
                     ))}
                 </div>
-                {confirmDeleteId != null && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl p-5 w-full max-w-sm">
-                            <p className="font-medium text-[#0F172A]">Batalkan cuti?</p>
-                            <p className="text-sm text-[#64748B] mt-1">Pengajuan yang dibatalkan tidak bisa dikembalikan.</p>
-                            <div className="flex gap-2 mt-4">
-                                <button type="button" onClick={()=>setConfirmDeleteId(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-2.5 text-sm font-medium">Batal</button>
-                                <button type="button" onClick={()=>handleCancel(confirmDeleteId)} className="flex-1 rounded-xl bg-[#EF4444] text-white py-2.5 text-sm font-semibold">Batalkan</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </KaryawanLayout>
     );

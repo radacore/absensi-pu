@@ -1,4 +1,6 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
+import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -6,34 +8,19 @@ export default function Profil(){
     const { props } = usePage();
     const me0 = props.me ?? { nama:'—', email:'', phone:'', foto:'', region:'', jabatan:'', unit:'', status:'', gol:'-', nip:'', nik:'' };
     const assigned0 = props.assigned ?? null;
-    const flash = props.flash;
-    const errors = props.errors;
+    const confirm = useConfirm();
 
     const [phone,setPhone]=useState(me0.phone || '');
     const [email,setEmail]=useState(me0.email || '');
     const [photoPreview,setPhotoPreview]=useState(me0.foto || null);
     const fileRef=useRef(null);
     const [pwd,setPwd]=useState({ current_password:'', password:'', password_confirmation:'' });
-    const [msg,setMsg]=useState(null);
-    const [confirmHapus,setConfirmHapus]=useState(false);
 
     useEffect(()=>{
         setPhone(me0.phone || '');
         setEmail(me0.email || '');
         if(me0.foto) setPhotoPreview(me0.foto);
     },[me0.phone, me0.email, me0.foto]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    useEffect(()=>{
-        if(flash?.success){ setMsg({ type:'success', text:flash.success }); setTimeout(()=>setMsg(null),2500); }
-        if(flash?.error){ setMsg({ type:'error', text:flash.error }); setTimeout(()=>setMsg(null),2500); }
-    },[flash?.success, flash?.error]);
-
-    useEffect(()=>{
-        if(errors && Object.keys(errors).length){
-            const t=Object.values(errors).flat().join(' ');
-            setMsg({ type:'error', text:t }); setTimeout(()=>setMsg(null),3000);
-        }
-    },[errors]);
 
     const handlePhoto=(e)=>{
         const file=e.target.files?.[0];
@@ -42,10 +29,18 @@ export default function Profil(){
         reader.onload=()=> setPhotoPreview(reader.result);
         reader.readAsDataURL(file);
     };
-    const clearPhoto=()=>{
+    const askClearPhoto=async ()=>{
+        const ok = await confirm({
+            title: 'Hapus foto profil?',
+            description: 'Tindakan ini akan menghapus foto dan tidak dapat dibatalkan.',
+            confirmLabel: 'Ya, hapus',
+            cancelLabel: 'Batal',
+            tone: 'danger',
+        });
+        if(!ok) return;
         router.delete('/karyawan/profil/foto', {
             preserveScroll:true,
-            onSuccess:()=>{ setPhotoPreview(null); setConfirmHapus(false); if(fileRef.current) fileRef.current.value=''; },
+            onSuccess:()=>{ setPhotoPreview(null); if(fileRef.current) fileRef.current.value=''; },
         });
     };
     const handleSaveProfile=()=>{
@@ -66,22 +61,30 @@ export default function Profil(){
     const handleReset=(e)=>{
         e.preventDefault();
         if(!pwd.current_password || !pwd.password || !pwd.password_confirmation){
-            setMsg({ type:'error', text:'Lengkapi semua field kata sandi' }); setTimeout(()=>setMsg(null),2500); return;
+            toast.error('Lengkapi semua field kata sandi'); return;
         }
-        if(pwd.password.length < 8){ setMsg({ type:'error', text:'Kata sandi baru minimal 8 karakter' }); setTimeout(()=>setMsg(null),2500); return; }
+        if(pwd.password.length < 8){ toast.error('Kata sandi baru minimal 8 karakter'); return; }
         if(!/[A-Z]/.test(pwd.password) || !/[a-z]/.test(pwd.password) || !/\d/.test(pwd.password)){
-            setMsg({ type:'error', text:'Kata sandi wajib mengandung huruf besar, huruf kecil, dan angka' }); setTimeout(()=>setMsg(null),3000); return;
+            toast.error('Kata sandi wajib mengandung huruf besar, huruf kecil, dan angka'); return;
         }
         if(me0.nik && pwd.password === me0.nik){
-            setMsg({ type:'error', text:'Kata sandi baru tidak boleh sama dengan NIK' }); setTimeout(()=>setMsg(null),2500); return;
+            toast.error('Kata sandi baru tidak boleh sama dengan NIK'); return;
         }
-        if(pwd.password !== pwd.password_confirmation){ setMsg({ type:'error', text:'Konfirmasi tidak cocok' }); setTimeout(()=>setMsg(null),2500); return; }
+        if(pwd.password !== pwd.password_confirmation){ toast.error('Konfirmasi kata sandi tidak cocok'); return; }
         router.put('/karyawan/profil/password', pwd, {
             preserveScroll:true,
             onSuccess:()=> setPwd({ current_password:'', password:'', password_confirmation:'' }),
         });
     };
-    const handleLogout=()=>{
+    const handleLogout=async ()=>{
+        const ok = await confirm({
+            title: 'Keluar dari akun?',
+            description: 'Anda perlu login ulang untuk mengakses aplikasi.',
+            confirmLabel: 'Ya, keluar',
+            cancelLabel: 'Batal',
+            tone: 'danger',
+        });
+        if(!ok) return;
         router.post('/karyawan/logout');
     };
 
@@ -98,7 +101,7 @@ export default function Profil(){
                             )}
                         </div>
                         {photoPreview && (
-                            <button type="button" onClick={()=>setConfirmHapus(true)} aria-label="Hapus foto profil" className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-white border border-[#E2E8F0] shadow-sm flex items-center justify-center text-[#64748B] hover:bg-[#FEF2F2] hover:text-[#EF4444] hover:border-[#FECACA] transition">
+                            <button type="button" onClick={askClearPhoto} aria-label="Hapus foto profil" className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-white border border-[#E2E8F0] shadow-sm flex items-center justify-center text-[#64748B] hover:bg-[#FEF2F2] hover:text-[#EF4444] hover:border-[#FECACA] transition">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
                             </button>
                         )}
@@ -136,7 +139,6 @@ export default function Profil(){
                     <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
                     <button type="button" onClick={()=>fileRef.current?.click()} className="w-full rounded-xl bg-white border border-[#E2E8F0] py-2.5 text-sm font-medium text-[#334155] hover:bg-[#F8FAFC] transition">{photoPreview ? 'Ganti foto' : 'Upload foto'}</button>
                     <button type="button" onClick={handleSaveProfile} className="w-full rounded-xl bg-[#0F172A] text-white py-2.5 text-sm font-semibold hover:bg-[#1E3A8A] transition">Simpan</button>
-                    {msg && (msg.text.includes('Data pribadi') || msg.text.includes('Foto')) && <p className={`text-xs px-3 py-2 rounded-xl ${msg.type==='success' ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{msg.text}</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
@@ -164,24 +166,9 @@ export default function Profil(){
                         </div>
                         <button type="submit" className="w-full rounded-xl bg-[#0F172A] text-white py-2.5 text-sm font-semibold hover:bg-[#1E3A8A] transition">Simpan kata sandi</button>
                     </form>
-                    {msg && !msg.text.includes('Data pribadi') && !msg.text.includes('Foto') && !msg.text.includes('Keluar') && <p className={`text-xs px-3 py-2 rounded-xl ${msg.type==='success' ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{msg.text}</p>}
                 </div>
 
                 <button type="button" onClick={handleLogout} className="w-full rounded-xl bg-[#FEF2F2] text-[#991B1B] py-3 text-sm font-semibold">Keluar</button>
-                {msg && msg.text.includes('Keluar') && <p className="text-xs text-center bg-[#FEF2F2] text-[#991B1B] rounded-xl py-2">{msg.text}</p>}
-
-                {confirmHapus && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={()=>setConfirmHapus(false)}>
-                        <div className="bg-white rounded-2xl w-full max-w-[360px] p-6 shadow-xl" onClick={(e)=>e.stopPropagation()}>
-                            <h3 className="font-semibold text-sm text-[#0F172A]">Hapus foto profil?</h3>
-                            <p className="text-xs text-[#64748B] mt-1.5">Tindakan ini akan menghapus foto dan tidak dapat dibatalkan.</p>
-                            <div className="mt-5 grid grid-cols-2 gap-2">
-                                <button type="button" onClick={()=>setConfirmHapus(false)} className="rounded-xl bg-[#F1F5F9] py-2.5 text-sm font-semibold text-[#64748B]">Batal</button>
-                                <button type="button" onClick={clearPhoto} className="rounded-xl bg-[#EF4444] text-white py-2.5 text-sm font-semibold hover:bg-[#DC2626]">Hapus</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </KaryawanLayout>
     );

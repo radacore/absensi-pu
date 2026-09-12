@@ -1,6 +1,8 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
+import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
@@ -8,35 +10,23 @@ const empty = { nama: '', email: '', region: '', password: '' };
 
 export default function AdminWilayah() {
     const { url, props } = usePage();
-    const { admins, regionNames, flash, errors } = props;
+    const { admins, regionNames } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     const list = admins || [];
     const regions = regionNames || [];
+    const confirm = useConfirm();
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({ ...empty, region: regions[1] || '' });
-    const [toast, setToast] = useState(null);
-    const [confirmDelete, setConfirmDelete] = useState(null);
-
-    const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
-
-    // toast dari server (flash + error validasi pertama)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => {
-        const serverMsg = flash?.success || flash?.error;
-        if (serverMsg) { showToast(serverMsg, !!flash?.success); return; }
-        const firstErr = errors && Object.values(errors)[0];
-        if (firstErr) showToast(firstErr, false);
-    }, [flash, errors]);
 
     const openAdd = () => { setEditing(null); setForm({ ...empty, region: regions[1] || '' }); setOpen(true); };
     const openEdit = (a) => { setEditing(a); setForm({ nama: a.nama, email: a.email, region: a.region, password: '' }); setOpen(true); };
     const close = () => setOpen(false);
 
     const save = () => {
-        if (!form.nama.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { showToast('Nama & email valid wajib', false); return; }
-        if (!editing && form.password.length < 8) { showToast('Password min 8 karakter', false); return; }
+        if (!form.nama.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { toast.error('Nama dan email valid wajib diisi'); return; }
+        if (!editing && form.password.length < 8) { toast.error('Password minimal 8 karakter'); return; }
         const payload = { nama: form.nama, email: form.email, region: form.region };
         if (editing) {
             if (form.password) payload.password = form.password;
@@ -48,21 +38,35 @@ export default function AdminWilayah() {
         setOpen(false);
     };
 
-    const handleReset = (a) => {
-        showToast('Reset password belum tersedia di fase ini — hubungi Super Admin');
+    const handleReset = () => {
+        toast.error('Reset password belum tersedia di fase ini — silakan hubungi Super Admin');
     };
-    const toggleStatus = (a) => {
-        router.put(`${base}/admin-wilayah/${a.id}/toggle`, { is_active: a.status !== 'Aktif' }, { preserveScroll: true });
+    const toggleStatus = async (a) => {
+        const willDeactivate = a.status === 'Aktif';
+        if (willDeactivate) {
+            const ok = await confirm({
+                title: `Nonaktifkan ${a.nama}?`,
+                description: `${a.email} • ${a.region}. Admin ini tidak akan bisa login sampai diaktifkan kembali.`,
+                confirmLabel: 'Ya, nonaktifkan',
+                cancelLabel: 'Batal',
+                tone: 'warning',
+            });
+            if (!ok) return;
+        }
+        router.put(`${base}/admin-wilayah/${a.id}/toggle`, { is_active: !willDeactivate }, { preserveScroll: true });
     };
-    const remove = (id) => {
+    const remove = async (id) => {
         const target = list.find((x)=>x.id===id);
         if (!target) return;
-        setConfirmDelete(target);
-    };
-    const confirmRemove = () => {
-        if (!confirmDelete) return;
-        router.delete(`${base}/admin-wilayah/${confirmDelete.id}`, { preserveScroll: true });
-        setConfirmDelete(null);
+        const ok = await confirm({
+            title: `Hapus ${target.nama}?`,
+            description: `${target.email} • ${target.region}. Akun Admin Wilayah akan dihapus permanen dan tidak dapat dikembalikan.`,
+            confirmLabel: 'Ya, hapus',
+            cancelLabel: 'Batal',
+            tone: 'danger',
+        });
+        if (!ok) return;
+        router.delete(`${base}/admin-wilayah/${target.id}`, { preserveScroll: true });
     };
 
     if (isWilayah) {
@@ -113,24 +117,6 @@ export default function AdminWilayah() {
                     </div>
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">Hanya Super Admin Makassar bisa kelola Admin Wilayah</div>
                 </div>
-
-                {toast && <p className={`text-xs text-center rounded-xl py-2 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
-
-                {confirmDelete && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
-                        <div className="bg-white rounded-2xl w-full max-w-[400px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
-                            <div className="px-6 py-4">
-                                <h3 className="font-semibold text-[#0F172A]">Hapus {confirmDelete.nama}?</h3>
-                                <p className="text-sm text-[#64748B] mt-1">{confirmDelete.email} • {confirmDelete.region}</p>
-                                <p className="text-xs text-[#94A3B8] mt-2">Akun Admin Wilayah akan dihapus. Tidak dapat dibatalkan.</p>
-                            </div>
-                            <div className="px-6 pb-5 flex gap-2">
-                                <button type="button" onClick={() => setConfirmDelete(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
-                                <button type="button" onClick={confirmRemove} className="flex-1 rounded-xl bg-[#EF4444] text-white py-3 text-sm font-semibold">Ya, hapus</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {open && (
                     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={close}>

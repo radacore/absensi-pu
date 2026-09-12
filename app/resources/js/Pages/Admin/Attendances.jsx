@@ -1,4 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { useConfirm } from '@/Components/ConfirmDialog';
+import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { getBase, OWN_REGION, WILAYAH_LIST as wilayahList, getSitesForWilayah, getValidSiteIds, siteById } from './_shared';
@@ -8,22 +10,18 @@ const statusTone = { on_time: 'bg-[#ECFDF5] text-[#065F46]', late: 'bg-[#FFF7E6]
 
 export default function Attendances() {
     const { url, props } = usePage();
-    const { regions: regionsProp, attendances: attendancesProp, settings, flash, errors } = props;
+    const { regions: regionsProp, attendances: attendancesProp, settings } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     const regionsData = regionsProp ?? [];
     const attendances = attendancesProp ?? [];
+    const confirm = useConfirm();
     const [q, setQ] = useState('');
     const [wilayah, setWilayah] = useState(isWilayah ? OWN_REGION : 'Semua');
     const [siteFilter, setSiteFilter] = useState('Semua');
     const [status, setStatus] = useState('Semua');
     const [tgl, setTgl] = useState(() => new Date().toISOString().slice(0, 10));
     const [detail, setDetail] = useState(null);
-    const [toast, setToast] = useState(null);
-
-    const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2200); };
-    useEffect(() => { if (flash?.success) showToast(flash.success, true); if (flash?.error) showToast(flash.error, false); }, [flash?.success, flash?.error]); // eslint-disable-line react-hooks/exhaustive-deps
-    useEffect(() => { if (errors && Object.keys(errors).length) showToast(Object.values(errors).flat().join(' '), false); }, [errors]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (siteFilter === 'Semua') return;
@@ -50,7 +48,7 @@ export default function Attendances() {
     const stats = { hadir: filtered.length, late: filtered.filter((r) => r.status === 'late').length, love: filtered.filter((r) => r.love).length };
 
     const handleExport = () => {
-        if (filtered.length === 0) { showToast('Tidak ada data untuk diekspor', false); return; }
+        if (filtered.length === 0) { toast.error('Tidak ada data untuk diekspor'); return; }
         const header = ['Nama', 'Email', 'Wilayah', 'Titik', 'Tgl', 'Datang', 'Pulang', 'Status', 'Jarak(m)'];
         const rows = filtered.map((r) => {
             const hit = siteById(r.office_location_id, regionsData);
@@ -63,15 +61,22 @@ export default function Attendances() {
         a.download = `absensi-${tgl}.csv`;
         a.click();
         URL.revokeObjectURL(a.href);
-        showToast('Ekspor CSV');
+        toast.success('Berhasil ekspor CSV');
     };
 
-    const handleDelete = (id) => {
-        if (!confirm('Hapus absensi ini?')) return;
+    const handleDelete = async (id) => {
+        const target = filtered.find((x) => x.id === id) ?? attendances.find((x) => x.id === id);
+        const ok = await confirm({
+            title: 'Hapus data absensi ini?',
+            description: target ? `${target.nama} • ${target.tgl} • ${target.datang}${target.pulang ? ` → ${target.pulang}` : ''}. Data absensi akan dihapus permanen.` : 'Data absensi akan dihapus permanen.',
+            confirmLabel: 'Ya, hapus',
+            cancelLabel: 'Batal',
+            tone: 'danger',
+        });
+        if (!ok) return;
         router.delete(`${base}/attendances/${id}`, {
             preserveScroll: true,
             onSuccess: () => setDetail(null),
-            onError: (e) => showToast(Object.values(e).flat().join(' ') || 'Gagal hapus', false),
         });
     };
 
@@ -157,8 +162,6 @@ export default function Attendances() {
                         <span>1 karyawan = 1 titik • Jam {jamLabel} WITA</span>
                     </div>
                 </div>
-
-                {toast && <p className={`text-xs text-center rounded-xl py-2 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
 
                 {detail && (() => {
                     const hit = siteById(detail.office_location_id, regionsData);
