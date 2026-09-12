@@ -23,6 +23,7 @@ const menuDefs = [
     { path: '/love', label: 'Klaim Toleransi', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill={a ? '#FCB833' : 'none'} stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><path d="M12 21s-6.5-4.2-8.5-8.5A4.5 4.5 0 0112 5a4.5 4.5 0 018.5 7.5C18.5 16.8 12 21 12 21z"/></svg> },
     { path: '/pengumuman', label: 'Pengumuman', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><path d="M15 17h5l-1.5-1.5A6 6 0 0118 9V7a6 6 0 00-6-6 6 6 0 00-6 6v2a6 6 0 01-.5 5.5L4 16h5"/><path d="M9 17a3 3 0 006 0"/></svg> },
     { path: '/settings', label: 'Pengaturan', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>, readOnlyWilayah: true },
+    { path: '/audit-log', label: 'Audit Log', superOnly: true, icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><path d="M12 2H5a2 2 0 00-2 2v16a2 2 0 002 2h14a2 2 0 002-2V9z"/><path d="M12 2v7h7"/><path d="M9 13h6M9 17h6"/></svg> },
 ];
 
 export default function AdminLayout({ children }) {

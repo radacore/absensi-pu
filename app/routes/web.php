@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminWilayahController;
 use App\Http\Controllers\Admin\AttendanceController;
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CutiController as AdminCutiController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EmployeeController;
@@ -29,7 +30,9 @@ Route::get('/', function () {
 // ── Karyawan PWA ──────────────────────────────────────────────
 Route::prefix('karyawan')->group(function () {
     Route::get('/login', fn () => Inertia::render('Karyawan/Login'))->name('karyawan.login');
-    Route::post('/login', [EmployeeAuthController::class, 'store'])->name('karyawan.login.store');
+    Route::post('/login', [EmployeeAuthController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('karyawan.login.store');
 
     Route::middleware('employee')->group(function () {
         Route::post('/logout', [EmployeeAuthController::class, 'destroy'])->name('karyawan.logout');
@@ -103,6 +106,9 @@ function adminMasterRoutes(string $prefix, string $role, string $label): void
         Route::post('/employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name("{$label}.employees.reset-password");
         Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->name("{$label}.employees.destroy");
 
+        // Audit log (super admin only via controller guard)
+        Route::get('/audit-log', [AuditLogController::class, 'index'])->name("{$label}.audit-log");
+
         // Admin Wilayah (super admin only via controller guard)
         Route::get('/admin-wilayah', [AdminWilayahController::class, 'index'])->name("{$label}.admin-wilayah");
         Route::post('/admin-wilayah', [AdminWilayahController::class, 'store'])->name("{$label}.admin-wilayah.store");
@@ -116,21 +122,27 @@ function adminMasterRoutes(string $prefix, string $role, string $label): void
 // ── Super Admin Pusat ─────────────────────────────────────────
 Route::prefix('super-admin')->group(function () {
     Route::get('/login', fn () => Inertia::render('Admin/Login'))->name('super_admin.login');
-    Route::post('/login', [AdminAuthController::class, 'store'])->name('super_admin.login.store');
+    Route::post('/login', [AdminAuthController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('super_admin.login.store');
 });
 adminMasterRoutes('super-admin', 'super_admin', 'super_admin');
 
 // ── Admin Wilayah ─────────────────────────────────────────────
 Route::prefix('admin')->group(function () {
     Route::get('/login', fn () => Inertia::render('Admin/Login'))->name('admin.login');
-    Route::post('/login', [AdminAuthController::class, 'store'])->name('admin.login.store');
+    Route::post('/login', [AdminAuthController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('admin.login.store');
 });
 adminMasterRoutes('admin', 'admin_wilayah', 'admin');
 
 // ── Alias legacy /wilayah → Admin Wilayah ─────────────────────
 Route::prefix('wilayah')->group(function () {
     Route::get('/login', fn () => Inertia::render('Admin/Login'))->name('wilayah.login');
-    Route::post('/login', [AdminAuthController::class, 'store'])->name('wilayah.login.store');
+    Route::post('/login', [AdminAuthController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('wilayah.login.store');
 });
 adminMasterRoutes('wilayah', 'admin_wilayah', 'wilayah');
 

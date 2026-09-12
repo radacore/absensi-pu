@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Region;
 use App\Models\User;
 use App\Support\AdminPresenter;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -41,7 +42,7 @@ class AdminWilayahController extends Controller
 
         $region = Region::where('name', $data['region'])->firstOrFail();
 
-        User::create([
+        $admin = User::create([
             'name' => $data['nama'],
             'email' => $data['email'],
             'role' => 'admin_wilayah',
@@ -50,6 +51,14 @@ class AdminWilayahController extends Controller
             'password' => $data['password'],
             'is_active' => true,
         ]);
+
+        Audit::log(
+            'admin_wilayah.create',
+            subject: $admin,
+            label: $admin->name,
+            description: "Tambah Admin Wilayah {$admin->name} untuk {$region->name}",
+            meta: ['region_id' => $region->id]
+        );
 
         return back()->with('success', 'Admin Wilayah ditambahkan.');
     }
@@ -83,6 +92,14 @@ class AdminWilayahController extends Controller
 
         $adminWilayah->update($payload);
 
+        Audit::log(
+            'admin_wilayah.update',
+            subject: $adminWilayah,
+            label: $adminWilayah->name,
+            description: "Perbarui Admin Wilayah {$adminWilayah->name}",
+            meta: ['region_id' => $region->id, 'password_changed' => ! empty($data['password'])]
+        );
+
         return back()->with('success', 'Admin Wilayah diperbarui.');
     }
 
@@ -94,6 +111,15 @@ class AdminWilayahController extends Controller
         $data = $request->validate(['is_active' => ['required', 'boolean']]);
         $adminWilayah->update(['is_active' => $data['is_active']]);
 
+        Audit::log(
+            $data['is_active'] ? 'admin_wilayah.activate' : 'admin_wilayah.deactivate',
+            subject: $adminWilayah,
+            label: $adminWilayah->name,
+            description: $data['is_active']
+                ? "Aktifkan Admin Wilayah {$adminWilayah->name}"
+                : "Nonaktifkan Admin Wilayah {$adminWilayah->name}"
+        );
+
         return back()->with('success', $data['is_active'] ? 'Akun diaktifkan.' : 'Akun dinonaktifkan.');
     }
 
@@ -102,7 +128,18 @@ class AdminWilayahController extends Controller
         $this->ensureSuperAdmin();
         abort_if($adminWilayah->role !== 'admin_wilayah', 403, 'Hanya akun Admin Wilayah yang dapat dikelola.');
 
+        $name = $adminWilayah->name;
+        $email = $adminWilayah->email;
+        $regionId = $adminWilayah->region_id;
         $adminWilayah->delete();
+
+        Audit::log(
+            'admin_wilayah.delete',
+            subject: null,
+            label: $name,
+            description: "Hapus Admin Wilayah {$name}",
+            meta: ['email' => $email, 'region_id' => $regionId]
+        );
 
         return back()->with('success', 'Admin Wilayah dihapus.');
     }

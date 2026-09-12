@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ToleranceClaim;
 use App\Support\AdminPresenter;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -32,9 +33,18 @@ class LoveController extends Controller
         $scope = $this->scope();
         abort_if($scope !== null && (int) $love->region_id !== $scope, 403);
         if ($love->status !== 'pending') return back()->with('error', 'Hanya pending bisa di-approve.');
-        // quota enforcement (loveMax per month): hit if approve would exceed? soft-check
         $love->status = 'approved';
         $love->save();
+
+        $empName = $love->employee?->name ?? '-';
+        Audit::log(
+            'love.approve',
+            subject: $love,
+            label: "Toleransi #{$love->id} {$empName}",
+            description: "Approve klaim toleransi {$empName} ({$love->jenis})",
+            meta: ['jenis' => $love->jenis, 'claim_date' => (string) $love->claim_date]
+        );
+
         return back()->with('success', 'Toleransi disetujui');
     }
 
@@ -47,6 +57,16 @@ class LoveController extends Controller
         $love->status = 'rejected';
         $love->note = $request->input('note');
         $love->save();
+
+        $empName = $love->employee?->name ?? '-';
+        Audit::log(
+            'love.reject',
+            subject: $love,
+            label: "Toleransi #{$love->id} {$empName}",
+            description: "Tolak klaim toleransi {$empName}",
+            meta: ['note' => $love->note, 'jenis' => $love->jenis]
+        );
+
         return back()->with('success', 'Toleransi ditolak');
     }
 
@@ -54,7 +74,18 @@ class LoveController extends Controller
     {
         $scope = $this->scope();
         abort_if($scope !== null && (int) $love->region_id !== $scope, 403);
+        $empName = $love->employee?->name ?? '-';
+        $snapshot = ['jenis' => $love->jenis, 'status' => $love->status, 'claim_date' => (string) $love->claim_date];
         $love->delete();
+
+        Audit::log(
+            'love.delete',
+            subject: null,
+            label: "Toleransi {$empName}",
+            description: "Hapus klaim toleransi {$empName}",
+            meta: $snapshot
+        );
+
         return back()->with('success', 'Klaim toleransi dihapus');
     }
 }

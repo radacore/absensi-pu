@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Region;
 use App\Support\AdminPresenter;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -34,7 +35,15 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         $data = $this->validateEmployee($request, null);
-        $this->createFromPayload($data);
+        $employee = $this->createFromPayload($data);
+
+        Audit::log(
+            'employee.create',
+            subject: $employee,
+            label: $employee->name,
+            description: "Tambah karyawan baru {$employee->name} (NIK {$employee->nik})",
+            meta: ['region_id' => $employee->region_id, 'site_id' => $employee->site_id]
+        );
 
         return back()->with('success', 'Karyawan berhasil ditambahkan.');
     }
@@ -62,6 +71,14 @@ class EmployeeController extends Controller
             'site_id' => $data['office_location_id'],
         ]);
 
+        Audit::log(
+            'employee.update',
+            subject: $employee,
+            label: $employee->name,
+            description: "Perbarui data karyawan {$employee->name}",
+            meta: ['region_id' => $employee->region_id, 'site_id' => $employee->site_id]
+        );
+
         return back()->with('success', 'Karyawan berhasil diperbarui.');
     }
 
@@ -70,7 +87,18 @@ class EmployeeController extends Controller
         $scope = $this->scopeRegion();
         abort_if($scope && $employee->region_id !== $scope, 403, 'Karyawan ini di luar cakupan Anda.');
 
+        $snapshot = ['nik' => $employee->nik, 'nip' => $employee->nip, 'region_id' => $employee->region_id, 'site_id' => $employee->site_id];
+        $name = $employee->name;
+        $id = $employee->id;
         $employee->delete();
+
+        Audit::log(
+            'employee.delete',
+            subject: null,
+            label: $name,
+            description: "Hapus karyawan {$name}",
+            meta: array_merge($snapshot, ['employee_id' => $id])
+        );
 
         return back()->with('success', 'Karyawan dihapus.');
     }
@@ -84,6 +112,14 @@ class EmployeeController extends Controller
             'password' => $employee->nik,
             'must_change_password' => true,
         ]);
+
+        Audit::log(
+            'employee.reset_password',
+            subject: $employee,
+            label: $employee->name,
+            description: "Reset kata sandi karyawan {$employee->name} ke NIK",
+            meta: ['nik_length' => strlen($employee->nik)]
+        );
 
         return back()->with([
             'success' => "Kata sandi {$employee->name} direset ke NIK. Karyawan wajib ganti kata sandi saat login.",
@@ -131,7 +167,8 @@ class EmployeeController extends Controller
             'status_kepegawaian' => $data['status'],
             'region_id' => $region->id,
             'site_id' => $data['office_location_id'],
-            'password' => 'password123',
+            'password' => $data['nik'],
+            'must_change_password' => true,
         ]);
     }
 

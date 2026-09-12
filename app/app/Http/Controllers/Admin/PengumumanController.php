@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
 use App\Support\AdminPresenter;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -92,7 +93,18 @@ class PengumumanController extends Controller
         $u = $this->user();
         if ($u->role === 'admin_wilayah' && $pengumuman->scope === 'Global') abort(403, 'Tidak bisa hapus Global');
         if ($u->role === 'admin_wilayah' && $pengumuman->region_id !== $u->region_id) abort(403);
+
+        $snapshot = ['judul' => $pengumuman->judul, 'scope' => $pengumuman->scope, 'region_id' => $pengumuman->region_id];
         $pengumuman->delete();
+
+        Audit::log(
+            'pengumuman.delete',
+            subject: null,
+            label: $snapshot['judul'],
+            description: "Hapus pengumuman {$snapshot['judul']}",
+            meta: $snapshot
+        );
+
         return back()->with('success', 'Pengumuman dihapus');
     }
 }
