@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react';
  * back()->with('success'|'error') dari controller, atau kirim event
  * `bbws:toast` (window.dispatchEvent) untuk pesan ad-hoc dari FE.
  */
-export default function ToastHost({ position = 'top' }) {
+export default function ToastHost({ position = 'bottom-right' }) {
     const { props } = usePage();
     const flash = props.flash;
     const errors = props.errors;
@@ -58,24 +58,41 @@ export default function ToastHost({ position = 'top' }) {
 
     if (items.length === 0) return null;
 
-    const anchor = position === 'top' ? 'top-4' : 'bottom-24';
+    const anchorMap = {
+        'bottom-right': 'bottom-4 right-4 sm:bottom-6 sm:right-6 items-end',
+        'bottom-left': 'bottom-4 left-4 sm:bottom-6 sm:left-6 items-start',
+        'top-right': 'top-4 right-4 sm:top-6 sm:right-6 items-end',
+        'top-left': 'top-4 left-4 sm:top-6 sm:left-6 items-start',
+        top: 'top-4 left-1/2 -translate-x-1/2 items-center',
+        bottom: 'bottom-24 left-1/2 -translate-x-1/2 items-center',
+    };
+    const anchor = anchorMap[position] || anchorMap['bottom-right'];
+
     return (
-        <div className={`fixed ${anchor} left-1/2 -translate-x-1/2 z-[70] flex flex-col gap-2 px-4 w-full max-w-[440px] pointer-events-none`} aria-live="polite" aria-atomic="true">
+        <div
+            className={`fixed ${anchor} z-[70] flex flex-col gap-2 w-full max-w-[380px] pointer-events-none`}
+            aria-live="polite"
+            aria-atomic="true"
+        >
             {items.map((t) => (
                 <div
                     key={t.id}
                     role={t.kind === 'error' ? 'alert' : 'status'}
-                    className={`pointer-events-auto rounded-xl px-4 py-3 text-sm font-medium shadow-lg backdrop-blur border ${
+                    className={`pointer-events-auto rounded-xl px-4 py-3 text-sm font-medium shadow-[0_10px_28px_-4px_rgba(15,23,42,0.35)] backdrop-blur border animate-toast-in ${
                         t.kind === 'error'
-                            ? 'bg-[#FEF2F2]/95 text-[#991B1B] border-[#FCA5A5]'
-                            : 'bg-[#ECFDF5]/95 text-[#065F46] border-[#6EE7B7]'
+                            ? 'bg-[#0F172A]/95 text-white border-[#EF4444]/60'
+                            : 'bg-[#1E3A8A]/95 text-white border-[#3B82F6]/40'
                     }`}
                 >
                     <div className="flex items-start gap-2.5">
                         {t.kind === 'error' ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <span className="w-6 h-6 rounded-lg bg-[#EF4444]/20 flex items-center justify-center shrink-0">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FCA5A5" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            </span>
                         ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <span className="w-6 h-6 rounded-lg bg-[#FCB833]/20 flex items-center justify-center shrink-0">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FCB833" strokeWidth="2.4"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </span>
                         )}
                         <p className="leading-snug flex-1 min-w-0 break-words">{t.msg}</p>
                     </div>
