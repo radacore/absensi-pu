@@ -23,7 +23,7 @@ export default function Absensi() {
     const errors = props.errors;
 
     const [captured, setCaptured] = useState(false);
-    const [photoPreview, setPhotoPreview] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(me.foto || null);
     const [toast, setToast] = useState(null);
     const [myPos, setMyPos] = useState(null);
     const [geoError, setGeoError] = useState(null);
@@ -32,7 +32,7 @@ export default function Absensi() {
     const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
     useEffect(() => { if (flash?.success) showToast(flash.success, true); if (flash?.error) showToast(flash.error, false); }, [flash?.success, flash?.error]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => { if (errors && Object.keys(errors).length) showToast(Object.values(errors).flat().join(' '), false); }, [errors]); // eslint-disable-line react-hooks/exhaustive-deps
-    useEffect(() => { try { const p = localStorage.getItem('bbws_mock_photo_v3'); if (p) setPhotoPreview(p); } catch {} }, []);
+    useEffect(() => { if (me.foto) setPhotoPreview(me.foto); }, [me.foto]);
 
     const jarak = useMemo(() => {
         if (!assigned || !myPos) return null;

@@ -360,8 +360,18 @@ class Fase3Test extends TestCase
         $super = $this->superAdmin();
         $emp = $this->empGowa();
         $ann = Announcement::create(['judul'=>'Info','konten'=>'isi','scope'=>'Global','region_id'=>null,'pin'=>false,'created_by'=>$super->id]);
+        $ann2 = Announcement::create(['judul'=>'Gowa','konten'=>'gowa','scope'=>'Wilayah','region_id'=>2,'pin'=>false,'created_by'=>$super->id]);
+        $outside = Announcement::create(['judul'=>'Maros','konten'=>'maros','scope'=>'Wilayah','region_id'=>3,'pin'=>false,'created_by'=>$super->id]);
 
-        $this->actingAs($emp, 'employee')->post("/karyawan/pengumuman/{$ann->id}/read")->assertSessionHas('success');
+        $this->actingAs($emp, 'employee');
+        foreach (['/karyawan', '/karyawan/absensi', '/karyawan/cuti', '/karyawan/love', '/karyawan/pengumuman', '/karyawan/profil', '/karyawan/rekap'] as $url) {
+            $this->get($url)->assertOk()
+                ->assertInertia(fn (Assert $p) => $p->where('notifications.unreadAnnouncements', 2));
+        }
+
+        $this->from('/karyawan/pengumuman')->followingRedirects()
+            ->post("/karyawan/pengumuman/{$ann->id}/read")->assertOk()
+            ->assertInertia(fn (Assert $p) => $p->where('notifications.unreadAnnouncements', 1));
         $this->assertDatabaseHas('announcement_reads', ['announcement_id'=>$ann->id,'employee_id'=>$emp->id]);
 
         // idempotent
@@ -369,12 +379,37 @@ class Fase3Test extends TestCase
         $this->assertSame(1, AnnouncementRead::where('announcement_id',$ann->id)->where('employee_id',$emp->id)->count());
 
         // markAllRead
-        $ann2 = Announcement::create(['judul'=>'Gowa','konten'=>'gowa','scope'=>'Wilayah','region_id'=>2,'pin'=>false,'created_by'=>$super->id]);
         $this->actingAs($emp, 'employee')->post('/karyawan/pengumuman/read-all')->assertSessionHas('success');
         $this->assertDatabaseHas('announcement_reads', ['announcement_id'=>$ann2->id,'employee_id'=>$emp->id]);
+        $this->assertDatabaseMissing('announcement_reads', ['announcement_id'=>$outside->id,'employee_id'=>$emp->id]);
 
         $this->actingAs($emp, 'employee')->get('/karyawan/pengumuman')->assertOk()
-            ->assertInertia(fn (Assert $p) => $p->where('unreadCount', 0)->where('readIds', [$ann->id, $ann2->id]));
+            ->assertInertia(fn (Assert $p) => $p->where('unreadCount', 0)->where('readIds', [$ann->id, $ann2->id])
+                ->where('notifications.unreadAnnouncements', 0));
+        $this->get('/karyawan/profil')->assertOk()
+            ->assertInertia(fn (Assert $p) => $p->where('notifications.unreadAnnouncements', 0));
+        $this->actingAs($this->empMaros(), 'employee')->get('/karyawan/profil')->assertOk()
+            ->assertInertia(fn (Assert $p) => $p->where('notifications.unreadAnnouncements', 2));
+    }
+
+    public function test_badge_uses_employee_guard_and_read_status(): void
+    {
+        $super = $this->superAdmin();
+        $emp = $this->empGowa();
+        $maros = $this->empMaros();
+        $global = Announcement::create(['judul'=>'Info','konten'=>'isi','scope'=>'Global','region_id'=>null,'pin'=>false,'created_by'=>$super->id]);
+        Announcement::create(['judul'=>'Gowa','konten'=>'gowa','scope'=>'Wilayah','region_id'=>2,'pin'=>false,'created_by'=>$super->id]);
+        Announcement::create(['judul'=>'Maros','konten'=>'maros','scope'=>'Wilayah','region_id'=>3,'pin'=>false,'created_by'=>$super->id]);
+        AnnouncementRead::create(['announcement_id'=>$global->id,'employee_id'=>$maros->id]);
+
+        $this->get('/karyawan/login')->assertOk()
+            ->assertInertia(fn (Assert $p) => $p->where('notifications.unreadAnnouncements', 0));
+        $this->actingAs($super)->get('/super-admin')->assertOk()
+            ->assertInertia(fn (Assert $p) => $p->where('notifications.unreadAnnouncements', 0));
+        $this->actingAs($emp, 'employee')->get('/karyawan/profil')->assertOk()
+            ->assertInertia(fn (Assert $p) => $p->where('notifications.unreadAnnouncements', 2));
+        $this->actingAs($maros, 'employee')->get('/karyawan/profil')->assertOk()
+            ->assertInertia(fn (Assert $p) => $p->where('notifications.unreadAnnouncements', 1));
     }
 
     public function test_karyawan_profil_update_and_password(): void

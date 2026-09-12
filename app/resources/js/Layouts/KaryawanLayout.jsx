@@ -1,5 +1,4 @@
 import { Link, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
 
 const navItems = [
     { href: '/karyawan', label: 'Beranda', icon: (active) => (
@@ -23,32 +22,8 @@ const navItems = [
 ];
 
 export default function KaryawanLayout({ children }) {
-    const { url } = usePage();
-    const [unreadInfo, setUnreadInfo] = useState(0);
-    useEffect(() => {
-        const calc = () => {
-            try {
-                const raw = localStorage.getItem('bbws_mock_pengumuman_v3');
-                const list = raw ? JSON.parse(raw) : [
-                    { id: 1, scope: 'Global' }, { id: 2, scope: 'Wilayah', region: 'Kab. Gowa' }, { id: 3, scope: 'Global' },
-                ];
-                const empRaw = localStorage.getItem('bbws_mock_employees_v3');
-                const emps = empRaw ? JSON.parse(empRaw) : [{ id: 1, region: 'Kab. Gowa' }];
-                const me = emps.find((e) => e.id === 1) || emps[0];
-                const readRaw = localStorage.getItem('bbws_mock_pengumuman_read_v3');
-                const read = readRaw ? new Set(JSON.parse(readRaw)) : new Set();
-                const visible = list.filter((p) => p.scope === 'Global' || (me && p.region === me.region));
-                setUnreadInfo(visible.filter((p) => !read.has(p.id)).length);
-            } catch { setUnreadInfo(0); }
-        };
-        calc();
-        window.addEventListener('focus', calc);
-        const onVis = () => { if (document.visibilityState === 'visible') calc(); };
-        document.addEventListener('visibilitychange', onVis);
-        const onStorage = (e) => { if (!e.key || e.key === 'bbws_mock_pengumuman_v3' || e.key === 'bbws_mock_pengumuman_read_v3' || e.key === 'bbws_mock_employees_v3') calc(); };
-        window.addEventListener('storage', onStorage);
-        return () => { window.removeEventListener('focus', calc); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
-    }, [url]);
+    const { url, props } = usePage();
+    const unreadInfo = props.notifications?.unreadAnnouncements ?? 0;
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex flex-col max-w-[480px] mx-auto shadow-[0_0_40px_rgba(15,23,42,0.06)]">
             {/* Topbar — no outline, subtle */}
