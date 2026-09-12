@@ -24,6 +24,8 @@ const navItems = [
 export default function KaryawanLayout({ children }) {
     const { url, props } = usePage();
     const unreadInfo = props.notifications?.unreadAnnouncements ?? 0;
+    const mustChangePassword = !!props.auth?.employee?.must_change_password;
+    const onProfilPage = url.startsWith('/karyawan/profil');
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex flex-col max-w-[480px] mx-auto shadow-[0_0_40px_rgba(15,23,42,0.06)]">
             {/* Topbar — no outline, subtle */}
@@ -36,6 +38,19 @@ export default function KaryawanLayout({ children }) {
                     </div>
                 </div>
             </header>
+
+            {mustChangePassword && (
+                <div className="sticky top-[64px] z-10 bg-[#FEF3C7] border-b border-[#FCB833]/40 px-4 py-3 flex items-start gap-3">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#92400E" strokeWidth="1.8" className="shrink-0 mt-0.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-[#92400E] leading-snug">Kata sandi Anda masih NIK</p>
+                        <p className="text-xs text-[#92400E]/80 leading-snug mt-0.5">Segera ganti untuk keamanan akun.</p>
+                    </div>
+                    {!onProfilPage && (
+                        <Link href="/karyawan/profil" className="shrink-0 text-xs font-semibold bg-[#0F172A] text-white rounded-lg px-3 py-1.5">Ganti sekarang</Link>
+                    )}
+                </div>
+            )}
 
             <main className="flex-1 pb-[86px] px-4 pt-4">{children}</main>
 

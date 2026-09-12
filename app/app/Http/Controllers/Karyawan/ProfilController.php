@@ -91,10 +91,19 @@ class ProfilController extends Controller
 
         $data = $request->validate([
             'current_password' => ['required', 'string'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[A-Z]/',
+                'regex:/[a-z]/',
+                'regex:/\d/',
+            ],
         ], [
             'password.confirmed' => 'Konfirmasi tidak cocok.',
             'password.min' => 'Kata sandi baru minimal 8 karakter.',
+            'password.regex' => 'Kata sandi baru wajib mengandung huruf besar, huruf kecil, dan angka.',
         ]);
 
         if (! Hash::check($data['current_password'], $me->password)) {
@@ -103,7 +112,14 @@ class ProfilController extends Controller
             ]);
         }
 
+        if ($data['password'] === $me->nik) {
+            throw ValidationException::withMessages([
+                'password' => 'Kata sandi baru tidak boleh sama dengan NIK.',
+            ]);
+        }
+
         $me->password = $data['password'];
+        $me->must_change_password = false;
         $me->save();
 
         return back()->with('success', 'Kata sandi berhasil diperbarui');

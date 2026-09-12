@@ -19,7 +19,7 @@ class HandleInertiaRequests extends Middleware
                     ? Auth::guard('web')->user()->only(['id', 'name', 'email', 'role', 'region_id', 'site_id'])
                     : null,
                 'employee' => fn () => Auth::guard('employee')->check()
-                    ? Auth::guard('employee')->user()->only(['id', 'nama', 'nik', 'nip', 'jabatan', 'region_id', 'site_id'])
+                    ? Auth::guard('employee')->user()->only(['id', 'nama', 'nik', 'nip', 'jabatan', 'region_id', 'site_id', 'must_change_password'])
                     : null,
             ],
             'notifications' => function () {

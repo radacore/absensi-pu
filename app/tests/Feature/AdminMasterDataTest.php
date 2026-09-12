@@ -150,7 +150,7 @@ class AdminMasterDataTest extends TestCase
         $this->assertDatabaseMissing('employees', ['id' => $emp->id]);
     }
 
-    public function test_super_admin_reset_karyawan_password_and_employee_can_login_with_new_password(): void
+    public function test_super_admin_reset_karyawan_password_to_nik_and_employee_can_login(): void
     {
         $emp = \App\Models\Employee::where('nik', '7371001234567890')->firstOrFail();
         $oldHash = $emp->password;
@@ -164,24 +164,19 @@ class AdminMasterDataTest extends TestCase
         $response->assertSessionHas('reset_password');
 
         $payload = session('reset_password');
-        $this->assertIsArray($payload);
         $this->assertSame($emp->id, $payload['employee_id']);
-        $this->assertSame($emp->name, $payload['nama']);
-        $this->assertSame(12, strlen($payload['password']));
-        $this->assertMatchesRegularExpression('/[A-Z]/', $payload['password']);
-        $this->assertMatchesRegularExpression('/[a-z]/', $payload['password']);
-        $this->assertMatchesRegularExpression('/\d/', $payload['password']);
-        $this->assertDoesNotMatchRegularExpression('/[0O1lI]/', $payload['password']);
+        $this->assertSame($emp->nik, $payload['nik']);
 
         $emp->refresh();
         $this->assertNotSame($oldHash, $emp->password);
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($payload['password'], $emp->password));
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($emp->nik, $emp->password));
+        $this->assertTrue($emp->must_change_password);
 
-        // login karyawan pakai password baru
+        // login karyawan pakai NIK sebagai password
         $this->post('/karyawan/logout');
         $login = $this->post('/karyawan/login', [
             'login' => $emp->nip ?: $emp->nik,
-            'password' => $payload['password'],
+            'password' => $emp->nik,
         ]);
         $login->assertRedirect('/karyawan');
         $this->assertTrue(\Illuminate\Support\Facades\Auth::guard('employee')->check());
@@ -191,6 +186,7 @@ class AdminMasterDataTest extends TestCase
     {
         $gowaEmp = \App\Models\Employee::where('region_id', 2)->firstOrFail();
         $marosEmp = \App\Models\Employee::where('region_id', 3)->firstOrFail();
+        $marosOldHash = $marosEmp->password;
 
         // own region → ok
         $ok = $this->actingAs($this->adminGowa())
@@ -198,36 +194,15 @@ class AdminMasterDataTest extends TestCase
             ->post("/admin/employees/{$gowaEmp->id}/reset-password");
         $ok->assertRedirect('/admin/employees');
         $ok->assertSessionHas('reset_password');
+        $this->assertTrue($gowaEmp->fresh()->must_change_password);
 
-        // luar region → 403
+        // luar region → 403 dan password tidak berubah
         $forbidden = $this->actingAs($this->adminGowa())
             ->from('/admin/employees')
             ->post("/admin/employees/{$marosEmp->id}/reset-password");
         $forbidden->assertForbidden();
-
-        // password Maros tidak berubah
-        $this->assertFalse(session()->has('reset_password') && (session('reset_password')['employee_id'] ?? null) === $marosEmp->id);
-    }
-
-    public function test_reset_password_generates_unique_password_each_call(): void
-    {
-        $emp = \App\Models\Employee::where('region_id', 2)->firstOrFail();
-
-        $this->actingAs($this->superAdmin());
-
-        $first = $this->from('/super-admin/employees')
-            ->post("/super-admin/employees/{$emp->id}/reset-password");
-        $first->assertSessionHas('reset_password');
-        $firstPassword = session('reset_password')['password'];
-
-        $second = $this->from('/super-admin/employees')
-            ->post("/super-admin/employees/{$emp->id}/reset-password");
-        $second->assertSessionHas('reset_password');
-        $secondPassword = session('reset_password')['password'];
-
-        $this->assertNotSame($firstPassword, $secondPassword);
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($secondPassword, $emp->fresh()->password));
-        $this->assertFalse(\Illuminate\Support\Facades\Hash::check($firstPassword, $emp->fresh()->password));
+        $this->assertSame($marosOldHash, $marosEmp->fresh()->password);
+        $this->assertFalse($marosEmp->fresh()->must_change_password);
     }
 
     public function test_reset_password_route_requires_admin_authentication(): void
@@ -235,6 +210,79 @@ class AdminMasterDataTest extends TestCase
         $emp = \App\Models\Employee::first();
         $this->post("/super-admin/employees/{$emp->id}/reset-password")->assertRedirect('/super-admin/login');
         $this->post("/admin/employees/{$emp->id}/reset-password")->assertRedirect('/admin/login');
+    }
+
+    public function test_must_change_password_flag_shared_to_inertia_and_cleared_after_update(): void
+    {
+        $emp = \App\Models\Employee::where('nik', '7371001234567890')->firstOrFail();
+
+        // reset dulu → flag true
+        $this->actingAs($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->post("/super-admin/employees/{$emp->id}/reset-password");
+        $this->assertTrue($emp->fresh()->must_change_password);
+
+        // login karyawan → shared prop membawa flag true
+        $this->post('/karyawan/logout');
+        $this->post('/karyawan/login', ['login' => $emp->nik, 'password' => $emp->nik]);
+
+        $this->get('/karyawan')->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $p) => $p->where('auth.employee.must_change_password', true));
+
+        // ganti password baru yang valid → flag false
+        $this->put('/karyawan/profil/password', [
+            'current_password' => $emp->nik,
+            'password' => 'Rahasia123',
+            'password_confirmation' => 'Rahasia123',
+        ])->assertSessionHas('success');
+
+        $this->assertFalse($emp->fresh()->must_change_password);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('Rahasia123', $emp->fresh()->password));
+
+        // shared prop refresh → flag false
+        $this->get('/karyawan')->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $p) => $p->where('auth.employee.must_change_password', false));
+    }
+
+    public function test_update_password_rejects_weak_password_and_matches_nik(): void
+    {
+        $emp = \App\Models\Employee::where('nik', '7371001234567890')->firstOrFail();
+
+        // set kondisi awal: password sama dengan NIK
+        $emp->forceFill(['password' => bcrypt($emp->nik), 'must_change_password' => true])->save();
+
+        $this->post('/karyawan/logout');
+        $this->post('/karyawan/login', ['login' => $emp->nik, 'password' => $emp->nik]);
+
+        // tanpa huruf besar → gagal
+        $this->put('/karyawan/profil/password', [
+            'current_password' => $emp->nik,
+            'password' => 'lowercase1',
+            'password_confirmation' => 'lowercase1',
+        ])->assertSessionHasErrors('password');
+
+        // tanpa angka → gagal
+        $this->put('/karyawan/profil/password', [
+            'current_password' => $emp->nik,
+            'password' => 'NoNumberHere',
+            'password_confirmation' => 'NoNumberHere',
+        ])->assertSessionHasErrors('password');
+
+        // < 8 → gagal
+        $this->put('/karyawan/profil/password', [
+            'current_password' => $emp->nik,
+            'password' => 'Ab1',
+            'password_confirmation' => 'Ab1',
+        ])->assertSessionHasErrors('password');
+
+        // sama dengan NIK → gagal
+        $this->put('/karyawan/profil/password', [
+            'current_password' => $emp->nik,
+            'password' => $emp->nik,
+            'password_confirmation' => $emp->nik,
+        ])->assertSessionHasErrors('password');
+
+        $this->assertTrue($emp->fresh()->must_change_password);
     }
 
     public function test_site_create_validation_and_delete_guards(): void

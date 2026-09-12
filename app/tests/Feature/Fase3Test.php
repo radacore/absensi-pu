@@ -431,27 +431,27 @@ class Fase3Test extends TestCase
 
         // ganti password: salah current → 422
         $this->actingAs($emp, 'employee')->put('/karyawan/profil/password', [
-            'current_password' => 'salah123',
-            'password' => 'newpass123',
-            'password_confirmation' => 'newpass123',
+            'current_password' => 'Salah123x',
+            'password' => 'NewPass123',
+            'password_confirmation' => 'NewPass123',
         ])->assertSessionHasErrors('current_password');
 
         // konfirmasi tidak cocok
         $this->actingAs($emp, 'employee')->put('/karyawan/profil/password', [
             'current_password' => 'password123',
-            'password' => 'newpass123',
-            'password_confirmation' => 'beda123',
+            'password' => 'NewPass123',
+            'password_confirmation' => 'BedaLagi123',
         ])->assertSessionHasErrors('password');
 
         // sukses
         $this->actingAs($emp, 'employee')->put('/karyawan/profil/password', [
             'current_password' => 'password123',
-            'password' => 'newpass123',
-            'password_confirmation' => 'newpass123',
+            'password' => 'NewPass123',
+            'password_confirmation' => 'NewPass123',
         ])->assertSessionHas('success');
 
         // login dengan password baru via guard employee (hash check)
         $emp->refresh();
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('newpass123', $emp->password));
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('NewPass123', $emp->password));
     }
 }

@@ -69,6 +69,12 @@ export default function Profil(){
             setMsg({ type:'error', text:'Lengkapi semua field kata sandi' }); setTimeout(()=>setMsg(null),2500); return;
         }
         if(pwd.password.length < 8){ setMsg({ type:'error', text:'Kata sandi baru minimal 8 karakter' }); setTimeout(()=>setMsg(null),2500); return; }
+        if(!/[A-Z]/.test(pwd.password) || !/[a-z]/.test(pwd.password) || !/\d/.test(pwd.password)){
+            setMsg({ type:'error', text:'Kata sandi wajib mengandung huruf besar, huruf kecil, dan angka' }); setTimeout(()=>setMsg(null),3000); return;
+        }
+        if(me0.nik && pwd.password === me0.nik){
+            setMsg({ type:'error', text:'Kata sandi baru tidak boleh sama dengan NIK' }); setTimeout(()=>setMsg(null),2500); return;
+        }
         if(pwd.password !== pwd.password_confirmation){ setMsg({ type:'error', text:'Konfirmasi tidak cocok' }); setTimeout(()=>setMsg(null),2500); return; }
         router.put('/karyawan/profil/password', pwd, {
             preserveScroll:true,
@@ -149,7 +155,8 @@ export default function Profil(){
                         </div>
                         <div>
                             <label htmlFor="newPwd" className="text-xs font-medium text-[#334155]">Kata sandi baru</label>
-                            <input id="newPwd" type="password" value={pwd.password} onChange={(e)=>setPwd({...pwd, password:e.target.value})} placeholder="Min. 8 karakter" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                            <input id="newPwd" type="password" value={pwd.password} onChange={(e)=>setPwd({...pwd, password:e.target.value})} placeholder="Min. 8 karakter, huruf besar+kecil+angka" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                            <p className="text-xs text-[#94A3B8] mt-1">Wajib mengandung huruf besar, huruf kecil, dan angka. Tidak boleh sama dengan NIK.</p>
                         </div>
                         <div>
                             <label htmlFor="confirmPwd" className="text-xs font-medium text-[#334155]">Konfirmasi baru</label>

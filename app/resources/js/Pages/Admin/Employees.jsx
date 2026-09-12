@@ -20,8 +20,6 @@ export default function Employees() {
     const [preview, setPreview] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [confirmReset, setConfirmReset] = useState(null);
-    const [resetResult, setResetResult] = useState(null);
-    const [copyState, setCopyState] = useState('idle');
 
     const [form, setForm] = useState({
         nik: '', nip: '', nama: '', email: '', gol: '-', jabatan: '', unit: '', status: 'PNS',
@@ -40,13 +38,9 @@ export default function Employees() {
         if (firstErr) showToast(firstErr, false);
     }, [flash, errors]);
 
-    // tampilkan modal password baru sekali ketika reset sukses
+    // tutup modal konfirmasi begitu reset sukses (server flash reset_password)
     useEffect(() => {
-        if (flash?.reset_password) {
-            setResetResult(flash.reset_password);
-            setCopyState('idle');
-            setConfirmReset(null);
-        }
+        if (flash?.reset_password) setConfirmReset(null);
     }, [flash?.reset_password]);
 
     // keep form office_location_id valid when region changes
@@ -130,17 +124,6 @@ export default function Employees() {
             preserveScroll: true,
             onError: (errs) => showToast(Object.values(errs)[0] || 'Gagal reset password', false),
         });
-    };
-    const copyResetPassword = async () => {
-        if (!resetResult?.password) return;
-        try {
-            await navigator.clipboard.writeText(resetResult.password);
-            setCopyState('copied');
-            setTimeout(() => setCopyState('idle'), 1500);
-        } catch {
-            setCopyState('failed');
-            setTimeout(() => setCopyState('idle'), 1500);
-        }
     };
     const remove = (id) => {
         const target = list.find((x)=>x.id===id);
@@ -249,34 +232,22 @@ export default function Employees() {
 
                 {confirmReset && (
                     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmReset(null)}>
-                        <div className="bg-white rounded-2xl w-full max-w-[400px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
+                        <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
                             <div className="px-6 py-4">
                                 <h3 className="font-semibold text-[#0F172A]">Reset kata sandi {confirmReset.nama}?</h3>
                                 <p className="text-sm text-[#64748B] mt-1">{confirmReset.email} • {confirmReset.region}</p>
-                                <p className="text-xs text-[#94A3B8] mt-2">Sistem akan membuat kata sandi baru 12 karakter. Kata sandi lama tidak dapat dipakai lagi. Sampaikan kata sandi baru ke karyawan segera setelah muncul.</p>
+                                <div className="mt-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] p-4 space-y-2">
+                                    <div>
+                                        <p className="text-xs font-medium text-[#94A3B8] uppercase tracking-wider">Kata sandi baru</p>
+                                        <p className="mt-1 font-mono text-base text-[#0F172A] tracking-wider select-all">{confirmReset.nik}</p>
+                                        <p className="text-xs text-[#94A3B8] mt-1">Sesuai NIK karyawan</p>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-[#92400E] bg-[#FEF3C7] rounded-lg px-3 py-2 mt-3">Karyawan wajib mengganti kata sandi saat login berikutnya. Password lama tidak dapat dipakai lagi.</p>
                             </div>
                             <div className="px-6 pb-5 flex gap-2">
                                 <button type="button" onClick={() => setConfirmReset(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
                                 <button type="button" onClick={confirmResetPassword} className="flex-1 rounded-xl bg-[#FCB833] text-[#0F172A] py-3 text-sm font-semibold">Reset sekarang</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {resetResult && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setResetResult(null)}>
-                        <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
-                            <div className="px-6 py-4">
-                                <h3 className="font-semibold text-[#0F172A]">Kata sandi baru untuk {resetResult.nama}</h3>
-                                <p className="text-sm text-[#64748B] mt-1">Hanya ditampilkan sekali. Salin dan sampaikan ke karyawan lewat channel resmi.</p>
-                                <div className="mt-4 flex items-stretch gap-2">
-                                    <code className="flex-1 rounded-xl bg-[#F1F5F9] px-4 py-3 text-lg font-mono tracking-widest text-[#0F172A] text-center select-all">{resetResult.password}</code>
-                                    <button type="button" onClick={copyResetPassword} className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold ${copyState === 'copied' ? 'bg-[#10B981] text-white' : copyState === 'failed' ? 'bg-[#FEF2F2] text-[#991B1B]' : 'bg-[#0F172A] text-white'}`}>{copyState === 'copied' ? 'Tersalin' : copyState === 'failed' ? 'Gagal' : 'Salin'}</button>
-                                </div>
-                                <p className="text-xs text-[#94A3B8] mt-3">Setelah modal ditutup, kata sandi tidak dapat dilihat lagi. Karyawan wajib ganti kata sandi setelah login pertama.</p>
-                            </div>
-                            <div className="px-6 pb-5">
-                                <button type="button" onClick={() => setResetResult(null)} className="w-full rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Tutup</button>
                             </div>
                         </div>
                     </div>

@@ -25,6 +25,7 @@ class Employee extends Authenticatable
         'foto_url',
         'email',
         'phone',
+        'must_change_password',
     ];
 
     protected $hidden = [
@@ -36,6 +37,7 @@ class Employee extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'must_change_password' => 'boolean',
         ];
     }
 
