@@ -100,6 +100,7 @@ function adminMasterRoutes(string $prefix, string $role, string $label): void
         Route::get('/employees', [EmployeeController::class, 'index'])->name("{$label}.employees");
         Route::post('/employees', [EmployeeController::class, 'store'])->name("{$label}.employees.store");
         Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->name("{$label}.employees.update");
+        Route::post('/employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name("{$label}.employees.reset-password");
         Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->name("{$label}.employees.destroy");
 
         // Admin Wilayah (super admin only via controller guard)

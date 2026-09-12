@@ -19,6 +19,9 @@ export default function Employees() {
     const [photo, setPhoto] = useState(null);
     const [preview, setPreview] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(null);
+    const [confirmReset, setConfirmReset] = useState(null);
+    const [resetResult, setResetResult] = useState(null);
+    const [copyState, setCopyState] = useState('idle');
 
     const [form, setForm] = useState({
         nik: '', nip: '', nama: '', email: '', gol: '-', jabatan: '', unit: '', status: 'PNS',
@@ -36,6 +39,15 @@ export default function Employees() {
         const firstErr = errors && Object.values(errors)[0];
         if (firstErr) showToast(firstErr, false);
     }, [flash, errors]);
+
+    // tampilkan modal password baru sekali ketika reset sukses
+    useEffect(() => {
+        if (flash?.reset_password) {
+            setResetResult(flash.reset_password);
+            setCopyState('idle');
+            setConfirmReset(null);
+        }
+    }, [flash?.reset_password]);
 
     // keep form office_location_id valid when region changes
     const sitesForFormRegion = useMemo(() => {
@@ -110,7 +122,25 @@ export default function Employees() {
 
     const handleReset = (e) => {
         if (isWilayah && e.region !== OWN_REGION) { showToast('Hanya own region', false); return; }
-        showToast('Reset password belum tersedia di fase ini — hubungi Super Admin');
+        setConfirmReset(e);
+    };
+    const confirmResetPassword = () => {
+        if (!confirmReset) return;
+        router.post(`${base}/employees/${confirmReset.id}/reset-password`, {}, {
+            preserveScroll: true,
+            onError: (errs) => showToast(Object.values(errs)[0] || 'Gagal reset password', false),
+        });
+    };
+    const copyResetPassword = async () => {
+        if (!resetResult?.password) return;
+        try {
+            await navigator.clipboard.writeText(resetResult.password);
+            setCopyState('copied');
+            setTimeout(() => setCopyState('idle'), 1500);
+        } catch {
+            setCopyState('failed');
+            setTimeout(() => setCopyState('idle'), 1500);
+        }
     };
     const remove = (id) => {
         const target = list.find((x)=>x.id===id);
@@ -216,6 +246,41 @@ export default function Employees() {
                 </div>
 
                 {toast && <p className={`text-xs text-center rounded-xl py-2 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
+
+                {confirmReset && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmReset(null)}>
+                        <div className="bg-white rounded-2xl w-full max-w-[400px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
+                            <div className="px-6 py-4">
+                                <h3 className="font-semibold text-[#0F172A]">Reset kata sandi {confirmReset.nama}?</h3>
+                                <p className="text-sm text-[#64748B] mt-1">{confirmReset.email} • {confirmReset.region}</p>
+                                <p className="text-xs text-[#94A3B8] mt-2">Sistem akan membuat kata sandi baru 12 karakter. Kata sandi lama tidak dapat dipakai lagi. Sampaikan kata sandi baru ke karyawan segera setelah muncul.</p>
+                            </div>
+                            <div className="px-6 pb-5 flex gap-2">
+                                <button type="button" onClick={() => setConfirmReset(null)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
+                                <button type="button" onClick={confirmResetPassword} className="flex-1 rounded-xl bg-[#FCB833] text-[#0F172A] py-3 text-sm font-semibold">Reset sekarang</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {resetResult && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setResetResult(null)}>
+                        <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
+                            <div className="px-6 py-4">
+                                <h3 className="font-semibold text-[#0F172A]">Kata sandi baru untuk {resetResult.nama}</h3>
+                                <p className="text-sm text-[#64748B] mt-1">Hanya ditampilkan sekali. Salin dan sampaikan ke karyawan lewat channel resmi.</p>
+                                <div className="mt-4 flex items-stretch gap-2">
+                                    <code className="flex-1 rounded-xl bg-[#F1F5F9] px-4 py-3 text-lg font-mono tracking-widest text-[#0F172A] text-center select-all">{resetResult.password}</code>
+                                    <button type="button" onClick={copyResetPassword} className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold ${copyState === 'copied' ? 'bg-[#10B981] text-white' : copyState === 'failed' ? 'bg-[#FEF2F2] text-[#991B1B]' : 'bg-[#0F172A] text-white'}`}>{copyState === 'copied' ? 'Tersalin' : copyState === 'failed' ? 'Gagal' : 'Salin'}</button>
+                                </div>
+                                <p className="text-xs text-[#94A3B8] mt-3">Setelah modal ditutup, kata sandi tidak dapat dilihat lagi. Karyawan wajib ganti kata sandi setelah login pertama.</p>
+                            </div>
+                            <div className="px-6 pb-5">
+                                <button type="button" onClick={() => setResetResult(null)} className="w-full rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Tutup</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {confirmDelete && (
                     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>

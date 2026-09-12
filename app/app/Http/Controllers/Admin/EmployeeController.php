@@ -8,6 +8,7 @@ use App\Models\Region;
 use App\Support\AdminPresenter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -73,6 +74,42 @@ class EmployeeController extends Controller
         $employee->delete();
 
         return back()->with('success', 'Karyawan dihapus.');
+    }
+
+    public function resetPassword(Employee $employee)
+    {
+        $scope = $this->scopeRegion();
+        abort_if($scope && $employee->region_id !== $scope, 403, 'Karyawan ini di luar cakupan Anda.');
+
+        $newPassword = $this->generatePassword();
+        $employee->update(['password' => $newPassword]);
+
+        return back()->with([
+            'success' => "Kata sandi {$employee->name} direset. Sampaikan segera ke karyawan.",
+            'reset_password' => [
+                'employee_id' => $employee->id,
+                'nama' => $employee->name,
+                'password' => $newPassword,
+            ],
+        ]);
+    }
+
+    private function generatePassword(): string
+    {
+        // 12 karakter, campur huruf besar/kecil dan angka, hindari karakter mirip (0O/1lI)
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        $length = 12;
+        $out = '';
+        for ($i = 0; $i < $length; $i++) {
+            $out .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
+
+        // Pastikan ada minimal 1 huruf besar, 1 huruf kecil, 1 angka
+        if (! preg_match('/[A-Z]/', $out) || ! preg_match('/[a-z]/', $out) || ! preg_match('/\d/', $out)) {
+            return $this->generatePassword();
+        }
+
+        return $out;
     }
 
     private function validateEmployee(Request $request, ?int $ignoreId): array

@@ -150,6 +150,93 @@ class AdminMasterDataTest extends TestCase
         $this->assertDatabaseMissing('employees', ['id' => $emp->id]);
     }
 
+    public function test_super_admin_reset_karyawan_password_and_employee_can_login_with_new_password(): void
+    {
+        $emp = \App\Models\Employee::where('nik', '7371001234567890')->firstOrFail();
+        $oldHash = $emp->password;
+
+        $response = $this->actingAs($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->post("/super-admin/employees/{$emp->id}/reset-password");
+
+        $response->assertRedirect('/super-admin/employees');
+        $response->assertSessionHas('success');
+        $response->assertSessionHas('reset_password');
+
+        $payload = session('reset_password');
+        $this->assertIsArray($payload);
+        $this->assertSame($emp->id, $payload['employee_id']);
+        $this->assertSame($emp->name, $payload['nama']);
+        $this->assertSame(12, strlen($payload['password']));
+        $this->assertMatchesRegularExpression('/[A-Z]/', $payload['password']);
+        $this->assertMatchesRegularExpression('/[a-z]/', $payload['password']);
+        $this->assertMatchesRegularExpression('/\d/', $payload['password']);
+        $this->assertDoesNotMatchRegularExpression('/[0O1lI]/', $payload['password']);
+
+        $emp->refresh();
+        $this->assertNotSame($oldHash, $emp->password);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($payload['password'], $emp->password));
+
+        // login karyawan pakai password baru
+        $this->post('/karyawan/logout');
+        $login = $this->post('/karyawan/login', [
+            'login' => $emp->nip ?: $emp->nik,
+            'password' => $payload['password'],
+        ]);
+        $login->assertRedirect('/karyawan');
+        $this->assertTrue(\Illuminate\Support\Facades\Auth::guard('employee')->check());
+    }
+
+    public function test_admin_wilayah_can_reset_own_region_karyawan_but_not_other(): void
+    {
+        $gowaEmp = \App\Models\Employee::where('region_id', 2)->firstOrFail();
+        $marosEmp = \App\Models\Employee::where('region_id', 3)->firstOrFail();
+
+        // own region → ok
+        $ok = $this->actingAs($this->adminGowa())
+            ->from('/admin/employees')
+            ->post("/admin/employees/{$gowaEmp->id}/reset-password");
+        $ok->assertRedirect('/admin/employees');
+        $ok->assertSessionHas('reset_password');
+
+        // luar region → 403
+        $forbidden = $this->actingAs($this->adminGowa())
+            ->from('/admin/employees')
+            ->post("/admin/employees/{$marosEmp->id}/reset-password");
+        $forbidden->assertForbidden();
+
+        // password Maros tidak berubah
+        $this->assertFalse(session()->has('reset_password') && (session('reset_password')['employee_id'] ?? null) === $marosEmp->id);
+    }
+
+    public function test_reset_password_generates_unique_password_each_call(): void
+    {
+        $emp = \App\Models\Employee::where('region_id', 2)->firstOrFail();
+
+        $this->actingAs($this->superAdmin());
+
+        $first = $this->from('/super-admin/employees')
+            ->post("/super-admin/employees/{$emp->id}/reset-password");
+        $first->assertSessionHas('reset_password');
+        $firstPassword = session('reset_password')['password'];
+
+        $second = $this->from('/super-admin/employees')
+            ->post("/super-admin/employees/{$emp->id}/reset-password");
+        $second->assertSessionHas('reset_password');
+        $secondPassword = session('reset_password')['password'];
+
+        $this->assertNotSame($firstPassword, $secondPassword);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($secondPassword, $emp->fresh()->password));
+        $this->assertFalse(\Illuminate\Support\Facades\Hash::check($firstPassword, $emp->fresh()->password));
+    }
+
+    public function test_reset_password_route_requires_admin_authentication(): void
+    {
+        $emp = \App\Models\Employee::first();
+        $this->post("/super-admin/employees/{$emp->id}/reset-password")->assertRedirect('/super-admin/login');
+        $this->post("/admin/employees/{$emp->id}/reset-password")->assertRedirect('/admin/login');
+    }
+
     public function test_site_create_validation_and_delete_guards(): void
     {
         $this->actingAs($this->superAdmin());
