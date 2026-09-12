@@ -70,7 +70,7 @@ export default function ToastHost({ position = 'bottom-right' }) {
 
     return (
         <div
-            className={`fixed ${anchor} z-[70] flex flex-col gap-2 w-full max-w-[380px] pointer-events-none`}
+            className={`fixed ${anchor} z-[70] flex flex-col gap-2 max-w-[calc(100vw-2rem)] sm:max-w-[380px] pointer-events-none`}
             aria-live="polite"
             aria-atomic="true"
         >

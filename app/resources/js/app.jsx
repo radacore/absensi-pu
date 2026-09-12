@@ -17,7 +17,7 @@ createInertiaApp({
         // Inertia context supaya usePage bisa dipakai di ToastHost.
         page.layout = page.layout || ((children) => (
             <ConfirmProvider>
-                <ToastHost position="top" />
+                <ToastHost />
                 {children}
             </ConfirmProvider>
         ));
