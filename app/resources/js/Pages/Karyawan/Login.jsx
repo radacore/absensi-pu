@@ -1,13 +1,24 @@
 import { useState } from 'react';
-import { Link } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 
 export default function Login() {
-    const [nik, setNik] = useState('');
+    const [form, setForm] = useState({ login: '', password: '' });
     const [show, setShow] = useState(false);
+    const [processing, setProcessing] = useState(false);
+    const { errors } = usePage().props;
+
+    function submit(e) {
+        e.preventDefault();
+        setProcessing(true);
+        router.post('/karyawan/login', form, {
+            preserveScroll: true,
+            onFinish: () => setProcessing(false),
+        });
+    }
+
     return (
         <div className="min-h-[100dvh] bg-[#F8FAFC] flex items-center justify-center px-5 py-8">
             <div className="w-full max-w-[420px]">
-                {/* Brand — no outline card, airy */}
                 <div className="text-center mb-8">
                     <img src="/logo.png" alt="BBWS Pompengan Jeneberang" className="mx-auto w-14 h-14 rounded-2xl object-cover shadow-[0_4px_16px_rgba(15,23,42,0.12)] bg-white" />
                     <p className="text-[11px] tracking-[0.18em] font-medium text-[#6B7280] mt-4">BALAI BESAR WILAYAH SUNGAI</p>
@@ -19,15 +30,16 @@ export default function Login() {
                         <h2 className="font-semibold text-[#0F172A]">Masuk</h2>
                     </div>
 
-                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                    <form onSubmit={submit} className="space-y-4">
+                        {errors.login && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{errors.login}</p>}
                         <div>
-                            <label htmlFor="email" className="text-xs font-medium text-[#334155]">Email</label>
+                            <label htmlFor="login" className="text-xs font-medium text-[#334155]">NIP atau NIK</label>
                             <input
-                                id="email"
-                                type="email"
-                                value={nik}
-                                onChange={(e) => setNik(e.target.value)}
-                                placeholder="nama@bbws-pj.go.id"
+                                id="login"
+                                type="text"
+                                value={form.login}
+                                onChange={(e) => setForm({ ...form, login: e.target.value })}
+                                placeholder="Masukkan NIP atau NIK"
                                 className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
                             />
                         </div>
@@ -37,6 +49,8 @@ export default function Login() {
                                 <input
                                     id="password"
                                     type={show ? 'text' : 'password'}
+                                    value={form.password}
+                                    onChange={(e) => setForm({ ...form, password: e.target.value })}
                                     placeholder="Masukkan kata sandi"
                                     className="w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] pr-14 placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
                                 />
@@ -46,11 +60,10 @@ export default function Login() {
                             </div>
                         </div>
 
-                        <Link href="/karyawan" className="block w-full text-center bg-[#0F172A] text-white rounded-xl py-3.5 text-sm font-semibold hover:bg-[#1E3A8A] transition">
+                        <button type="submit" disabled={processing} className="block w-full text-center bg-[#0F172A] text-white rounded-xl py-3.5 text-sm font-semibold hover:bg-[#1E3A8A] transition disabled:opacity-60">
                             Masuk
-                        </Link>
+                        </button>
                         <p className="text-center text-xs text-[#94A3B8]">Lupa kata sandi? Hubungi Admin Wilayah atau Super Admin untuk reset.</p>
-                        <p className="text-center text-xs text-[#94A3B8]">Akses khusus karyawan BBWS Pompengan Jeneberang</p>
                     </form>
                 </div>
             </div>

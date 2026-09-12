@@ -21,10 +21,11 @@ const menuDefs = [
 ];
 
 export default function AdminLayout({ children }) {
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const usr = props.auth?.user || null;
     const base = getAdminBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
-    const roleLabel = isWilayah ? 'Admin Wilayah' : 'Super Admin • Makassar';
+    const roleLabel = usr ? (usr.role === 'super_admin' ? 'Super Admin' : 'Admin Wilayah') : (isWilayah ? 'Admin Wilayah' : 'Super Admin');
     const visibleDefs = isWilayah ? menuDefs.filter((m) => !m.superOnly) : menuDefs;
     const menu = visibleDefs.map((m) => ({ ...m, href: `${base}${m.path}` }));
     const [open, setOpen] = useState(false);
@@ -58,8 +59,8 @@ export default function AdminLayout({ children }) {
                     <div className="bg-white/5 rounded-xl p-3 flex items-center gap-3">
                         <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face&auto=format" alt="admin" className="w-9 h-9 rounded-full object-cover" />
                         <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{isWilayah ? 'Admin Wilayah' : 'Super Admin'}</p>
-                            <p className="text-xs text-white/60 truncate">{isWilayah ? 'wilayah@bbws-pj.go.id' : 'pusat@bbws-pj.go.id'}</p>
+                            <p className="text-sm font-medium truncate">{usr?.name || (isWilayah ? 'Admin Wilayah' : 'Super Admin')}</p>
+                            <p className="text-xs text-white/60 truncate">{usr?.email || (isWilayah ? 'wilayah@bbws-pj.go.id' : 'pusat@bbws-pj.go.id')}</p>
                         </div>
                     </div>
                 </div>

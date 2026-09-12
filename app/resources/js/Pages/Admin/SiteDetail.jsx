@@ -1,7 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { loadRegions, loadEmployees, saveRegions, saveEmployees, getBase, OWN_REGION } from './_shared';
+import { getBase } from './_shared';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -10,12 +10,10 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 // Maps Leaflet per titik, anggota per titik, radius 50–1000m, pindah titik modal.
 
 export default function SiteDetail({ regionId, siteId }) {
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const { regions, employees, readOnly, flash, errors } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
-
-    const [regions, setRegions] = useState(loadRegions());
-    const [employees, setEmployees] = useState(loadEmployees());
     const [toast, setToast] = useState(null);
     const [editOpen, setEditOpen] = useState(false);
     const [moveOpen, setMoveOpen] = useState(null); // employee to move
@@ -30,18 +28,9 @@ export default function SiteDetail({ regionId, siteId }) {
     const site = useMemo(() => region?.locations?.find((s) => s.id === Number(siteId)), [region, siteId]);
 
     const [form, setForm] = useState(() => site ? { nama_lokasi: site.nama_lokasi, lat: String(site.lat), lng: String(site.lng), radius: site.radius, address: site.address || '' } : { nama_lokasi: '', lat: '', lng: '', radius: 200, address: '' });
-    useEffect(() => { if (site) setForm({ nama_lokasi: site.nama_lokasi, lat: String(site.lat), lng: String(site.lng), radius: site.radius, address: site.address || '' }); }, [site?.id]);
-    useEffect(() => {
-        const sync = () => { setRegions(loadRegions()); setEmployees(loadEmployees()); };
-        window.addEventListener('focus', sync);
-        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
-        document.addEventListener('visibilitychange', onVis);
-        const onStorage = (e) => { if (!e.key || e.key === 'bbws_mock_regions_v3' || e.key === 'bbws_mock_employees_v3') sync(); };
-        window.addEventListener('storage', onStorage);
-        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
-    }, []);
+    useEffect(() => { if (site) setForm({ nama_lokasi: site.nama_lokasi, lat: String(site.lat), lng: String(site.lng), radius: site.radius, address: site.address || '' }); }, [site?.id, site?.nama_lokasi, site?.radius]);
 
-    const canEdit = isWilayah ? region?.name === OWN_REGION : true;
+    const canEdit = !readOnly;
     const anggota = useMemo(() => employees.filter((e) => e.office_location_id === Number(siteId)), [employees, siteId]);
     const kandidatTambah = useMemo(() => {
         if (!region) return [];
@@ -53,6 +42,15 @@ export default function SiteDetail({ regionId, siteId }) {
     }, [employees, region, addQ, siteId]);
 
     const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
+
+    // toast dari server (flash + error validasi pertama)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        const serverMsg = flash?.success || flash?.error;
+        if (serverMsg) { showToast(serverMsg, !!flash?.success); return; }
+        const firstErr = errors && Object.values(errors)[0];
+        if (firstErr) showToast(firstErr, false);
+    }, [flash, errors]);
 
     // Leaflet map per titik
     useEffect(() => {
@@ -112,13 +110,10 @@ export default function SiteDetail({ regionId, siteId }) {
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) { showToast('Lat/Lng tidak valid', false); return; }
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { showToast('Lat -90..90, Lng -180..180', false); return; }
         if (radius < 50 || radius > 1000) { showToast('Radius 50–1000m', false); return; }
-        setRegions((prev) => {
-            const next = prev.map((r) => r.id !== region.id ? r : { ...r, locations: r.locations.map((s) => s.id !== site.id ? s : { ...s, nama_lokasi: namaTrim, lat, lng, radius, address: form.address.trim() }) });
-            saveRegions(next);
-            return next;
-        });
+        router.put(`${base}/sites/${site.id}`, {
+            nama_lokasi: namaTrim, lat, lng, radius, address: form.address.trim(),
+        }, { preserveScroll: true });
         setEditOpen(false);
-        showToast('Titik diperbarui');
     };
 
     const handleRemoveFromSite = () => {
@@ -128,12 +123,8 @@ export default function SiteDetail({ regionId, siteId }) {
 
     const handleAssign = (empId) => {
         if (!canEdit) return;
-        setEmployees((prev) => {
-            const next = prev.map((e) => e.id === empId ? { ...e, office_location_id: site.id } : e);
-            saveEmployees(next); return next;
-        });
+        router.post(`${base}/sites/${site.id}/employees`, { employee_ids: [empId] }, { preserveScroll: true });
         setSelectedIds((prev) => { const n = new Set(prev); n.delete(empId); return n; });
-        showToast('Karyawan ditambahkan ke titik');
     };
 
     const toggleSelect = (id) => {
@@ -149,14 +140,10 @@ export default function SiteDetail({ regionId, siteId }) {
     };
     const handleBulkAssign = () => {
         if (!canEdit || selectedIds.size === 0) return;
-        setEmployees((prev) => {
-            const next = prev.map((e) => selectedIds.has(e.id) ? { ...e, office_location_id: site.id } : e);
-            saveEmployees(next); return next;
-        });
-        const n = selectedIds.size;
+        const ids = [...selectedIds];
+        router.post(`${base}/sites/${site.id}/employees`, { employee_ids: ids }, { preserveScroll: true });
         setSelectedIds(new Set());
         setAddOpen(false); setAddQ('');
-        showToast(`${n} karyawan ditambahkan ke titik`);
     };
     const handleConfirmRemove = () => {
         if (confirmRemove) handleRemoveFromSite(confirmRemove.id);
@@ -164,12 +151,8 @@ export default function SiteDetail({ regionId, siteId }) {
 
     const handleMove = (targetSiteId) => {
         if (!moveOpen || !canEdit) return;
-        setEmployees((prev) => {
-            const next = prev.map((e) => e.id === moveOpen.id ? { ...e, office_location_id: targetSiteId } : e);
-            saveEmployees(next); return next;
-        });
+        router.put(`${base}/sites/${site.id}/move`, { employee_id: moveOpen.id }, { preserveScroll: true });
         setMoveOpen(null);
-        showToast('Karyawan dipindah titik');
     };
 
     if (!region || !site) {

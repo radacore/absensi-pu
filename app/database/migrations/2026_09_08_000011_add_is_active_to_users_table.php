@@ -12,16 +12,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('role')->default('admin_wilayah')->after('password'); // super_admin | admin_wilayah
-            $table->foreignId('region_id')->nullable()->after('role')->constrained('regions')->nullOnDelete();
+            $table->boolean('is_active')->default(true)->after('role');
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('region_id');
-            $table->dropColumn('role');
+            $table->dropColumn('is_active');
         });
     }
 };

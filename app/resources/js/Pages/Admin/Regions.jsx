@@ -1,7 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { loadRegions, loadEmployees, saveRegions, saveEmployees, getBase, OWN_REGION, MAX_SITES } from './_shared';
+import { getBase, OWN_REGION, MAX_SITES } from './_shared';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -10,11 +10,10 @@ const emptyWilayah = { name: '', kantor: '', tipe: 'cabang', address: '' };
 const emptySite = { nama_lokasi: '', lat: '', lng: '', radius: 200, address: '' };
 
 export default function Regions() {
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const { regions, employees, flash, errors } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
-    const [regions, setRegions] = useState(() => loadRegions());
-    const [employees, setEmployees] = useState(() => loadEmployees());
     const [q, setQ] = useState('');
     const [toast, setToast] = useState(null);
 
@@ -31,19 +30,15 @@ export default function Regions() {
     const siteMapRef = useRef(null);
     const siteLeafletRef = useRef(null);
 
-    // reload from storage when page shown (after SiteDetail edits)
-    useEffect(() => {
-        const sync = () => { setRegions(loadRegions()); setEmployees(loadEmployees()); };
-        window.addEventListener('focus', sync);
-        // also on visibility
-        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
-        document.addEventListener('visibilitychange', onVis);
-        const onStorage = () => sync();
-        window.addEventListener('storage', onStorage);
-        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
-    }, []);
+    const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
 
-    const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+    // toast dari server (flash success/error + error validasi pertama)
+    useEffect(() => {
+        const serverMsg = flash?.success || flash?.error;
+        if (serverMsg) { showToast(serverMsg, !!flash?.success); return; }
+        const firstErr = errors && Object.values(errors)[0];
+        if (firstErr) showToast(firstErr, false);
+    }, [flash, errors]);
 
     const liveOwn = useMemo(() => regions.find((r) => r.name === OWN_REGION) || regions.find((r) => r.id === 2) || regions[0], [regions]);
     const displayRegions = isWilayah ? (liveOwn ? [liveOwn] : []) : regions;
@@ -64,26 +59,21 @@ export default function Regions() {
     const handleSaveWilayah = () => {
         const nameTrim = wilayahForm.name.trim();
         const kantorTrim = wilayahForm.kantor.trim();
-        if (!nameTrim || !kantorTrim) { showToast('Nama wilayah & kantor wajib'); return; }
+        if (!nameTrim || !kantorTrim) { showToast('Nama wilayah & kantor wajib', false); return; }
         const nameLower = nameTrim.toLowerCase();
         const dup = regions.some((r) => r.name.trim().toLowerCase() === nameLower && r.id !== editingWilayah?.id);
-        if (dup) { showToast('Nama wilayah sudah ada'); return; }
-        if (wilayahForm.tipe === 'pusat' && regions.some((r) => r.tipe === 'pusat' && r.id !== editingWilayah?.id)) { showToast('Hanya 1 Kantor Pusat — Makassar sudah Pusat'); return; }
+        if (dup) { showToast('Nama wilayah sudah ada', false); return; }
+        if (wilayahForm.tipe === 'pusat' && regions.some((r) => r.tipe === 'pusat' && r.id !== editingWilayah?.id)) { showToast('Hanya 1 Kantor Pusat — Makassar sudah Pusat', false); return; }
+        const payload = { name: nameTrim, kantor: kantorTrim, tipe: wilayahForm.tipe, address: wilayahForm.address.trim() };
         if (editingWilayah) {
-            setRegions((prev) => {
-                const next = prev.map((r) => r.id === editingWilayah.id ? { ...r, name: nameTrim, kantor: kantorTrim, tipe: wilayahForm.tipe, address: wilayahForm.address.trim() } : r);
-                saveRegions(next); return next;
-            });
-            showToast('Wilayah diperbarui');
+            router.put(`${base}/regions/${editingWilayah.id}`, payload, { preserveScroll: true });
         } else {
-            const nextRegion = { id: Date.now(), name: nameTrim, kantor: kantorTrim, tipe: wilayahForm.tipe, address: wilayahForm.address.trim(), locations: [] };
-            setRegions((prev) => { const next = [...prev, nextRegion]; saveRegions(next); return next; });
-            showToast('Wilayah ditambah — tambah 1 titik untuk aktifkan absen');
+            router.post(`${base}/regions`, payload, { preserveScroll: true });
         }
         setWilayahOpen(false);
     };
     const handleDeleteWilayah = (id) => {
-        if (isWilayah) { showToast('Admin Wilayah tidak bisa hapus wilayah'); return; }
+        if (isWilayah) { showToast('Admin Wilayah tidak bisa hapus wilayah', false); return; }
         const r = regions.find((x) => x.id === id);
         if (!r) return;
         const nEmp = employees.filter((e) => e.region === r.name).length;
@@ -93,14 +83,7 @@ export default function Regions() {
     const confirmDeleteWilayahAction = () => {
         if (!confirmDeleteWilayah) return;
         const id = confirmDeleteWilayah.id;
-        const r = regions.find((x) => x.id === id);
-        // Wajib 1 titik: hapus wilayah + karyawannya sekaligus
-        const emps = loadEmployees();
-        const siteIds = new Set((r?.locations || []).map((s) => s.id));
-        const nextEmps = emps.filter((e) => !siteIds.has(e.office_location_id) && e.region !== r?.name);
-        saveEmployees(nextEmps); setEmployees(nextEmps);
-        setRegions((prev) => { const next = prev.filter((x) => x.id !== id); saveRegions(next); return next; });
-        showToast(r ? `Wilayah ${r.name} dihapus — ${confirmDeleteWilayah.nEmp} karyawan terhapus` : 'Wilayah dihapus');
+        router.delete(`${base}/regions/${id}`, { preserveScroll: true });
         setConfirmDeleteWilayah(null);
     };
 
@@ -177,57 +160,37 @@ export default function Regions() {
     const handleSaveSite = () => {
         if (!addSiteFor) return;
         const namaTrim = siteForm.nama_lokasi.trim();
-        if (!namaTrim) { showToast('Nama titik wajib'); return; }
+        if (!namaTrim) { showToast('Nama titik wajib', false); return; }
         const dupSite = addSiteFor.locations.some((s) => s.nama_lokasi.trim().toLowerCase() === namaTrim.toLowerCase());
-        if (dupSite) { showToast('Nama titik sudah ada di wilayah ini'); return; }
+        if (dupSite) { showToast('Nama titik sudah ada di wilayah ini', false); return; }
         const lat = Number(siteForm.lat), lng = Number(siteForm.lng), radius = Number(siteForm.radius);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) { showToast('Pilih titik di peta / isi lat lng'); return; }
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { showToast('Lat -90..90, Lng -180..180'); return; }
-        if (radius < 50 || radius > 1000) { showToast('Radius 50–1000m'); return; }
-        const newId = Date.now();
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) { showToast('Pilih titik di peta / isi lat lng', false); return; }
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { showToast('Lat -90..90, Lng -180..180', false); return; }
+        if (radius < 50 || radius > 1000) { showToast('Radius 50–1000m', false); return; }
         const regionId = addSiteFor.id;
-        setRegions((prev) => {
-            const next = prev.map((r) => r.id !== regionId ? r : {
-                ...r,
-                locations: [...r.locations, { id: newId, nama_lokasi: siteForm.nama_lokasi.trim(), lat, lng, radius, address: siteForm.address.trim() }]
-            });
-            saveRegions(next); return next;
-        });
+        router.post(`${base}/regions/${regionId}/sites`, {
+            nama_lokasi: namaTrim,
+            lat,
+            lng,
+            radius,
+            address: siteForm.address.trim(),
+        }, { preserveScroll: true });
         closeAddSite();
-        showToast('Titik ditambah — membuka halaman titik untuk tambah anggota...');
-        setTimeout(() => router.visit(`${base}/regions/${regionId}/sites/${newId}`), 400);
     };
 
     const handleDeleteSite = (regionId, siteId) => {
         const region = regions.find((r) => r.id === regionId);
         if (!region) return;
-        if (isWilayah && region.name !== OWN_REGION) { showToast('Hanya own region'); return; }
-        if (region.locations.length <= 1) { showToast('Minimal 1 titik per wilayah'); return; }
+        if (isWilayah && region.name !== OWN_REGION) { showToast('Hanya own region', false); return; }
+        if (region.locations.length <= 1) { showToast('Minimal 1 titik per wilayah', false); return; }
         const nAnggota = employees.filter((e) => e.office_location_id === siteId).length;
         const siteName = region.locations.find((s) => s.id === siteId)?.nama_lokasi || 'titik ini';
         setConfirmDeleteSite({ regionId, siteId, siteName, nAnggota, regionName: region.name });
     };
     const confirmDeleteSiteAction = () => {
         if (!confirmDeleteSite) return;
-        const { regionId, siteId } = confirmDeleteSite;
-        if (confirmDeleteSite.nAnggota > 0) {
-            // Wajib 1 titik: pindah anggota ke titik lain di region sama sebelum hapus
-            const region = regions.find((r) => r.id === regionId);
-            const otherId = region?.locations.find((s) => s.id !== siteId)?.id;
-            if (otherId) {
-                const emps = loadEmployees();
-                const nextEmps = emps.map((e) => e.office_location_id === siteId ? { ...e, office_location_id: otherId } : e);
-                saveEmployees(nextEmps); setEmployees(nextEmps);
-            } else {
-                showToast('Tidak bisa hapus titik terakhir yang masih ada anggota — pindah dulu', false);
-                return;
-            }
-        }
-        setRegions((prev) => {
-            const next = prev.map((r) => r.id !== regionId ? r : { ...r, locations: r.locations.filter((s) => s.id !== siteId) });
-            saveRegions(next); return next;
-        });
-        showToast(confirmDeleteSite.nAnggota > 0 ? `Titik ${confirmDeleteSite.siteName} dihapus — ${confirmDeleteSite.nAnggota} anggota dipindah` : `Titik ${confirmDeleteSite.siteName} dihapus`);
+        const { siteId } = confirmDeleteSite;
+        router.delete(`${base}/sites/${siteId}`, { preserveScroll: true });
         setConfirmDeleteSite(null);
     };
 
@@ -311,7 +274,7 @@ export default function Regions() {
                     </div>
                 </div>
 
-                {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2 px-3">{toast}</p>}
+                {toast && <p className={`text-xs text-center rounded-xl py-2 px-3 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
 
                 {wilayahOpen && (
                     <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={closeWilayah}>

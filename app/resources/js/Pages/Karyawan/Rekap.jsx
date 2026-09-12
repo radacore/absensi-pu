@@ -1,38 +1,13 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
-import { Link } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
-import { loadRegions, loadEmployees, loadCuti, loadAttendances, loadSettings, loadLove } from '@/Pages/Admin/_shared';
-
-const MOCK_KARYAWAN_ID = 1;
+import { Link, usePage } from '@inertiajs/react';
 
 export default function Rekap() {
-    const [regionsData, setRegionsData] = useState(() => loadRegions());
-    const [employees, setEmployees] = useState(() => loadEmployees());
-    const [cutiList, setCutiList] = useState(() => loadCuti());
-    const [attendances, setAttendances] = useState(() => loadAttendances());
-    const [settings, setSettings] = useState(() => loadSettings());
-    const [love, setLove] = useState(() => loadLove());
-    useEffect(() => {
-        const sync = () => {
-            setRegionsData(loadRegions()); setEmployees(loadEmployees()); setCutiList(loadCuti()); setAttendances(loadAttendances()); setSettings(loadSettings()); setLove(loadLove());
-        };
-        sync();
-        window.addEventListener('focus', sync);
-        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
-        document.addEventListener('visibilitychange', onVis);
-        const onStorage = () => sync();
-        window.addEventListener('storage', onStorage);
-        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
-    }, []);
-    const me = useMemo(() => employees.find((e) => e.id === MOCK_KARYAWAN_ID) || employees[0], [employees]);
-    const assigned = useMemo(() => {
-        if (!me || me.office_location_id == null) return null;
-        for (const r of regionsData) {
-            const s = r.locations.find((x) => x.id === Number(me.office_location_id));
-            if (s) return { site: s, region: r };
-        }
-        return null;
-    }, [me, regionsData]);
+    const { props } = usePage();
+    const assigned = props.assigned ?? null;
+    const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4 };
+    const monthRows = props.monthRows ?? [];
+    const hadir = props.hadir ?? 0;
+    const terlambat = props.terlambat ?? 0;
 
     const now = new Date();
     const year = now.getFullYear();
@@ -40,30 +15,19 @@ export default function Rekap() {
     const monthName = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDow = new Date(year, month, 1).getDay();
-
-    const myCuti = useMemo(() => cutiList.filter((c) => c.employee_id === MOCK_KARYAWAN_ID && c.status !== 'Ditolak'), [cutiList]);
-    const myAttendDays = useMemo(() => new Set(attendances.filter((a)=>a.employee_id===MOCK_KARYAWAN_ID).map((a)=>a.tgl)), [attendances]);
-    const hadir = myAttendDays.size || Math.min(daysInMonth - 10, 16);
-    const terlambat = attendances.filter((a)=>a.employee_id===MOCK_KARYAWAN_ID && a.status==='late').length || 2;
-    const cutiDays = myCuti.length || 1;
-    const loveMax = settings.loveMax ?? 4;
-    const loveUsed = love.filter((c)=>c.employee_id===MOCK_KARYAWAN_ID && (c.status==='approved' || c.status==='pending')).length;
-    const sisa = Math.max(0, loveMax - loveUsed);
-
     const today = now.getDate();
-    const cutiDaySet = new Set(myCuti.flatMap((c)=>{
-        // parse mulai/selesai ISO if available, else fallback day 8
-        if (c.mulai && c.selesai) {
-            const s = new Date(c.mulai).getDate();
-            const e = new Date(c.selesai).getDate();
-            const m = new Date(c.mulai).getMonth();
-            if (m===month) {
-                const arr=[]; for(let d=s; d<=Math.min(e, daysInMonth); d++) arr.push(d); return arr;
-            }
-        }
-        return [8];
-    }));
-    const terlambatSet = new Set([3, 12].filter(()=> terlambat>0));
+
+    const loveMax = settings.loveMax ?? 4;
+    // Fase 3 belum ada: cuti/love masih 0
+    const cutiDays = 0;
+    const sisa = loveMax;
+
+    const statusByDay = new Map();
+    monthRows.forEach((r) => {
+        const d = new Date(r.tgl + 'T00:00:00').getDate();
+        if (new Date(r.tgl).getMonth() === month) statusByDay.set(d, r.status);
+    });
+    const terlambatSet = new Set([...statusByDay.entries()].filter(([, s]) => s === 'late').map(([d]) => d));
 
     const days = Array.from({ length: daysInMonth }, (_, i) => {
         const d = i + 1;
@@ -71,14 +35,31 @@ export default function Rekap() {
         const isWeekend = dow === 0 || dow === 6;
         if (isWeekend) return { d, status: 'libur' };
         if (d > today) return { d, status: 'future' };
-        if (cutiDaySet.has(d)) return { d, status: 'cuti' };
-        if (terlambatSet.has(d)) return { d, status: 'terlambat' };
-        return { d, status: 'hadir' };
+        if (statusByDay.has(d)) {
+            const s = statusByDay.get(d);
+            if (s === 'late') return { d, status: 'terlambat' };
+            if (s === 'excused_love') return { d, status: 'hadir' };
+            return { d, status: 'hadir' };
+        }
+        // fallback demo only if no real data at all
+        if (monthRows.length === 0 && terlambatSet.size === 0 && d <= Math.min(today, 3)) return { d, status: 'hadir' };
+        return { d, status: d <= today ? 'hadir' : 'future' };
     });
 
     const offset = firstDow === 0 ? 6 : firstDow - 1;
-    const workDays = days.filter((x)=>x.status!=='libur' && x.status!=='future').length || 1;
+    const workDays = days.filter((x) => x.status !== 'libur' && x.status !== 'future').length || 1;
     const pct = Math.min(99, Math.max(60, Math.round((hadir / workDays) * 100)));
+
+    if (!assigned) {
+        return (
+            <KaryawanLayout>
+                <div className="bg-white rounded-2xl p-6 text-center">
+                    <p className="font-medium text-[#0F172A]">Titik belum di-assign</p>
+                    <p className="text-sm text-[#64748B] mt-1">Rekap menunggu penugasan titik.</p>
+                </div>
+            </KaryawanLayout>
+        );
+    }
 
     return (
         <KaryawanLayout>
@@ -86,17 +67,17 @@ export default function Rekap() {
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Rekap kehadiran</h2>
-                        <p className="text-sm text-[#64748B] capitalize">{monthName} • {assigned.region.name} • {assigned.site.nama_lokasi} • {assigned.site.radius} m • Toleransi {sisa}/{loveMax}</p>
+                        <p className="text-sm text-[#64748B] capitalize">{monthName} • {assigned.regionName} • {assigned.nama_lokasi} • {assigned.radius} m • Toleransi {sisa}/{loveMax}</p>
                     </div>
                     <span className="bg-[#FCB833] text-[#0F172A] text-xs font-semibold px-3 py-1.5 rounded-full">{loveMax} Toleransi</span>
                 </div>
                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-3 flex items-center justify-between">
-                    <span className="text-xs font-medium text-[#1E3A8A]">{assigned.site.nama_lokasi} • {assigned.site.lat.toFixed(4)}, {assigned.site.lng.toFixed(4)}</span>
-                    <span className="text-xs text-[#64748B]">{assigned.site.radius} m • {settings.jamMasuk}–{settings.jamPulang}</span>
+                    <span className="text-xs font-medium text-[#1E3A8A]">{assigned.nama_lokasi} • {assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)}</span>
+                    <span className="text-xs text-[#64748B]">{assigned.radius} m • {settings.jamMasuk}–{settings.jamPulang}</span>
                 </div>
                 <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] flex items-center justify-between">
                     <div className="flex gap-1.5">
-                        {Array.from({length: loveMax}, (_,i)=>(<span key={i} className={`w-8 h-2 rounded-full ${i < sisa ? 'bg-[#FCB833]' : 'bg-[#F1F5F9]'}`}></span>))}
+                        {Array.from({ length: loveMax }, (_, i) => (<span key={`love-${i}`} className={`w-8 h-2 rounded-full ${i < sisa ? 'bg-[#FCB833]' : 'bg-[#F1F5F9]'}`}></span>))}
                     </div>
                     <span className="text-xs font-medium text-[#92400E] bg-[#FFF7E6] px-2.5 py-1 rounded-full border border-[#FCB833]/20">Sisa {sisa} • Reset 1 {new Date(year, month + 1, 1).toLocaleDateString('id-ID', { month: 'short' })}</span>
                 </div>
@@ -133,16 +114,16 @@ export default function Rekap() {
                         </div>
                     </div>
                     <div className="grid grid-cols-7 gap-1.5 text-center">
-                        {['Sn','Sl','Rb','Km','Jm','Sb','Mg'].map((h) => (
+                        {['Sn', 'Sl', 'Rb', 'Km', 'Jm', 'Sb', 'Mg'].map((h) => (
                             <span key={h} className="text-xs font-medium text-[#94A3B8] py-1">{h}</span>
                         ))}
-                        {Array.from({ length: offset }).map((_, i) => <span key={`off-${i}-${month}`} className="py-2"></span>)}
+                        {Array.from({ length: offset }).map((_, i) => <span key={`off-${i}`} className="py-2"></span>)}
                         {days.map((d) => (
                             <span key={d.d} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium mx-auto
                                 ${d.status === 'hadir' ? 'bg-[#FCB833] text-[#0F172A]' : d.status === 'terlambat' ? 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]' : d.status === 'cuti' ? 'bg-[#ECFDF5] text-[#065F46]' : d.status === 'future' ? 'text-[#CBD5E1]' : 'bg-[#F8FAFC] text-[#94A3B8]'}`}>{d.d}</span>
                         ))}
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-4">Jam {settings.jamMasuk}–{settings.jamPulang} WITA • Kelonggaran {settings.toleransi}m • Di luar {assigned.site.radius} m titik {assigned.site.nama_lokasi} tidak tercatat</p>
+                    <p className="text-xs text-[#94A3B8] mt-4">Jam {settings.jamMasuk}–{settings.jamPulang} WITA • Kelonggaran {settings.toleransi}m • Di luar {assigned.radius} m titik {assigned.nama_lokasi} tidak tercatat</p>
                 </div>
 
                 <div className="flex gap-2">

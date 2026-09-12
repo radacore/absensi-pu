@@ -16,7 +16,8 @@ return new class extends Migration
             $table->time('jam_masuk')->default('07:30:00');
             $table->time('jam_pulang')->default('16:00:00');
             $table->integer('toleransi_late_menit')->default(15);
-            $table->json('hari_kerja')->nullable(); // ["Senin","Selasa","Rabu","Kamis","Jumat"]
+            $table->unsignedSmallInteger('love_max')->default(4);
+            $table->json('hari_kerja')->nullable();
             $table->string('timezone')->default('Asia/Makassar');
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

@@ -1,14 +1,15 @@
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { loadRegions, loadEmployees, saveEmployees, getBase, OWN_REGION, REGION_LIST as regionsList, siteById } from './_shared';
+import { getBase, OWN_REGION, REGION_LIST as regionsList, siteById } from './_shared';
 
 export default function Employees() {
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const { regions, employees, flash, errors } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
-    const [regionsData, setRegionsData] = useState(() => loadRegions());
-    const [list, setList] = useState(() => loadEmployees());
+    const regionsData = regions;
+    const list = employees;
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
     const [toast, setToast] = useState(null);
@@ -25,15 +26,16 @@ export default function Employees() {
         office_location_id: null,
     });
 
+    const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
+
+    // toast dari server (flash + error validasi pertama)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
-        const sync = () => { setRegionsData(loadRegions()); setList(loadEmployees()); };
-        window.addEventListener('focus', sync);
-        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
-        document.addEventListener('visibilitychange', onVis);
-        const onStorage = () => sync();
-        window.addEventListener('storage', onStorage);
-        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
-    }, []);
+        const serverMsg = flash?.success || flash?.error;
+        if (serverMsg) { showToast(serverMsg, !!flash?.success); return; }
+        const firstErr = errors && Object.values(errors)[0];
+        if (firstErr) showToast(firstErr, false);
+    }, [flash, errors]);
 
     // keep form office_location_id valid when region changes
     const sitesForFormRegion = useMemo(() => {
@@ -79,52 +81,46 @@ export default function Employees() {
         const r = new FileReader(); r.onload = () => setPreview(r.result); r.readAsDataURL(f);
     };
 
-    const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(null),2500); };
-
     const save = () => {
-        if (isWilayah && form.region !== OWN_REGION) { showToast(`Admin Wilayah hanya boleh di ${OWN_REGION}`); return; }
-        if (!form.nama.trim() || !form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { showToast('Nama & email valid wajib'); return; }
-        if (!/^\d{16}$/.test(form.nik)) { showToast('NIK 16 digit'); return; }
-        if (form.office_location_id == null || form.office_location_id === '') { showToast('Titik proyek wajib dipilih — 1 karyawan = 1 titik'); return; }
+        if (isWilayah && form.region !== OWN_REGION) { showToast(`Admin Wilayah hanya boleh di ${OWN_REGION}`, false); return; }
+        if (!form.nama.trim() || !form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { showToast('Nama & email valid wajib', false); return; }
+        if (!/^\d{16}$/.test(form.nik)) { showToast('NIK 16 digit', false); return; }
+        if (form.office_location_id == null || form.office_location_id === '') { showToast('Titik proyek wajib dipilih — 1 karyawan = 1 titik', false); return; }
         const regionObj = regionsData.find((r) => r.name === form.region);
-        const rid = regionObj ? regionObj.id : null;
-        {
-            const ok = regionObj?.locations.some((s) => s.id === Number(form.office_location_id));
-            if (!ok) { showToast('Titik tidak sesuai wilayah'); return; }
+        if (!regionObj) { showToast('Wilayah tidak ditemukan', false); return; }
+        const ok = regionObj.locations.some((s) => s.id === Number(form.office_location_id));
+        if (!ok) { showToast('Titik tidak sesuai wilayah', false); return; }
+        if (!editing) {
+            if (list.some((x)=>x.nik===form.nik)) { showToast('NIK sudah ada', false); return; }
+            if (list.some((x)=>x.email===form.email)) { showToast('Email sudah ada', false); return; }
         }
+        const payload = {
+            nik: form.nik, nip: form.nip || '', nama: form.nama, email: form.email, gol: form.gol,
+            jabatan: form.jabatan, unit: form.unit, status: form.status,
+            region: form.region, office_location_id: Number(form.office_location_id),
+        };
         if (editing) {
-            if (isWilayah && editing.region !== OWN_REGION) { showToast('Tidak bisa edit karyawan luar wilayah'); return; }
-            const nextList = list.map((x) => x.id===editing.id ? {
-                ...x, nik:form.nik, nip:form.nip, nama:form.nama, email:form.email, gol:form.gol, jabatan:form.jabatan, unit:form.unit, status:form.status, region:form.region, regionId: rid, office_location_id: Number(form.office_location_id), kantor:form.region.replace('Kab. ','').replace('Kota ',''), foto: preview||x.foto
-            } : x);
-            setList(nextList); saveEmployees(nextList); showToast('Karyawan diperbarui');
+            if (isWilayah && editing.region !== OWN_REGION) { showToast('Tidak bisa edit karyawan luar wilayah', false); return; }
+            router.put(`${base}/employees/${editing.id}`, payload, { preserveScroll: true });
         } else {
-            // cek nik/email unik simple
-            if (list.some((x)=>x.nik===form.nik)) { showToast('NIK sudah ada'); return; }
-            if (list.some((x)=>x.email===form.email)) { showToast('Email sudah ada'); return; }
-            const next = {
-                id: Date.now(), nik:form.nik, nip:form.nip, nama:form.nama, email:form.email, gol:form.gol, jabatan:form.jabatan, unit:form.unit, status:form.status,
-                region:form.region, regionId: rid, office_location_id: Number(form.office_location_id),
-                kantor:form.region.replace('Kab. ','').replace('Kota ',''), foto: preview || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face&auto=format'
-            };
-            const nextList = [...list, next]; setList(nextList); saveEmployees(nextList); showToast('Karyawan ditambah — siap absen di titik assigned');
+            router.post(`${base}/employees`, payload, { preserveScroll: true });
         }
         setOpen(false);
     };
 
     const handleReset = (e) => {
-        if (isWilayah && e.region !== OWN_REGION) { showToast('Hanya own region'); return; }
-        showToast(`Reset password — tautan dikirim ke ${e.email}`);
+        if (isWilayah && e.region !== OWN_REGION) { showToast('Hanya own region', false); return; }
+        showToast('Reset password belum tersedia di fase ini — hubungi Super Admin');
     };
     const remove = (id) => {
         const target = list.find((x)=>x.id===id);
         if (!target) return;
-        if (isWilayah && target.region !== OWN_REGION) { showToast('Hanya own region'); return; }
+        if (isWilayah && target.region !== OWN_REGION) { showToast('Hanya own region', false); return; }
         setConfirmDelete(target);
     };
     const confirmRemove = () => {
         if (!confirmDelete) return;
-        const nextList = list.filter((x)=>x.id!==confirmDelete.id); setList(nextList); saveEmployees(nextList); showToast(`${confirmDelete.nama} dihapus`);
+        router.delete(`${base}/employees/${confirmDelete.id}`, { preserveScroll: true });
         setConfirmDelete(null);
     };
 
@@ -219,7 +215,7 @@ export default function Employees() {
                     </div>
                 </div>
 
-                {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2">{toast}</p>}
+                {toast && <p className={`text-xs text-center rounded-xl py-2 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
 
                 {confirmDelete && (
                     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>

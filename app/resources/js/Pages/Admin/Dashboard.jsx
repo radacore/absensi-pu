@@ -1,37 +1,25 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
-import { loadRegions, loadEmployees, loadAttendances, loadCuti, loadLove, loadSettings } from './_shared';
+import { useMemo, useState } from 'react';
 
 function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
-const wilayahList = ['Semua','Kota Makassar','Kab. Gowa','Kab. Maros','Kab. Bone','Kota Parepare','Kota Palopo','Kab. Bantaeng','Kab. Barru','Kab. Bulukumba','Kab. Enrekang','Kab. Jeneponto','Kab. Kepulauan Selayar','Kab. Luwu','Kab. Luwu Timur','Kab. Luwu Utara','Kab. Pangkajene dan Kepulauan','Kab. Pinrang','Kab. Sinjai','Kab. Soppeng','Kab. Takalar','Kab. Tana Toraja','Kab. Toraja Utara','Kab. Wajo','Kab. Sidrap'];
+const wilayahList = ['Semua', 'Kota Makassar', 'Kab. Gowa', 'Kab. Maros', 'Kab. Bone', 'Kota Parepare', 'Kota Palopo', 'Kab. Bantaeng', 'Kab. Barru', 'Kab. Bulukumba', 'Kab. Enrekang', 'Kab. Jeneponto', 'Kab. Kepulauan Selayar', 'Kab. Luwu', 'Kab. Luwu Timur', 'Kab. Luwu Utara', 'Kab. Pangkajene dan Kepulauan', 'Kab. Pinrang', 'Kab. Sinjai', 'Kab. Soppeng', 'Kab. Takalar', 'Kab. Tana Toraja', 'Kab. Toraja Utara', 'Kab. Wajo', 'Kab. Sidrap'];
 
 export default function Dashboard() {
-    const { url } = usePage();
+    const { url, props } = usePage();
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     const OWN_DASH = 'Kab. Gowa';
-    const [regionsData, setRegionsData] = useState(() => loadRegions());
-    const [employees, setEmployees] = useState(() => loadEmployees());
-    const [attendances, setAttendances] = useState(() => loadAttendances());
-    const [cuti, setCuti] = useState(() => loadCuti());
-    const [love, setLove] = useState(() => loadLove());
-    const [settings, setSettings] = useState(() => loadSettings());
+    const regionsData = props.regions ?? [];
+    const employees = props.employees ?? [];
+    const attendances = props.attendances ?? [];
+    const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4 };
+    const cuti = props.cuti ?? [];
+    const love = props.love ?? [];
     const [wilayah, setWilayah] = useState(isWilayah ? OWN_DASH : 'Semua');
     const [siteFilter, setSiteFilter] = useState('Semua');
     const [tgl] = useState(() => new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }));
-
-    useEffect(() => {
-        const sync = () => { setRegionsData(loadRegions()); setEmployees(loadEmployees()); setAttendances(loadAttendances()); setCuti(loadCuti()); setLove(loadLove()); setSettings(loadSettings()); };
-        window.addEventListener('focus', sync);
-        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
-        document.addEventListener('visibilitychange', onVis);
-        const onStorage = () => sync();
-        window.addEventListener('storage', onStorage);
-        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
-    }, []);
-    useEffect(() => { setSiteFilter('Semua'); }, [wilayah]);
 
     const activeRegionName = isWilayah ? OWN_DASH : wilayah;
     const activeRegion = useMemo(() => regionsData.find((r) => r.name === activeRegionName) || null, [regionsData, activeRegionName]);
@@ -49,24 +37,21 @@ export default function Dashboard() {
         return employees.filter((e) => e.regionId === activeRegion.id).length;
     }, [employees, activeRegion]);
 
-    // Kehadiran per wilayah
     const wilayahStats = useMemo(() => {
         const targetNames = isWilayah ? [OWN_DASH] : wilayah === 'Semua' ? regionsData.map((r) => r.name) : [wilayah];
         const rows = targetNames.map((name) => {
             const total = employees.filter((e) => e.region === name).length;
-            // hadir hari ini = attendances untuk wilayah itu (dummy tgl 2026-08-24 fallback ke semua tgl)
             const list = attendances.filter((a) => a.wilayah === name);
             const hadir = list.length;
             const late = list.filter((a) => a.status === 'late').length;
             const kantor = regionsData.find((r) => r.name === name)?.kantor || name;
             return { name: kantor, wilayah: name, hadir, total: total || hadir || 1, late };
         }).filter((r) => r.total > 0 || r.hadir > 0);
-        // limit top 12 when Semua
         if (!isWilayah && wilayah === 'Semua') return rows.slice(0, 12);
         return rows;
     }, [regionsData, employees, attendances, wilayah, isWilayah]);
 
-    const filtered = wilayahStats; // for bar chart
+    const filtered = wilayahStats;
     const hadir = filtered.reduce((s, c) => s + c.hadir, 0);
     const total = filtered.reduce((s, c) => s + c.total, 0);
     const late = filtered.reduce((s, c) => s + c.late, 0);
@@ -83,17 +68,17 @@ export default function Dashboard() {
 
     const stats = isWilayah
         ? [
-            { label: 'Total Karyawan', value: String(employees.filter((e)=>e.region===OWN_DASH).length), sub: `${OWN_DASH} • 1 kantor`, accent: 'gold', href: `${base}/employees` },
+            { label: 'Total Karyawan', value: String(employees.filter((e) => e.region === OWN_DASH).length), sub: `${OWN_DASH} • 1 kantor`, accent: 'gold', href: `${base}/employees` },
             { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late • ${OWN_DASH}`, accent: 'emerald', href: `${base}/attendances` },
             { label: 'Cuti pending', value: String(cutiPending), sub: `${OWN_DASH} • butuh approval`, accent: 'amber', href: `${base}/cuti` },
             { label: 'Toleransi pending', value: String(lovePending), sub: `${OWN_DASH} • claim hari ini`, accent: 'gold', href: `${base}/love` },
-          ]
+        ]
         : [
             { label: 'Total Karyawan', value: wilayah === 'Semua' ? String(employees.length) : String(total), sub: wilayah === 'Semua' ? '24 wilayah' : `${wilayah}`, accent: 'gold', href: `${base}/employees` },
             { label: 'Hadir hari ini', value: String(hadir), sub: `${pct}% • ${late} late`, accent: 'emerald', href: `${base}/attendances` },
             { label: 'Cuti pending', value: String(cutiPending), sub: 'butuh approval • semua wilayah', accent: 'amber', href: `${base}/cuti` },
             { label: 'Toleransi pending', value: String(lovePending), sub: 'claim hari ini • semua wilayah', accent: 'gold', href: `${base}/love` },
-          ];
+        ];
 
     const wilayahActivities = [
         { t: '07:52 — Andi Saputra (Gowa) terlambat 7m — dalam radius 42m', tag: 'late', color: 'amber' },
@@ -124,14 +109,14 @@ export default function Dashboard() {
                         {isWilayah ? (
                             <span className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm font-medium text-[#0F172A]">{OWN_DASH}</span>
                         ) : (
-                            <select value={wilayah} onChange={(e)=>setWilayah(e.target.value)} className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1E3A8A]/10">
-                                {wilayahList.map((w)=><option key={w} value={w}>{w}</option>)}
+                            <select value={wilayah} onChange={(e) => { setWilayah(e.target.value); setSiteFilter('Semua'); }} className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1E3A8A]/10">
+                                {wilayahList.map((w) => <option key={w} value={w}>{w}</option>)}
                             </select>
                         )}
                         {(isWilayah || wilayah !== 'Semua') && activeRegion && sitesForActive.length > 0 && (
-                            <select value={siteFilter} onChange={(e)=>setSiteFilter(e.target.value)} className="rounded-xl bg-[#FFF7E6] border border-[#FCB833]/30 px-3 py-2.5 text-sm outline-none">
+                            <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)} className="rounded-xl bg-[#FFF7E6] border border-[#FCB833]/30 px-3 py-2.5 text-sm outline-none">
                                 <option value="Semua">Semua titik ({sitesForActive.length})</option>
-                                {sitesForActive.map((s)=><option key={s.id} value={String(s.id)}>{s.nama_lokasi} • {s.radius}m</option>)}
+                                {sitesForActive.map((s) => <option key={s.id} value={String(s.id)}>{s.nama_lokasi} • {s.radius}m</option>)}
                             </select>
                         )}
                         <Link href={`${base}/attendances`} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">Lihat Absensi →</Link>
@@ -181,16 +166,16 @@ export default function Dashboard() {
                         <div className="mt-4 space-y-3 max-h-[320px] overflow-y-auto pr-1">
                             {filtered.map((c) => (
                                 <div key={c.wilayah} className="flex items-center gap-3">
-                                    <span className="text-xs font-medium text-[#334155] w-[160px] truncate" title={c.wilayah}>{c.name} <span className="text-[#94A3B8] font-normal">• {c.wilayah.replace('Kab. ','').replace('Kota ','')}</span></span>
+                                    <span className="text-xs font-medium text-[#334155] w-[160px] truncate" title={c.wilayah}>{c.name} <span className="text-[#94A3B8] font-normal">• {c.wilayah.replace('Kab. ', '').replace('Kota ', '')}</span></span>
                                     <div className="flex-1 h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
                                         <div className="h-full bg-[#0F172A]" style={{ width: `${c.total ? (c.hadir / c.total) * 100 : 0}%` }}></div>
                                     </div>
                                     <span className="text-xs text-[#64748B] whitespace-nowrap">{c.hadir}/{c.total} • <span className="text-[#92400E] font-medium">{c.late} late</span></span>
                                 </div>
                             ))}
-                            {filtered.length===0 && <p className="text-xs text-[#94A3B8] text-center py-6">Belum ada data kehadiran</p>}
+                            {filtered.length === 0 && <p className="text-xs text-[#94A3B8] text-center py-6">Belum ada data kehadiran</p>}
                         </div>
-                          <div className="mt-4 flex flex-wrap gap-2">
+                        <div className="mt-4 flex flex-wrap gap-2">
                             {isWilayah ? (
                                 <>
                                     <Link href={`${base}/regions`} className="text-xs font-medium bg-[#F8FAFC] text-[#334155] px-3 py-1.5 rounded-full border">{OWN_DASH} • Kelola Lokasi →</Link>
@@ -217,7 +202,7 @@ export default function Dashboard() {
                         <p className="text-xs text-white/50 mt-4">{isWilayah ? 'Diatur Pusat — lihat di Pengaturan (read-only)' : 'Super Admin atur di Pengaturan • Reset Toleransi tgl 1 pukul 00:00 WITA'}</p>
                         <Link href={`${base}/settings`} className="mt-4 bg-white text-[#0F172A] rounded-xl py-2.5 text-sm font-semibold text-center">{isWilayah ? 'Lihat Pengaturan' : 'Buka Pengaturan'}</Link>
                         <div className="mt-4 grid grid-cols-2 gap-2">
-                            <Link href={`${base}/cuti`} className="bg-white/10 rounded-xl py-2 text-xs font-medium text-center">{isWilayah ? `Cuti ${OWN_DASH.replace('Kab. ','')}` : 'Cuti berjenjang'}</Link>
+                            <Link href={`${base}/cuti`} className="bg-white/10 rounded-xl py-2 text-xs font-medium text-center">{isWilayah ? `Cuti ${OWN_DASH.replace('Kab. ', '')}` : 'Cuti berjenjang'}</Link>
                             <Link href={`${base}/love`} className="bg-[#FCB833] text-[#0F172A] rounded-xl py-2 text-xs font-semibold text-center">Klaim Toleransi</Link>
                         </div>
                     </div>
@@ -230,7 +215,7 @@ export default function Dashboard() {
                     </div>
                     <div className="divide-y divide-[#F1F5F9]">
                         {activities.map((a, i) => (
-                            <div key={i} className="px-5 py-3 flex items-center gap-3">
+                            <div key={`${a.tag}-${i}`} className="px-5 py-3 flex items-center gap-3">
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${a.color === 'gold' ? 'bg-[#FCB833]' : a.color === 'emerald' ? 'bg-[#10B981]' : a.color === 'amber' ? 'bg-[#F59E0B]' : 'bg-[#0EA5E9]'}`}></span>
                                 <p className="text-sm text-[#334155] flex-1 min-w-0 truncate">{a.t}</p>
                                 <span className="text-xs font-medium px-2 py-1 rounded-full bg-[#F8FAFC] text-[#64748B] shrink-0">{a.tag}</span>

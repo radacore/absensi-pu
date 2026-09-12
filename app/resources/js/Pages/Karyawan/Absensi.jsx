@@ -1,8 +1,6 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
+import { router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { loadRegions, loadEmployees, loadAttendances, saveAttendances, loadSettings } from '@/Pages/Admin/_shared';
-
-const MOCK_KARYAWAN_ID = 1;
 
 function haversineM(lat1, lng1, lat2, lng2) {
     const R = 6371000;
@@ -14,133 +12,116 @@ function haversineM(lat1, lng1, lat2, lng2) {
 }
 
 export default function Absensi() {
+    const { props } = usePage();
+    const me = props.me ?? { id: 1, nama: '—', foto: '', region: '' };
+    const assigned = props.assigned ?? null;
+    const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15 };
+    const history = props.history ?? [];
+    const alreadyToday = !!props.alreadyToday;
+    const todayISO = props.todayISO ?? new Date().toISOString().slice(0, 10);
+    const flash = props.flash;
+    const errors = props.errors;
+
     const [captured, setCaptured] = useState(false);
-    const [regionsData, setRegionsData] = useState(() => loadRegions());
-    const [employees, setEmployees] = useState(() => loadEmployees());
-    const [attendances, setAttendances] = useState(() => loadAttendances());
-    const [settings, setSettings] = useState(() => loadSettings());
     const [photoPreview, setPhotoPreview] = useState(null);
     const [toast, setToast] = useState(null);
     const [myPos, setMyPos] = useState(null);
     const [geoError, setGeoError] = useState(null);
     const [geoLoading, setGeoLoading] = useState(false);
-    useEffect(() => {
-        const sync = () => {
-            setRegionsData(loadRegions()); setEmployees(loadEmployees()); setAttendances(loadAttendances()); setSettings(loadSettings());
-            try { const p = localStorage.getItem('bbws_mock_photo_v3'); if (p) setPhotoPreview(p); } catch {}
-        };
-        sync();
-        window.addEventListener('focus', sync);
-        const onVis = () => { if (document.visibilityState === 'visible') sync(); };
-        document.addEventListener('visibilitychange', onVis);
-        const onStorage = () => sync();
-        window.addEventListener('storage', onStorage);
-        return () => { window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('storage', onStorage); };
-    }, []);
-    const me = useMemo(() => employees.find((e) => e.id === MOCK_KARYAWAN_ID) || employees[0], [employees]);
-    const assigned = useMemo(() => {
-        if (!me || me.office_location_id == null) return null;
-        for (const r of regionsData) {
-            const s = r.locations.find((x) => x.id === Number(me.office_location_id));
-            if (s) return { site: s, region: r };
-        }
-        return null;
-    }, [me, regionsData]);
+
+    const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
+    useEffect(() => { if (flash?.success) showToast(flash.success, true); if (flash?.error) showToast(flash.error, false); }, [flash?.success, flash?.error]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { if (errors && Object.keys(errors).length) showToast(Object.values(errors).flat().join(' '), false); }, [errors]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { try { const p = localStorage.getItem('bbws_mock_photo_v3'); if (p) setPhotoPreview(p); } catch {} }, []);
 
     const jarak = useMemo(() => {
         if (!assigned || !myPos) return null;
-        return Math.round(haversineM(myPos.lat, myPos.lng, assigned.site.lat, assigned.site.lng));
+        return Math.round(haversineM(myPos.lat, myPos.lng, assigned.lat, assigned.lng));
     }, [assigned, myPos]);
-    const inRadius = assigned && jarak != null ? jarak <= assigned.site.radius : false;
+    const inRadius = assigned && jarak != null ? jarak <= assigned.radius : false;
     const tanpaTitik = !assigned;
 
-    const myHistory = useMemo(() => attendances.filter((a) => a.employee_id === MOCK_KARYAWAN_ID).slice().sort((a,b)=> (b.tgl+b.datang).localeCompare(a.tgl+a.datang)), [attendances]);
-
     const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    const todayISO = new Date().toISOString().slice(0,10);
-    const alreadyToday = myHistory.some((h) => h.tgl === todayISO && h.datang);
 
     const requestPos = () => {
         if (!assigned) return;
-        if (!navigator.geolocation) { setGeoError('Geolocation tidak didukung — pakai demo 39m'); setMyPos({ lat: assigned.site.lat + 0.00035, lng: assigned.site.lng }); return; }
+        if (!navigator.geolocation) { setGeoError('Geolocation tidak didukung — pakai demo 39m'); setMyPos({ lat: assigned.lat + 0.00035, lng: assigned.lng }); return; }
         setGeoLoading(true); setGeoError(null);
         navigator.geolocation.getCurrentPosition(
             (p) => { setMyPos({ lat: p.coords.latitude, lng: p.coords.longitude }); setGeoLoading(false); },
-            (err) => { setGeoError(err.message || 'Gagal GPS — pakai demo 39m'); setMyPos({ lat: assigned.site.lat + 0.00035, lng: assigned.site.lng }); setGeoLoading(false); },
+            (err) => { setGeoError(err.message || 'Gagal GPS — pakai demo 39m'); setMyPos({ lat: assigned.lat + 0.00035, lng: assigned.lng }); setGeoLoading(false); },
             { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
         );
     };
     const handleOpenCapture = () => { setCaptured(true); requestPos(); };
 
     const handleKirim = () => {
-        if (tanpaTitik) { setToast('Titik belum di-assign — tidak bisa absen (422)'); setTimeout(()=>setToast(null),2200); return; }
-        if (jarak == null) { setToast(geoLoading ? 'Menunggu GPS...' : 'Lokasi belum siap — aktifkan GPS'); setTimeout(()=>setToast(null),2200); return; }
-        if (!inRadius) { setToast(`${jarak} m / ${assigned.site.radius} m — di luar radius`); setTimeout(()=>setToast(null),2200); return; }
-        if (alreadyToday) { setToast('Sudah absen hari ini'); setTimeout(()=>setToast(null),2200); return; }
-        const jamMasuk = settings.jamMasuk || '07:30';
-        const tol = settings.toleransi ?? 15;
-        const [h,m] = jamMasuk.split(':').map(Number);
-        const cutoffMin = h*60+m+tol;
-        const now = new Date();
-        const curMin = now.getHours()*60+now.getMinutes();
-        const isLate = curMin > cutoffMin;
-        const datang = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-        const selfie = photoPreview || me?.foto || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face&auto=format';
-        const foto = selfie;
-        const next = {
-            id: Date.now(), employee_id: MOCK_KARYAWAN_ID, nama: me.nama, email: me.email, wilayah: me.region, kantor: assigned.region.kantor,
-            office_location_id: assigned.site.id, tgl: todayISO, datang, pulang: '', status: isLate ? 'late' : 'on_time', love: null,
-            jarak, lat: myPos.lat, lng: myPos.lng, foto, selfie,
-        };
-        const updated = [next, ...attendances];
-        setAttendances(updated); saveAttendances(updated);
-        setCaptured(false);
-        setToast(isLate ? 'Absen tercatat — Terlambat' : 'Absen tercatat — Tepat waktu'); setTimeout(()=>setToast(null),2500);
+        if (tanpaTitik) { showToast('Titik belum di-assign — tidak bisa absen', false); return; }
+        if (jarak == null) { showToast(geoLoading ? 'Menunggu GPS...' : 'Lokasi belum siap — aktifkan GPS', false); return; }
+        if (!inRadius) { showToast(`${jarak} m / ${assigned.radius} m — di luar radius`, false); return; }
+        if (alreadyToday) { showToast('Sudah absen hari ini', false); return; }
+        router.post('/karyawan/absensi/clock-in', {
+            lat: myPos.lat,
+            lng: myPos.lng,
+            selfie_url: photoPreview || null,
+        }, {
+            preserveScroll: true,
+            onError: (e) => showToast(Object.values(e).flat().join(' ') || 'Gagal absen', false),
+            onSuccess: () => setCaptured(false),
+        });
     };
 
     const handlePulang = () => {
-        const rec = myHistory.find((h)=> h.tgl===todayISO && !h.pulang);
-        if (!rec) { setToast('Belum absen masuk hari ini'); setTimeout(()=>setToast(null),2200); return; }
-        if (tanpaTitik || jarak == null || !inRadius) { setToast(jarak==null ? 'Lokasi belum siap' : 'Di luar radius — tidak bisa pulang'); setTimeout(()=>setToast(null),2200); return; }
-        const pulang = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-        const updated = attendances.map((a)=> a.id===rec.id ? { ...a, pulang } : a);
-        setAttendances(updated); saveAttendances(updated);
-        setToast('Absen pulang tercatat'); setTimeout(()=>setToast(null),2200);
+        if (tanpaTitik || jarak == null || !inRadius) { showToast(jarak == null ? 'Lokasi belum siap' : 'Di luar radius — tidak bisa pulang', false); return; }
+        if (!history.some((h) => h.tgl === todayISO && !h.pulang)) { showToast('Belum absen masuk hari ini', false); return; }
+        router.post('/karyawan/absensi/clock-out', { lat: myPos.lat, lng: myPos.lng }, {
+            preserveScroll: true,
+            onError: (e) => showToast(Object.values(e).flat().join(' ') || 'Gagal absen pulang', false),
+        });
     };
+
+    if (tanpaTitik) {
+        return (
+            <KaryawanLayout>
+                <div className="bg-white rounded-2xl p-6 text-center">
+                    <p className="font-medium text-[#0F172A]">Titik belum di-assign</p>
+                    <p className="text-sm text-[#64748B] mt-1">Hubungi admin wilayah untuk penugasan titik.</p>
+                </div>
+            </KaryawanLayout>
+        );
+    }
 
     return (
         <KaryawanLayout>
             <div className="space-y-5">
                 <div>
                     <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Absensi</h2>
-                    <p className="text-sm text-[#64748B] mt-1">{assigned.region.name} • {assigned.site.nama_lokasi} • Radius {assigned.site.radius} m • 1 karyawan = 1 titik</p>
+                    <p className="text-sm text-[#64748B] mt-1">{assigned.regionName} • {assigned.nama_lokasi} • Radius {assigned.radius} m • 1 karyawan = 1 titik</p>
                     <p className="text-xs text-[#94A3B8] mt-1">Valid hanya di titik assigned dalam radius titiknya — di luar / titik lain ditolak 422 • Jam {settings.jamMasuk}–{settings.jamPulang} WITA kelonggaran {settings.toleransi}m</p>
                 </div>
 
-                {assigned && (
-                    <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-4">
-                        <p className="text-xs font-medium text-[#94A3B8]">Titik assigned kamu</p>
-                        <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.site.nama_lokasi}</p>
-                        <p className="text-xs font-mono text-[#64748B]">{assigned.site.lat.toFixed(4)}, {assigned.site.lng.toFixed(4)} • {assigned.site.radius} m</p>
-                        {assigned.site.address && <p className="text-xs text-[#94A3B8] mt-1">{assigned.site.address}</p>}
-                    </div>
-                )}
+                <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-4">
+                    <p className="text-xs font-medium text-[#94A3B8]">Titik assigned kamu</p>
+                    <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.nama_lokasi}</p>
+                    <p className="text-xs font-mono text-[#64748B]">{assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)} • {assigned.radius} m</p>
+                    {assigned.address && <p className="text-xs text-[#94A3B8] mt-1">{assigned.address}</p>}
+                </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <div className="rounded-2xl bg-[#F8FAFC] h-[240px] flex flex-col items-center justify-center p-6">
                         {!captured ? (
                             <>
                                 <span className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><path d="M14 4a2 2 0 012 2v1h2a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2V6a2 2 0 012-2h4z"/><circle cx="12" cy="13" r="3.5"/><path d="M16 6h1"/></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><path d="M14 4a2 2 0 012 2v1h2a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2V6a2 2 0 012-2h4z" /><circle cx="12" cy="13" r="3.5" /><path d="M16 6h1" /></svg>
                                 </span>
                                 <p className="text-sm font-medium text-[#0F172A] mt-3">Siap absen</p>
-                                <p className="text-xs text-[#64748B] text-center mt-1">Kamera + lokasi untuk pratinjau jarak ke <span className="font-medium text-[#0F172A]">{assigned.site.nama_lokasi}</span> — hitung haversine ke {assigned.site.radius} m</p>
+                                <p className="text-xs text-[#64748B] text-center mt-1">Kamera + lokasi untuk pratinjau jarak ke <span className="font-medium text-[#0F172A]">{assigned.nama_lokasi}</span> — hitung haversine ke {assigned.radius} m</p>
                                 <button type="button" onClick={handleOpenCapture} className="mt-4 bg-[#0F172A] text-white rounded-xl px-5 py-2.5 text-sm font-semibold">Buka kamera &amp; lokasi</button>
                             </>
                         ) : (
                             <div className="w-full text-center">
                                 <div className="mx-auto w-20 h-20 rounded-full bg-white shadow-sm flex items-center justify-center overflow-hidden">
-                                    {photoPreview ? <img src={photoPreview} alt="selfie" className="w-full h-full object-cover" /> : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0116 0"/><circle cx="12" cy="8" r="4"/><path d="M8 12h8"/></svg>}
+                                    {photoPreview ? <img src={photoPreview} alt="selfie" className="w-full h-full object-cover" /> : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="8" r="4" /><path d="M4 20a8 8 0 0116 0" /></svg>}
                                 </div>
                                 <p className="text-sm font-semibold text-[#0F172A] mt-3">Pratinjau selfie</p>
                                 {geoLoading ? (
@@ -148,25 +129,25 @@ export default function Absensi() {
                                 ) : jarak == null ? (
                                     <p className="text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 bg-[#FEF2F2] text-[#991B1B]">Lokasi belum siap</p>
                                 ) : (
-                                    <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{jarak} m / {assigned.site.radius} m • {inRadius ? 'Dalam radius titik assigned' : 'Di luar radius — ditolak 422'}</p>
+                                    <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{jarak} m / {assigned.radius} m • {inRadius ? 'Dalam radius titik assigned' : 'Di luar radius — ditolak 422'}</p>
                                 )}
                                 {geoError && <p className="text-xs text-[#92400E] mt-1">{geoError}</p>}
                                 {myPos && <p className="text-xs font-mono text-[#94A3B8] mt-1">{myPos.lat.toFixed(6)}, {myPos.lng.toFixed(6)}</p>}
-                                <p className="text-xs text-[#94A3B8] mt-1">{nowStr} WITA • {assigned.region.name} • {assigned.site.nama_lokasi}</p>
+                                <p className="text-xs text-[#94A3B8] mt-1">{nowStr} WITA • {assigned.regionName} • {assigned.nama_lokasi}</p>
                                 <div className="flex gap-2 justify-center mt-4">
                                     <button type="button" onClick={() => { setCaptured(false); setMyPos(null); setGeoError(null); }} className="rounded-xl bg-white shadow-sm px-4 py-2 text-sm font-medium text-[#334155]">Ulangi</button>
                                     <button type="button" onClick={requestPos} className="rounded-xl bg-white border border-[#E2E8F0] px-4 py-2 text-sm font-medium text-[#334155]">Refresh GPS</button>
-                                    <button type="button" onClick={handleKirim} disabled={jarak==null || !inRadius || alreadyToday} title={jarak==null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius` : alreadyToday ? 'Sudah absen hari ini' : ''} className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak!=null && inRadius && !alreadyToday ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}>Kirim absen masuk</button>
+                                    <button type="button" onClick={handleKirim} disabled={jarak == null || !inRadius || alreadyToday} title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : alreadyToday ? 'Sudah absen hari ini' : ''} className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && !alreadyToday ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}>Kirim absen masuk</button>
                                 </div>
                             </div>
                         )}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-2">
                         <button type="button" onClick={handlePulang} className="rounded-xl py-3 text-sm font-medium bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF]">Absen pulang</button>
-                        <button type="button" onClick={handleOpenCapture} disabled={captured && jarak!=null && !inRadius} title={captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius` : ''} className={`rounded-xl py-3 text-sm font-semibold ${captured && jarak!=null && !inRadius ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
+                        <button type="button" onClick={handleOpenCapture} disabled={captured && jarak != null && !inRadius} title={captured && jarak != null && !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : ''} className={`rounded-xl py-3 text-sm font-semibold ${captured && jarak != null && !inRadius ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{captured && jarak!=null && !inRadius ? `${jarak} m / ${assigned.site.radius} m — di luar radius ${assigned.site.nama_lokasi}` : `Absen hanya dapat dilakukan di dalam radius titik penugasan`}</p>
-                    {toast && <p className="text-xs text-center bg-[#ECFDF5] text-[#065F46] rounded-xl py-2 mt-3">{toast}</p>}
+                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{captured && jarak != null && !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius ${assigned.nama_lokasi}` : `Absen hanya dapat dilakukan di dalam radius titik penugasan`}</p>
+                    {toast && <p className={`text-xs text-center rounded-xl py-2 mt-3 ${toast.ok ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{toast.msg}</p>}
                     {alreadyToday && <p className="text-xs text-center text-[#92400E] mt-2">Sudah absen hari ini ({todayISO}) — lihat riwayat</p>}
                 </div>
 
@@ -174,16 +155,16 @@ export default function Absensi() {
                     <div className="px-5 pt-5 pb-4 border-b border-[#F1F5F9] flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
                             <span className="w-8 h-8 rounded-xl bg-[#F1F5F9] flex items-center justify-center">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M3 10h18"/></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.8"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4" /><path d="M16 3v4" /><path d="M3 10h18" /></svg>
                             </span>
                             <div>
                                 <h3 className="font-semibold text-sm text-[#0F172A] leading-tight">Riwayat Absensi</h3>
-                                <p className="text-xs text-[#64748B]">{myHistory.length} entri</p>
+                                <p className="text-xs text-[#64748B]">{history.length} entri</p>
                             </div>
                         </div>
-                        <span className="text-xs text-[#64748B] bg-[#F8FAFC] rounded-full px-3 py-1.5 whitespace-nowrap">{assigned.site.nama_lokasi}</span>
+                        <span className="text-xs text-[#64748B] bg-[#F8FAFC] rounded-full px-3 py-1.5 whitespace-nowrap">{assigned.nama_lokasi}</span>
                     </div>
-                    {myHistory.length===0 ? (
+                    {history.length === 0 ? (
                         <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada absensi</p>
                     ) : (
                         <div className="overflow-x-auto">
@@ -197,7 +178,7 @@ export default function Absensi() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[#F1F5F9]">
-                                    {myHistory.map((r) => (
+                                    {history.map((r) => (
                                         <tr key={`${r.tgl}-${r.datang}-${r.id}`} className={`hover:bg-[#F8FAFC]/50 ${r.tgl === todayISO ? 'bg-[#F0F7FF]' : ''}`}>
                                             <td className="px-5 py-3">
                                                 <p className="font-medium text-[#0F172A] whitespace-nowrap">{new Date(r.tgl + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
@@ -206,7 +187,7 @@ export default function Absensi() {
                                             <td className="px-5 py-3 font-mono text-[#0F172A] whitespace-nowrap tabular-nums">{r.datang}</td>
                                             <td className="px-5 py-3 font-mono whitespace-nowrap tabular-nums">{r.pulang ? <span className="text-[#0F172A]">{r.pulang}</span> : <span className="text-[#CBD5E1]">—</span>}</td>
                                             <td className="px-5 py-3">
-                                                <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${r.status==='on_time' ? 'bg-[#ECFDF5] text-[#065F46]' : r.status==='excused_love' ? 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30' : r.status==='late' ? 'bg-[#FFFBEB] text-[#92400E]' : 'bg-[#F1F5F9] text-[#334155]'}`}>{r.status==='on_time' ? 'Tepat waktu' : r.status==='late' ? 'Terlambat' : r.status==='excused_love' ? 'Toleransi' : r.status}</span>
+                                                <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${r.status === 'on_time' ? 'bg-[#ECFDF5] text-[#065F46]' : r.status === 'excused_love' ? 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30' : r.status === 'late' ? 'bg-[#FFFBEB] text-[#92400E]' : 'bg-[#F1F5F9] text-[#334155]'}`}>{r.status === 'on_time' ? 'Tepat waktu' : r.status === 'late' ? 'Terlambat' : r.status === 'excused_love' ? 'Toleransi' : r.status}</span>
                                             </td>
                                         </tr>
                                     ))}

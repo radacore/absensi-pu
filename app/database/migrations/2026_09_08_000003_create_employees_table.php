@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('unit_kerja');
             $table->enum('status_kepegawaian', ['PNS', 'PPPK', 'Kontrak', 'Honorer']);
             $table->foreignId('region_id')->constrained('regions')->cascadeOnDelete();
+            $table->foreignId('site_id')->constrained('sites')->cascadeOnDelete();
             $table->string('password');
             $table->string('foto_url')->nullable();
             $table->string('email')->nullable();
