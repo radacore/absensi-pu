@@ -2,7 +2,23 @@ import KaryawanLayout from '@/Layouts/KaryawanLayout';
 import { useConfirm } from '@/Components/ConfirmDialog';
 import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+
+const DOKUMEN_ACCEPT = '.pdf,application/pdf,image/jpeg,image/png,image/webp';
+const DOKUMEN_MIMES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+const DOKUMEN_MAX_BYTES = 5 * 1024 * 1024;
+
+const emptyForm = {
+    nomor_surat: '', tanggal_mulai: '', tanggal_selesai: '',
+    keterangan: '', tujuan: '', transportasi: 'mobil', pembebanan_anggaran: '',
+};
+
+const formatBytes = (bytes) => {
+    if (!bytes) return '';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    return `${(bytes / (1024 ** i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+};
 
 export default function Dinas() {
     const { props } = usePage();
@@ -10,10 +26,33 @@ export default function Dinas() {
     const confirm = useConfirm();
 
     const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({
-        nomor_surat: '', tanggal_mulai: '', tanggal_selesai: '',
-        keterangan: '', tujuan: '', transportasi: 'mobil', pembebanan_anggaran: '',
-    });
+    const [form, setForm] = useState(emptyForm);
+    const [dokumen, setDokumen] = useState(null);
+    const fileRef = useRef(null);
+
+    const resetForm = () => {
+        setForm(emptyForm);
+        setDokumen(null);
+        if (fileRef.current) fileRef.current.value = '';
+    };
+
+    const pickFile = (e) => {
+        const f = e.target.files?.[0] ?? null;
+        if (!f) { setDokumen(null); return; }
+        if (!DOKUMEN_MIMES.includes(f.type)) {
+            toast.error('Dokumen harus berformat PDF, JPG, PNG, atau WEBP');
+            e.target.value = '';
+            setDokumen(null);
+            return;
+        }
+        if (f.size > DOKUMEN_MAX_BYTES) {
+            toast.error('Ukuran dokumen maksimal 5 MB');
+            e.target.value = '';
+            setDokumen(null);
+            return;
+        }
+        setDokumen(f);
+    };
 
     const submit = () => {
         if (!form.nomor_surat.trim()) { toast.error('Nomor surat wajib diisi'); return; }
@@ -21,12 +60,17 @@ export default function Dinas() {
         if (form.tanggal_selesai < form.tanggal_mulai) { toast.error('Tanggal selesai tidak boleh sebelum mulai'); return; }
         if (form.keterangan.trim().length < 5) { toast.error('Keterangan minimal 5 karakter'); return; }
         if (!form.tujuan.trim()) { toast.error('Tujuan wajib diisi'); return; }
-        router.post('/karyawan/dinas', form, {
+        if (!dokumen) { toast.error('Dokumen pendukung (surat tugas) wajib diunggah'); return; }
+
+        const fd = new FormData();
+        Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ''));
+        fd.append('dokumen', dokumen);
+
+        router.post('/karyawan/dinas', fd, {
             preserveScroll: true,
-            onSuccess: () => {
-                setShowForm(false);
-                setForm({ nomor_surat: '', tanggal_mulai: '', tanggal_selesai: '', keterangan: '', tujuan: '', transportasi: 'mobil', pembebanan_anggaran: '' });
-            },
+            forceFormData: true,
+            onSuccess: () => { setShowForm(false); resetForm(); },
+            onError: (errs) => toast.error(Object.values(errs)[0] || 'Gagal mengirim pengajuan'),
         });
     };
 
@@ -96,6 +140,18 @@ export default function Dinas() {
                                 <input type="text" value={form.pembebanan_anggaran} onChange={(e) => setForm({ ...form, pembebanan_anggaran: e.target.value })} placeholder="misal: Kendaraan Sewa" className="mt-1 block w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
                             </label>
                         </div>
+                        <div>
+                            <span className="text-xs font-medium text-[#334155]">Dokumen Surat Tugas <span className="text-[#DC2626]">*</span></span>
+                            <input ref={fileRef} type="file" accept={DOKUMEN_ACCEPT} onChange={pickFile} className="hidden" />
+                            <button type="button" onClick={() => fileRef.current?.click()} className="mt-1 w-full rounded-xl bg-white border border-dashed border-[#CBD5E1] py-3 text-sm font-medium text-[#334155] hover:bg-[#F8FAFC] transition">
+                                {dokumen ? '📎 Ganti dokumen' : '📎 Pilih dokumen (PDF / JPG / PNG / WEBP)'}
+                            </button>
+                            {dokumen ? (
+                                <p className="mt-1.5 text-xs text-[#0D9488] break-all">✓ {dokumen.name} • {formatBytes(dokumen.size)}</p>
+                            ) : (
+                                <p className="mt-1.5 text-xs text-[#94A3B8]">Wajib diunggah. Format PDF atau gambar, maksimal 5 MB.</p>
+                            )}
+                        </div>
                         <button type="button" onClick={submit} className="w-full rounded-xl bg-[#0D9488] text-white py-2.5 text-sm font-semibold">Kirim Pengajuan</button>
                     </div>
                 )}
@@ -112,6 +168,11 @@ export default function Dinas() {
                                         <p className="text-xs text-[#64748B] mt-1">📄 {r.nomor_surat} • 🎯 {r.tujuan}</p>
                                         <p className="text-xs text-[#475569] mt-2">{r.keterangan}</p>
                                         {r.transportasi && <p className="text-xs text-[#94A3B8] mt-1">🚗 {r.transportasi}{r.pembebanan_anggaran ? ` • 💰 ${r.pembebanan_anggaran}` : ''}</p>}
+                                        {r.dokumen_url && (
+                                            <a href={r.dokumen_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-[#0D9488] bg-[#F0FDFA] border border-[#99F6E4] px-2.5 py-1.5 rounded-lg">
+                                                {r.dokumen_is_image ? '🖼' : '📄'} Lihat dokumen{r.dokumen_size ? ` • ${r.dokumen_size}` : ''}
+                                            </a>
+                                        )}
                                     </div>
                                     <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor(r.status)}`}>{r.status}</span>
                                 </div>

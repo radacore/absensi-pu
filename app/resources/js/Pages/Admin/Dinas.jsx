@@ -98,6 +98,7 @@ export default function Dinas() {
                                     <th className="text-left px-4 py-3">Nomor Surat</th>
                                     <th className="text-left px-4 py-3">Tanggal Dinas</th>
                                     <th className="text-left px-4 py-3">Tujuan</th>
+                                    <th className="text-left px-4 py-3">Dokumen</th>
                                     <th className="text-left px-4 py-3">Status</th>
                                     <th className="text-right px-4 py-3"></th>
                                 </tr>
@@ -117,6 +118,18 @@ export default function Dinas() {
                                         <td className="px-4 py-3 text-xs text-[#334155]">
                                             {r.tujuan}
                                             {r.transportasi && <p className="text-[#94A3B8]">🚗 {r.transportasi}</p>}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {r.dokumen_nama ? (
+                                                <div className="space-y-1">
+                                                    <a href={`${base}/dinas/${r.id}/dokumen`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-[#0D9488] bg-[#F0FDFA] border border-[#99F6E4] px-2 py-1.5 rounded-lg">
+                                                        {r.dokumen_is_image ? '🖼' : '📄'} Lihat
+                                                    </a>
+                                                    <p className="text-[10px] text-[#94A3B8] max-w-[150px] truncate" title={r.dokumen_nama}>{r.dokumen_nama} • {r.dokumen_size}</p>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-[#CBD5E1]">—</span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor(r.status)}`}>{r.status}</span>

@@ -55,6 +55,7 @@ Route::prefix('karyawan')->group(function () {
         Route::get('/dinas', [KaryawanDinasController::class, 'index'])->name('karyawan.dinas');
         Route::post('/dinas', [KaryawanDinasController::class, 'store'])->name('karyawan.dinas.store');
         Route::delete('/dinas/{dinas}', [KaryawanDinasController::class, 'destroy'])->name('karyawan.dinas.destroy');
+        Route::get('/dinas/{dinas}/dokumen', [KaryawanDinasController::class, 'dokumen'])->name('karyawan.dinas.dokumen');
         Route::get('/pengumuman', [KaryawanPengumumanController::class, 'index'])->name('karyawan.pengumuman');
         Route::post('/pengumuman/{pengumuman}/read', [KaryawanPengumumanController::class, 'markRead'])->name('karyawan.pengumuman.read');
         Route::post('/pengumuman/read-all', [KaryawanPengumumanController::class, 'markAllRead'])->name('karyawan.pengumuman.readAll');
@@ -91,6 +92,7 @@ function adminMasterRoutes(string $prefix, string $role, string $label): void
         Route::put('/dinas/{dinas}/approve', [AdminDinasController::class, 'approve'])->name("{$label}.dinas.approve");
         Route::put('/dinas/{dinas}/reject', [AdminDinasController::class, 'reject'])->name("{$label}.dinas.reject");
         Route::delete('/dinas/{dinas}', [AdminDinasController::class, 'destroy'])->name("{$label}.dinas.destroy");
+        Route::get('/dinas/{dinas}/dokumen', [AdminDinasController::class, 'dokumen'])->name("{$label}.dinas.dokumen");
         Route::get('/pengumuman', [AdminPengumumanController::class, 'index'])->name("{$label}.pengumuman");
         Route::post('/pengumuman', [AdminPengumumanController::class, 'store'])->name("{$label}.pengumuman.store");
         Route::put('/pengumuman/{pengumuman}', [AdminPengumumanController::class, 'update'])->name("{$label}.pengumuman.update");

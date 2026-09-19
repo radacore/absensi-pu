@@ -9,6 +9,7 @@ use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class DinasController extends Controller
@@ -52,6 +53,9 @@ class DinasController extends Controller
                     'status' => $d->status,
                     'note' => $d->note,
                     'tanggal_pengajuan' => $d->tanggal_pengajuan->format('Y-m-d'),
+                    'dokumen_nama' => $d->dokumen_nama,
+                    'dokumen_size' => $d->dokumenSizeLabel(),
+                    'dokumen_is_image' => $d->dokumenIsImage(),
                 ];
             })->all();
 
@@ -104,6 +108,11 @@ class DinasController extends Controller
         abort_if($scope !== null && (int) $dinas->employee?->region_id !== $scope, 403);
         $empName = $dinas->employee?->name ?? '-';
         $snap = ['nomor_surat' => $dinas->nomor_surat, 'status' => $dinas->status, 'tujuan' => $dinas->tujuan];
+
+        if ($dinas->hasDokumen()) {
+            Storage::disk('local')->delete($dinas->dokumen_path);
+        }
+
         $dinas->delete();
 
         Audit::log(
@@ -115,5 +124,21 @@ class DinasController extends Controller
         );
 
         return back()->with('success', 'Dinas dihapus.');
+    }
+
+    /** Pratinjau / unduh dokumen pendukung — dibatasi wilayah admin. */
+    public function dokumen(DinasClaim $dinas)
+    {
+        $scope = $this->scope();
+        abort_if($scope !== null && (int) $dinas->employee?->region_id !== $scope, 403);
+        abort_unless($dinas->hasDokumen(), 404);
+
+        $disk = Storage::disk('local');
+        abort_unless($disk->exists($dinas->dokumen_path), 404);
+
+        return $disk->response($dinas->dokumen_path, $dinas->dokumen_nama, [
+            'Content-Type' => $dinas->dokumen_mime ?: 'application/octet-stream',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 }

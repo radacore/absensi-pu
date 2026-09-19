@@ -11,7 +11,9 @@ use App\Models\ToleranceClaim;
 use App\Models\User;
 use App\Support\RekapPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -29,6 +31,15 @@ class RekapPresensiTest extends TestCase
     private function adminGowa(): User { return User::where('email', 'admin.gowa@bbws-pj.go.id')->first(); }
     private function empGowa(): Employee { return Employee::where('region_id', 2)->first(); }
     private function empMaros(): Employee { return Employee::where('region_id', 3)->first(); }
+
+    /** Berkas PDF asli sebagai dokumen pendukung wajib pengajuan dinas. */
+    private function dokumenPdf(string $name = 'surat-tugas.pdf'): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'rekap-pdf-');
+        file_put_contents($path, "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n");
+
+        return new UploadedFile($path, $name, 'application/pdf', null, true);
+    }
 
     public function test_rekap_presenter_hitung_distribusi_hadir_cuti_dinas_tanpa_keterangan(): void
     {
@@ -142,6 +153,7 @@ class RekapPresensiTest extends TestCase
 
     public function test_dinas_karyawan_crud_dan_admin_approve(): void
     {
+        Storage::fake('local');
         $emp = $this->empGowa();
 
         // Karyawan submit
@@ -153,6 +165,7 @@ class RekapPresensiTest extends TestCase
             'tujuan' => 'Bone',
             'transportasi' => 'mobil',
             'pembebanan_anggaran' => 'Kendaraan Sewa',
+            'dokumen' => $this->dokumenPdf(),
         ]);
 
         $this->assertDatabaseHas('dinas_claims', ['employee_id' => $emp->id, 'nomor_surat' => '2485/SPT/0627/2026', 'status' => 'Menunggu']);
