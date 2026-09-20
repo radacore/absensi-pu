@@ -7,12 +7,12 @@ use App\Models\DinasClaim;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Leave;
-use App\Models\ToleranceClaim;
 use App\Models\User;
 use App\Support\RekapPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -27,10 +27,25 @@ class RekapPresensiTest extends TestCase
         $this->seed();
     }
 
-    private function superAdmin(): User { return User::where('role', 'super_admin')->first(); }
-    private function adminGowa(): User { return User::where('email', 'admin.gowa@bbws-pj.go.id')->first(); }
-    private function empGowa(): Employee { return Employee::where('region_id', 2)->first(); }
-    private function empMaros(): Employee { return Employee::where('region_id', 3)->first(); }
+    private function superAdmin(): User
+    {
+        return User::where('role', 'super_admin')->first();
+    }
+
+    private function adminGowa(): User
+    {
+        return User::where('email', 'admin.gowa@bbws-pj.go.id')->first();
+    }
+
+    private function empGowa(): Employee
+    {
+        return Employee::where('region_id', 2)->first();
+    }
+
+    private function empMaros(): Employee
+    {
+        return Employee::where('region_id', 3)->first();
+    }
 
     /** Berkas PDF asli sebagai dokumen pendukung wajib pengajuan dinas. */
     private function dokumenPdf(string $name = 'surat-tugas.pdf'): UploadedFile
@@ -90,7 +105,9 @@ class RekapPresensiTest extends TestCase
         $weekdayCount = 0;
         for ($d = 1; $d <= 30; $d++) {
             $dow = Carbon::create($year, $month, $d)->dayOfWeek;
-            if ($dow !== 0 && $dow !== 6) $weekdayCount++;
+            if ($dow !== 0 && $dow !== 6) {
+                $weekdayCount++;
+            }
         }
         $this->assertSame($weekdayCount, $rekap['distribusi']['tanpa_keterangan']);
     }
@@ -153,7 +170,8 @@ class RekapPresensiTest extends TestCase
 
     public function test_dinas_karyawan_crud_dan_admin_approve(): void
     {
-        Storage::fake('local');
+        Storage::fake(config('filesystems.uploads.private_disk'));
+        Storage::fake(config('filesystems.uploads.public_disk'));
         $emp = $this->empGowa();
 
         // Karyawan submit
@@ -171,7 +189,7 @@ class RekapPresensiTest extends TestCase
         $this->assertDatabaseHas('dinas_claims', ['employee_id' => $emp->id, 'nomor_surat' => '2485/SPT/0627/2026', 'status' => 'Menunggu']);
 
         // Admin approve — switch guard ke web
-        \Illuminate\Support\Facades\Auth::guard('employee')->logout();
+        Auth::guard('employee')->logout();
         $dinas = DinasClaim::where('employee_id', $emp->id)->firstOrFail();
         $this->actingAs($this->adminGowa(), 'web')
             ->put("/admin/dinas/{$dinas->id}/approve")

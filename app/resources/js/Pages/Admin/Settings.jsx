@@ -5,26 +5,32 @@ import { useEffect, useState } from 'react';
 
 function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
+const HARI = { '1': 'Senin', '2': 'Selasa', '3': 'Rabu', '4': 'Kamis', '5': 'Jumat', '6': 'Sabtu', '7': 'Minggu' };
+
 export default function Settings() {
     const { url, props } = usePage();
     const base = getBase(url);
-    const init = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4 };
+    const hariKerjaLabel = (props.settings?.hariKerja ?? ['1', '2', '3', '4', '5']).map((d) => HARI[String(d)] ?? d).join(', ');
+    const init = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, absenLiburAktif: false, absenLiburMode: 'tolak' };
     const readOnly = !!props.readOnly;
     const [jamMasuk, setJamMasuk] = useState(init.jamMasuk);
     const [jamPulang, setJamPulang] = useState(init.jamPulang);
     const [toleransi, setToleransi] = useState(init.toleransi);
     const [loveMax, setLoveMax] = useState(init.loveMax);
+    const [absenLiburAktif, setAbsenLiburAktif] = useState(!!init.absenLiburAktif);
+    const [absenLiburMode, setAbsenLiburMode] = useState(init.absenLiburMode ?? 'tolak');
 
     useEffect(() => {
         setJamMasuk(init.jamMasuk); setJamPulang(init.jamPulang); setToleransi(init.toleransi); setLoveMax(init.loveMax);
-    }, [init.jamMasuk, init.jamPulang, init.toleransi, init.loveMax]);
+        setAbsenLiburAktif(!!init.absenLiburAktif); setAbsenLiburMode(init.absenLiburMode ?? 'tolak');
+    }, [init.jamMasuk, init.jamPulang, init.toleransi, init.loveMax, init.absenLiburAktif, init.absenLiburMode]);
 
     const handleSave = () => {
         if (readOnly) return;
         if (jamMasuk >= jamPulang) { toast.error('Jam masuk harus lebih awal dari jam pulang'); return; }
         if (toleransi < 0 || toleransi > 60) { toast.error('Kelonggaran harus antara 0–60 menit'); return; }
         if (loveMax < 1 || loveMax > 10) { toast.error('Kuota toleransi harus antara 1–10 per bulan'); return; }
-        router.put(`${base}/settings`, { jamMasuk, jamPulang, toleransi, loveMax }, { preserveScroll: true });
+        router.put(`${base}/settings`, { jamMasuk, jamPulang, toleransi, loveMax, absenLiburAktif, absenLiburMode }, { preserveScroll: true });
     };
 
     return (
@@ -58,7 +64,7 @@ export default function Settings() {
                         </div>
                         <div>
                             <label className="text-xs font-medium text-[#334155]">Hari kerja</label>
-                            <div className="mt-1.5 bg-[#F8FAFC] rounded-xl px-3 py-2.5 text-sm text-[#334155]">Senin — Jumat</div>
+                            <div className="mt-1.5 bg-[#F8FAFC] rounded-xl px-3 py-2.5 text-sm text-[#334155]">{hariKerjaLabel}</div>
                         </div>
                     </div>
                     <p className="text-xs text-[#94A3B8]">Timezone Asia/Makassar • Tepat waktu ≤ jam_masuk + kelonggaran → on_time</p>
@@ -82,6 +88,52 @@ export default function Settings() {
                         </div>
                     </div>
                     <p className="text-xs text-[#94A3B8]">Berlaku bulan depan • Reset 1st 00:00 WITA • Saat ini {loveMax} Toleransi untuk semua karyawan</p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <h3 className="font-medium text-sm text-[#0F172A] flex items-center gap-2">
+                            <span className="w-7 h-7 rounded-xl bg-[#EFF6FF] flex items-center justify-center">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" strokeWidth="1.7"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4" /><path d="M16 3v4" /><path d="M3 10h18" /><path d="M9 15h6" /></svg>
+                            </span>
+                            Absen di Akhir Pekan / Hari Libur
+                        </h3>
+                        <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                            <span className="text-xs font-medium text-[#64748B]">{absenLiburAktif ? 'Aktif' : 'Nonaktif'}</span>
+                            <input
+                                type="checkbox"
+                                role="switch"
+                                checked={absenLiburAktif}
+                                disabled={readOnly}
+                                onChange={(e) => !readOnly && setAbsenLiburAktif(e.target.checked)}
+                                className={`h-5 w-9 appearance-none rounded-full transition relative cursor-pointer
+                                    before:content-[''] before:absolute before:top-0.5 before:left-0.5 before:h-4 before:w-4 before:rounded-full before:bg-white before:transition
+                                    checked:before:translate-x-4 ${absenLiburAktif ? 'bg-[#0D9488]' : 'bg-[#CBD5E1]'} ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            />
+                        </label>
+                    </div>
+
+                    <div className={`grid grid-cols-1 gap-2.5 ${!absenLiburAktif ? 'opacity-50 pointer-events-none' : ''}`}>
+                        <label className={`flex items-start gap-3 rounded-xl border px-3.5 py-3 cursor-pointer transition ${absenLiburMode === 'tolak' ? 'border-[#0F172A] bg-[#F8FAFC]' : 'border-[#E2E8F0] bg-white'}`}>
+                            <input type="radio" name="absenLiburMode" value="tolak" checked={absenLiburMode === 'tolak'} disabled={readOnly || !absenLiburAktif} onChange={() => setAbsenLiburMode('tolak')} className="mt-0.5 accent-[#0F172A]" />
+                            <span>
+                                <span className="block text-sm font-medium text-[#0F172A]">Tolak absen (422)</span>
+                                <span className="block text-xs text-[#64748B] mt-0.5">Karyawan tidak bisa absen di luar hari kerja. Pengajuan dispensasi lewat Admin Wilayah.</span>
+                            </span>
+                        </label>
+                        <label className={`flex items-start gap-3 rounded-xl border px-3.5 py-3 cursor-pointer transition ${absenLiburMode === 'catat' ? 'border-[#0F172A] bg-[#F8FAFC]' : 'border-[#E2E8F0] bg-white'}`}>
+                            <input type="radio" name="absenLiburMode" value="catat" checked={absenLiburMode === 'catat'} disabled={readOnly || !absenLiburAktif} onChange={() => setAbsenLiburMode('catat')} className="mt-0.5 accent-[#0F172A]" />
+                            <span>
+                                <span className="block text-sm font-medium text-[#0F172A]">Tetap dicatat, status khusus <span className="font-mono text-xs bg-[#F1F5F9] px-1.5 py-0.5 rounded">libur</span></span>
+                                <span className="block text-xs text-[#64748B] mt-0.5">Absen tetap tersimpan, tetapi tidak dihitung sebagai kehadiran hari kerja.</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <p className="text-xs text-[#94A3B8]">
+                        Hari non-kerja = di luar hari kerja ({hariKerjaLabel}) atau terdaftar di menu Hari Libur.
+                        {!absenLiburAktif && ' Saat nonaktif, absen di luar hari kerja dicatat seperti hari kerja biasa.'}
+                    </p>
                 </div>
 
                 <button type="button" onClick={handleSave} disabled={readOnly} className={`w-full rounded-xl py-3 text-sm font-semibold transition ${readOnly ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white hover:bg-[#1E3A8A]'}`}>{readOnly ? 'Read-only — hanya Super Admin bisa simpan' : 'Simpan pengaturan'}</button>

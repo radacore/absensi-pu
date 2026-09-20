@@ -156,7 +156,17 @@ class RekapPresenter
                 $jamPulangStr = $att->clock_out_at ? Carbon::parse($att->clock_out_at)->format('H:i') : '—';
                 $hadirCount++;
 
-                if ($att->clock_in_at) {
+                if ($att->status === 'excused_love') {
+                    // Keterlambatan sudah dimaafkan oleh klaim toleransi yang
+                    // disetujui (lupa absen) → jangan dihitung sebagai terlambat.
+                    $toleransiCount++;
+                    $zonaMasuk = 'toleransi';
+                    $catatan = 'Toleransi disetujui — Lupa Absen';
+                    if ($att->clock_in_at) {
+                        $p = Carbon::parse($att->clock_in_at);
+                        $trenMasukMin = (int) $p->format('G') * 60 + (int) $p->format('i');
+                    }
+                } elseif ($att->clock_in_at) {
                     $p = Carbon::parse($att->clock_in_at);
                     $inMin = (int) $p->format('G') * 60 + (int) $p->format('i');
                     $trenMasukMin = $inMin;

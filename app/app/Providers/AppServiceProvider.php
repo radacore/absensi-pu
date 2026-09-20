@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -51,6 +52,25 @@ class AppServiceProvider extends ServiceProvider
                 return back()->withErrors([
                     'login' => 'Terlalu banyak percobaan login. Coba lagi dalam beberapa menit.',
                     'email' => 'Terlalu banyak percobaan login. Coba lagi dalam beberapa menit.',
+                ]);
+            });
+        });
+
+        /*
+         * Batasi unggahan berkas: 10 per menit per akun.
+         *
+         * Setiap unggahan menyisakan objek permanen di object storage, jadi
+         * tanpa batas ini satu akun bisa membanjiri bucket. Di-key ke akun
+         * yang login bila ada, kalau tidak ke alamat IP.
+         */
+        RateLimiter::for('uploads', function (Request $request) {
+            $actor = Auth::guard('employee')->id()
+                ?? Auth::guard('web')->id()
+                ?? $request->ip();
+
+            return Limit::perMinute(10)->by('uploads|'.$actor)->response(function () {
+                return back()->withErrors([
+                    'dokumen' => 'Terlalu banyak unggahan. Coba lagi sebentar lagi.',
                 ]);
             });
         });

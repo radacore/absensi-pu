@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
+use App\Support\MediaCleanup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -58,8 +59,13 @@ class ProfilController extends Controller
         ]);
 
         if ($request->hasFile('foto')) {
-            $path = $request->file('foto')->store('foto', 'public');
-            $me->foto_url = Storage::url($path);
+            $disk = config('filesystems.uploads.public_disk');
+            $path = $request->file('foto')->store('foto', ['disk' => $disk, 'visibility' => 'public']);
+            // Foto lama dibuang supaya tidak menumpuk di object storage.
+            MediaCleanup::deleteByPublicUrl($me->foto_url);
+            // URL harus dibuat dari disk tempat berkas disimpan — Storage::url()
+            // memakai disk default dan akan salah begitu unggahan dipindah ke S3.
+            $me->foto_url = Storage::disk($disk)->url($path);
         } elseif (! empty($data['foto_url'])) {
             $me->foto_url = $data['foto_url'];
         }
@@ -79,6 +85,7 @@ class ProfilController extends Controller
     public function destroyFoto(Request $request)
     {
         $me = Auth::guard('employee')->user();
+        MediaCleanup::deleteByPublicUrl($me->foto_url);
         $me->foto_url = null;
         $me->save();
 

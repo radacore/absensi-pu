@@ -50,13 +50,17 @@ class EmployeeController extends Controller
 
     public function update(Request $request, Employee $employee)
     {
-        $data = $this->validateEmployee($request, $employee->id);
-
+        // Otorisasi dijalankan SEBELUM validasi. Bila urutannya dibalik, aturan
+        // `unique` pada NIK/NIP/email akan membocorkan keberadaan data milik
+        // wilayah lain lewat pesan galat (existence oracle).
         $scope = $this->scopeRegion();
         abort_if($scope && $employee->region_id !== $scope, 403, 'Karyawan ini di luar cakupan Anda.');
 
+        $data = $this->validateEmployee($request, $employee->id);
+
         $region = Region::where('name', $data['region'])->firstOrFail();
         $this->assertSameRegion($region);
+        $this->assertSiteInRegion($region, (int) $data['office_location_id']);
 
         $employee->update([
             'nik' => $data['nik'],
@@ -151,10 +155,7 @@ class EmployeeController extends Controller
     {
         $region = Region::where('name', $data['region'])->firstOrFail();
         $this->assertSameRegion($region);
-
-        if (! $region->sites()->where('id', $data['office_location_id'])->exists()) {
-            throw ValidationException::withMessages(['office_location_id' => 'Titik tidak sesuai wilayah.']);
-        }
+        $this->assertSiteInRegion($region, (int) $data['office_location_id']);
 
         return Employee::create([
             'nik' => $data['nik'],
@@ -176,5 +177,21 @@ class EmployeeController extends Controller
     {
         $scope = $this->scopeRegion();
         abort_if($scope && $region->id !== $scope, 403, 'Region ini di luar cakupan Anda.');
+    }
+
+    /**
+     * Titik kerja wajib benar-benar milik wilayah yang dipilih.
+     *
+     * Dipakai bersama oleh store dan update. Sebelumnya hanya `store` yang
+     * memeriksanya, sehingga `update` bisa memindahkan karyawan ke titik milik
+     * wilayah lain sementara region-nya tetap wilayah sendiri.
+     */
+    private function assertSiteInRegion(Region $region, int $siteId): void
+    {
+        if (! $region->sites()->where('id', $siteId)->exists()) {
+            throw ValidationException::withMessages([
+                'office_location_id' => 'Titik tidak sesuai wilayah.',
+            ]);
+        }
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaCleanup;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -32,6 +33,18 @@ class DinasClaim extends Model
             'tanggal_selesai' => 'date',
             'tanggal_pengajuan' => 'date',
         ];
+    }
+
+    /**
+     * Dokumen di object storage ikut terhapus setiap kali baris ini dihapus —
+     * dari jalur mana pun (karyawan membatalkan, admin menghapus, atau
+     * pembersihan massal). Tanpa ini berkas akan menumpuk jadi yatim.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (DinasClaim $dinas): void {
+            MediaCleanup::deletePrivate($dinas->dokumen_path);
+        });
     }
 
     public function employee(): BelongsTo

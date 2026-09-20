@@ -36,8 +36,24 @@ class RegionSeeder extends Seeder
             ['name' => 'Kab. Sidrap', 'slug' => 'kab-sidrap', 'kantor_name' => 'Kantor Wilayah Sidrap', 'tipe' => 'cabang', 'address' => 'Jl. Jenderal Sudirman — Pangkajene Sidenreng'],
         ];
 
-        foreach ($regions as $r) {
-            Region::updateOrCreate(['slug' => $r['slug']], $r);
+        // ID wilayah sengaja dibuat DETERMINISTIK (1..24 mengikuti urutan
+        // daftar di atas). Seeder lain dan uji merujuk ID wilayah secara
+        // langsung (mis. region_id 2 = Kab. Gowa).
+        //
+        // Tanpa ini penyemaian gagal di MySQL: ROLLBACK tidak mengembalikan
+        // counter AUTO_INCREMENT, jadi penyemaian kedua dalam satu proses
+        // (mis. tiap tes yang dibungkus transaksi oleh RefreshDatabase)
+        // menghasilkan ID 25..48 — dan semua rujukan ke region_id 1..24 patah.
+        // SQLite tidak memperlihatkan gejala ini.
+        foreach ($regions as $i => $r) {
+            $region = Region::firstOrNew(['slug' => $r['slug']]);
+            $region->fill($r);
+
+            if (! $region->exists) {
+                $region->id = $i + 1;
+            }
+
+            $region->save();
         }
     }
 }

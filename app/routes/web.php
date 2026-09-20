@@ -53,14 +53,18 @@ Route::prefix('karyawan')->group(function () {
         Route::get('/love', [KaryawanLoveController::class, 'index'])->name('karyawan.love');
         Route::post('/love', [KaryawanLoveController::class, 'store'])->name('karyawan.love.store');
         Route::get('/dinas', [KaryawanDinasController::class, 'index'])->name('karyawan.dinas');
-        Route::post('/dinas', [KaryawanDinasController::class, 'store'])->name('karyawan.dinas.store');
+        Route::post('/dinas', [KaryawanDinasController::class, 'store'])
+            ->middleware('throttle:uploads')
+            ->name('karyawan.dinas.store');
         Route::delete('/dinas/{dinas}', [KaryawanDinasController::class, 'destroy'])->name('karyawan.dinas.destroy');
         Route::get('/dinas/{dinas}/dokumen', [KaryawanDinasController::class, 'dokumen'])->name('karyawan.dinas.dokumen');
         Route::get('/pengumuman', [KaryawanPengumumanController::class, 'index'])->name('karyawan.pengumuman');
         Route::post('/pengumuman/{pengumuman}/read', [KaryawanPengumumanController::class, 'markRead'])->name('karyawan.pengumuman.read');
         Route::post('/pengumuman/read-all', [KaryawanPengumumanController::class, 'markAllRead'])->name('karyawan.pengumuman.readAll');
         Route::get('/profil', [KaryawanProfilController::class, 'index'])->name('karyawan.profil');
-        Route::put('/profil', [KaryawanProfilController::class, 'update'])->name('karyawan.profil.update');
+        Route::put('/profil', [KaryawanProfilController::class, 'update'])
+            ->middleware('throttle:uploads')
+            ->name('karyawan.profil.update');
         Route::delete('/profil/foto', [KaryawanProfilController::class, 'destroyFoto'])->name('karyawan.profil.foto.destroy');
         Route::put('/profil/password', [KaryawanProfilController::class, 'updatePassword'])->name('karyawan.profil.password');
     });

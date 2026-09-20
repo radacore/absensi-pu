@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\AttendanceSetting;
 use App\Models\Leave;
-use App\Models\Site;
 use App\Support\AdminPresenter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -27,9 +26,9 @@ class AttendanceController extends Controller
             ->get()
             ->map(fn (Attendance $a) => [
                 'id' => $a->id,
-                'tgl' => $a->work_date instanceof \Illuminate\Support\Carbon ? $a->work_date->format('Y-m-d') : (string) $a->work_date,
-                'datang' => $a->clock_in_at ? \Illuminate\Support\Carbon::parse($a->clock_in_at)->format('H:i') : '',
-                'pulang' => $a->clock_out_at ? \Illuminate\Support\Carbon::parse($a->clock_out_at)->format('H:i') : '',
+                'tgl' => $a->work_date instanceof Carbon ? $a->work_date->format('Y-m-d') : (string) $a->work_date,
+                'datang' => $a->clock_in_at ? Carbon::parse($a->clock_in_at)->format('H:i') : '',
+                'pulang' => $a->clock_out_at ? Carbon::parse($a->clock_out_at)->format('H:i') : '',
                 'status' => $a->status ?? 'on_time',
                 'jarak' => (int) ($a->distance_in_m ?? 0),
                 'selfie' => $a->selfie_url,
@@ -50,6 +49,19 @@ class AttendanceController extends Controller
         $today = now('Asia/Makassar')->toDateString();
         $todayRow = Attendance::where('employee_id', $me->id)->whereDate('work_date', $today)->first();
 
+        // Info gerbang hari libur → dipakai UI untuk mematikan tombol absen.
+        $now = now('Asia/Makassar');
+        $liburLabel = ($settings && $settings->absen_libur_aktif)
+            ? AdminPresenter::nonWorkDayLabel($settings, $now)
+            : null;
+        $absenLibur = [
+            'aktif' => (bool) ($settings?->absen_libur_aktif),
+            'mode' => $settings?->absen_libur_mode ?: 'tolak',
+            'hariIniLibur' => $liburLabel !== null,
+            'label' => $liburLabel,
+            'ditolak' => $liburLabel !== null && ($settings?->absen_libur_mode ?: 'tolak') === 'tolak',
+        ];
+
         return Inertia::render('Karyawan/Absensi', [
             'me' => [
                 'id' => $me->id,
@@ -64,6 +76,7 @@ class AttendanceController extends Controller
                 'jamPulang' => substr((string) $settings->jam_pulang, 0, 5),
                 'toleransi' => (int) $settings->toleransi_late_menit,
             ] : ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15],
+            'absenLibur' => $absenLibur,
             'alreadyToday' => (bool) $todayRow,
             'todayISO' => $today,
         ]);
@@ -82,7 +95,8 @@ class AttendanceController extends Controller
             'selfie_url' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $today = now('Asia/Makassar')->toDateString();
+        $now = now('Asia/Makassar');
+        $today = $now->toDateString();
         if (Attendance::where('employee_id', $me->id)->whereDate('work_date', $today)->exists()) {
             throw ValidationException::withMessages(['work_date' => 'Sudah absen hari ini.']);
         }
@@ -94,13 +108,30 @@ class AttendanceController extends Controller
         }
 
         $settings = AttendanceSetting::first();
+
+        // ── Gerbang hari kerja (Super Admin: absen_libur_aktif / absen_libur_mode)
+        //   aktif + 'tolak' → absen di luar hari kerja ditolak (422).
+        //   aktif + 'catat' → absen tetap dicatat, status 'libur'.
+        //   nonaktif        → perilaku lama: dicatat seperti hari kerja biasa.
+        $liburLabel = ($settings && $settings->absen_libur_aktif)
+            ? AdminPresenter::nonWorkDayLabel($settings, $now)
+            : null;
+
+        if ($liburLabel !== null && ($settings->absen_libur_mode ?: 'tolak') === 'tolak') {
+            throw ValidationException::withMessages([
+                'work_date' => "Absen ditolak — {$liburLabel}. Hubungi Admin Wilayah bila perlu dispensasi.",
+            ]);
+        }
+
         $jamMasuk = $settings ? substr((string) $settings->jam_masuk, 0, 5) : '07:30';
         $tol = $settings ? (int) $settings->toleransi_late_menit : 15;
         [$h, $m] = array_map('intval', explode(':', $jamMasuk));
         $cutoffMin = $h * 60 + $m + $tol;
-        $now = now('Asia/Makassar');
         $curMin = (int) $now->format('G') * 60 + (int) $now->format('i');
         $status = $curMin > $cutoffMin ? 'late' : 'on_time';
+        if ($liburLabel !== null) {
+            $status = 'libur';
+        }
 
         Attendance::create([
             'employee_id' => $me->id,
@@ -115,7 +146,13 @@ class AttendanceController extends Controller
             'region_id' => $me->region_id,
         ]);
 
-        return back()->with('success', $status === 'late' ? 'Absen tercatat — Terlambat' : 'Absen tercatat — Tepat waktu');
+        $pesan = match ($status) {
+            'late' => 'Absen tercatat — Terlambat',
+            'libur' => "Absen tercatat — {$liburLabel}",
+            default => 'Absen tercatat — Tepat waktu',
+        };
+
+        return back()->with('success', $pesan);
     }
 
     public function clockOut(Request $request)

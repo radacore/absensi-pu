@@ -25,8 +25,15 @@ class SiteController extends Controller
     {
         $scope = $this->scopeRegion();
         abort_if($site->region_id !== $region->id, 404);
+        abort_if($scope && $site->region_id !== $scope, 403, 'Titik ini di luar cakupan Anda.');
 
-        $regions = collect(Region::with('sites')->orderBy('id')->get())
+        // Data disaring sesuai cakupan. Sebelumnya kedua query ini tidak difilter
+        // sama sekali, sehingga admin satu wilayah menerima seluruh wilayah dan
+        // seluruh karyawan instansi (kebocoran NIK/NIP/email lintas wilayah).
+        $regions = collect(Region::with('sites')
+            ->when($scope, fn ($q) => $q->where('id', $scope))
+            ->orderBy('id')
+            ->get())
             ->map(fn ($r) => [
                 'id' => $r->id,
                 'name' => $r->name,
@@ -42,29 +49,33 @@ class SiteController extends Controller
             ])
             ->all();
 
-        $employees = Employee::with('region')->get()->map(fn ($e) => [
-            'id' => $e->id,
-            'nik' => $e->nik,
-            'nip' => $e->nip ?? '',
-            'nama' => $e->name,
-            'email' => $e->email ?? '',
-            'gol' => $e->golongan ?? '-',
-            'jabatan' => $e->jabatan,
-            'unit' => $e->unit_kerja,
-            'status' => $e->status_kepegawaian,
-            'region' => $e->region?->name ?? '',
-            'regionId' => $e->region_id,
-            'office_location_id' => $e->site_id,
-            'foto' => $e->foto_url ?: AdminPresenter::DEFAULT_AVATAR,
-        ])->values()->all();
+        $employees = Employee::with('region')
+            ->when($scope, fn ($q) => $q->where('region_id', $scope))
+            ->get()
+            ->map(fn ($e) => [
+                'id' => $e->id,
+                'nik' => $e->nik,
+                'nip' => $e->nip ?? '',
+                'nama' => $e->name,
+                'email' => $e->email ?? '',
+                'gol' => $e->golongan ?? '-',
+                'jabatan' => $e->jabatan,
+                'unit' => $e->unit_kerja,
+                'status' => $e->status_kepegawaian,
+                'region' => $e->region?->name ?? '',
+                'regionId' => $e->region_id,
+                'office_location_id' => $e->site_id,
+                'foto' => $e->foto_url ?: AdminPresenter::DEFAULT_AVATAR,
+            ])->values()->all();
 
-        // Admin wilayah: hanya wilayahnya sendiri yang boleh diedit, sisanya read-only
         return Inertia::render('Admin/SiteDetail', [
             'regionId' => $region->id,
             'siteId' => $site->id,
             'regions' => $regions,
             'employees' => $employees,
-            'readOnly' => (bool) ($scope && $site->region_id !== $scope),
+            // Setelah pemeriksaan cakupan di atas, halaman ini hanya bisa dibuka
+            // untuk wilayah milik aktor sendiri — jadi selalu bisa diedit.
+            'readOnly' => false,
         ]);
     }
 

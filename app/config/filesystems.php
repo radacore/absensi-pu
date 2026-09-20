@@ -17,6 +17,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Upload Disks
+    |--------------------------------------------------------------------------
+    |
+    | Aplikasi memakai dua jenis berkas unggahan dengan kebutuhan akses berbeda:
+    |
+    | - public_disk  : berkas yang boleh dibuka langsung lewat URL (foto profil).
+    | - private_disk : berkas privat yang HANYA disajikan lewat route ber-otorisasi
+    |                  (dokumen surat tugas perjalanan dinas).
+    |
+    | Keduanya bisa diarahkan ke disk lokal maupun objek storage S3 tanpa
+    | mengubah kode — cukup ubah env. Contoh produksi:
+    |
+    |   UPLOAD_PUBLIC_DISK=s3
+    |   UPLOAD_PRIVATE_DISK=s3
+    |
+    */
+
+    'uploads' => [
+        'public_disk' => env('UPLOAD_PUBLIC_DISK', 'public'),
+        'private_disk' => env('UPLOAD_PRIVATE_DISK', 'local'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |

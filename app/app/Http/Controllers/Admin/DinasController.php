@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DinasClaim;
 use App\Support\AdminPresenter;
 use App\Support\Audit;
+use App\Support\StreamsDokumen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -14,9 +15,12 @@ use Inertia\Inertia;
 
 class DinasController extends Controller
 {
+    use StreamsDokumen;
+
     private function scope(): ?int
     {
         $u = Auth::guard('web')->user();
+
         return $u->role === 'super_admin' ? null : $u->region_id;
     }
 
@@ -69,7 +73,9 @@ class DinasController extends Controller
     {
         $scope = $this->scope();
         abort_if($scope !== null && (int) $dinas->employee?->region_id !== $scope, 403);
-        if ($dinas->status !== 'Menunggu') return back()->with('error', 'Hanya yang Menunggu bisa di-approve.');
+        if ($dinas->status !== 'Menunggu') {
+            return back()->with('error', 'Hanya yang Menunggu bisa di-approve.');
+        }
         $dinas->update(['status' => 'Disetujui']);
 
         Audit::log(
@@ -87,7 +93,9 @@ class DinasController extends Controller
     {
         $scope = $this->scope();
         abort_if($scope !== null && (int) $dinas->employee?->region_id !== $scope, 403);
-        if ($dinas->status !== 'Menunggu') return back()->with('error', 'Hanya yang Menunggu bisa ditolak.');
+        if ($dinas->status !== 'Menunggu') {
+            return back()->with('error', 'Hanya yang Menunggu bisa ditolak.');
+        }
         $data = $request->validate(['note' => ['required', 'string', 'min:3', 'max:500']]);
         $dinas->update(['status' => 'Ditolak', 'note' => $data['note']]);
 
@@ -110,7 +118,7 @@ class DinasController extends Controller
         $snap = ['nomor_surat' => $dinas->nomor_surat, 'status' => $dinas->status, 'tujuan' => $dinas->tujuan];
 
         if ($dinas->hasDokumen()) {
-            Storage::disk('local')->delete($dinas->dokumen_path);
+            Storage::disk(config('filesystems.uploads.private_disk'))->delete($dinas->dokumen_path);
         }
 
         $dinas->delete();
@@ -133,12 +141,6 @@ class DinasController extends Controller
         abort_if($scope !== null && (int) $dinas->employee?->region_id !== $scope, 403);
         abort_unless($dinas->hasDokumen(), 404);
 
-        $disk = Storage::disk('local');
-        abort_unless($disk->exists($dinas->dokumen_path), 404);
-
-        return $disk->response($dinas->dokumen_path, $dinas->dokumen_nama, [
-            'Content-Type' => $dinas->dokumen_mime ?: 'application/octet-stream',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return $this->streamDokumen($dinas);
     }
 }

@@ -12,6 +12,15 @@ function haversineM(lat1, lng1, lat2, lng2) {
     return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+const STATUS_META = {
+    on_time: { label: 'Tepat waktu', cls: 'bg-[#ECFDF5] text-[#065F46]' },
+    late: { label: 'Terlambat', cls: 'bg-[#FFFBEB] text-[#92400E]' },
+    excused_love: { label: 'Toleransi', cls: 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30' },
+    early_leave: { label: 'Pulang cepat', cls: 'bg-[#FEF2F2] text-[#991B1B]' },
+    libur: { label: 'Libur', cls: 'bg-[#EFF6FF] text-[#1E3A8A]' },
+};
+const statusMeta = (s) => STATUS_META[s] ?? { label: s, cls: 'bg-[#F1F5F9] text-[#334155]' };
+
 export default function Absensi() {
     const { props } = usePage();
     const me = props.me ?? { id: 1, nama: '—', foto: '', region: '' };
@@ -20,6 +29,8 @@ export default function Absensi() {
     const history = props.history ?? [];
     const alreadyToday = !!props.alreadyToday;
     const todayISO = props.todayISO ?? new Date().toISOString().slice(0, 10);
+    const absenLibur = props.absenLibur ?? { aktif: false, mode: 'tolak', hariIniLibur: false, label: null, ditolak: false };
+    const blokirAbsen = !!absenLibur.ditolak && !alreadyToday;
 
     const [captured, setCaptured] = useState(false);
     const [photoPreview, setPhotoPreview] = useState(me.foto || null);
@@ -52,6 +63,7 @@ export default function Absensi() {
 
     const handleKirim = () => {
         if (tanpaTitik) { toast.error('Titik belum di-assign — tidak bisa absen'); return; }
+        if (blokirAbsen) { toast.error(`Absen ditolak — ${absenLibur.label}`); return; }
         if (jarak == null) { toast.error(geoLoading ? 'Menunggu GPS...' : 'Lokasi belum siap — aktifkan GPS'); return; }
         if (!inRadius) { toast.error(`${jarak} m / ${assigned.radius} m — di luar radius`); return; }
         if (alreadyToday) { toast.error('Sudah absen hari ini'); return; }
@@ -99,6 +111,20 @@ export default function Absensi() {
                     <p className="text-xs text-[#94A3B8] mt-1">Valid hanya di titik assigned dalam radius titiknya — di luar / titik lain ditolak 422 • Jam {settings.jamMasuk}–{settings.jamPulang} WITA kelonggaran {settings.toleransi}m</p>
                 </div>
 
+                {absenLibur.hariIniLibur && (
+                    <div className={`rounded-2xl p-4 border ${absenLibur.ditolak ? 'bg-[#FEF2F2] border-[#FECACA]' : 'bg-[#FFFBEB] border-[#FDE68A]'}`}>
+                        <p className={`text-xs font-medium ${absenLibur.ditolak ? 'text-[#991B1B]' : 'text-[#92400E]'}`}>
+                            {absenLibur.ditolak ? 'Absen ditutup hari ini' : 'Di luar hari kerja'}
+                        </p>
+                        <p className={`text-sm font-semibold mt-1 ${absenLibur.ditolak ? 'text-[#991B1B]' : 'text-[#92400E]'}`}>{absenLibur.label}</p>
+                        <p className="text-xs text-[#64748B] mt-1">
+                            {absenLibur.ditolak
+                                ? 'Absen masuk tidak tersedia di luar hari kerja. Ajukan dispensasi ke Admin Wilayah bila Anda bertugas.'
+                                : 'Absen tetap bisa dikirim dan akan dicatat dengan status "Libur" — tidak dihitung sebagai kehadiran hari kerja.'}
+                        </p>
+                    </div>
+                )}
+
                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-4">
                     <p className="text-xs font-medium text-[#94A3B8]">Titik assigned kamu</p>
                     <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.nama_lokasi}</p>
@@ -115,7 +141,7 @@ export default function Absensi() {
                                 </span>
                                 <p className="text-sm font-medium text-[#0F172A] mt-3">Siap absen</p>
                                 <p className="text-xs text-[#64748B] text-center mt-1">Kamera + lokasi untuk pratinjau jarak ke <span className="font-medium text-[#0F172A]">{assigned.nama_lokasi}</span> — hitung haversine ke {assigned.radius} m</p>
-                                <button type="button" onClick={handleOpenCapture} className="mt-4 bg-[#0F172A] text-white rounded-xl px-5 py-2.5 text-sm font-semibold">Buka kamera &amp; lokasi</button>
+                                <button type="button" onClick={handleOpenCapture} disabled={blokirAbsen} title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : ''} className={`mt-4 rounded-xl px-5 py-2.5 text-sm font-semibold ${blokirAbsen ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Buka kamera &amp; lokasi</button>
                             </>
                         ) : (
                             <div className="w-full text-center">
@@ -136,7 +162,7 @@ export default function Absensi() {
                                 <div className="flex gap-2 justify-center mt-4">
                                     <button type="button" onClick={() => { setCaptured(false); setMyPos(null); setGeoError(null); }} className="rounded-xl bg-white shadow-sm px-4 py-2 text-sm font-medium text-[#334155]">Ulangi</button>
                                     <button type="button" onClick={requestPos} className="rounded-xl bg-white border border-[#E2E8F0] px-4 py-2 text-sm font-medium text-[#334155]">Refresh GPS</button>
-                                    <button type="button" onClick={handleKirim} disabled={jarak == null || !inRadius || alreadyToday} title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : alreadyToday ? 'Sudah absen hari ini' : ''} className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && !alreadyToday ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}>Kirim absen masuk</button>
+                                    <button type="button" onClick={handleKirim} disabled={jarak == null || !inRadius || alreadyToday || blokirAbsen} title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : alreadyToday ? 'Sudah absen hari ini' : ''} className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && !alreadyToday && !blokirAbsen ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}>Kirim absen masuk</button>
                                 </div>
                             </div>
                         )}
@@ -185,7 +211,7 @@ export default function Absensi() {
                                             <td className="px-5 py-3 font-mono text-[#0F172A] whitespace-nowrap tabular-nums">{r.datang}</td>
                                             <td className="px-5 py-3 font-mono whitespace-nowrap tabular-nums">{r.pulang ? <span className="text-[#0F172A]">{r.pulang}</span> : <span className="text-[#CBD5E1]">—</span>}</td>
                                             <td className="px-5 py-3">
-                                                <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${r.status === 'on_time' ? 'bg-[#ECFDF5] text-[#065F46]' : r.status === 'excused_love' ? 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30' : r.status === 'late' ? 'bg-[#FFFBEB] text-[#92400E]' : 'bg-[#F1F5F9] text-[#334155]'}`}>{r.status === 'on_time' ? 'Tepat waktu' : r.status === 'late' ? 'Terlambat' : r.status === 'excused_love' ? 'Toleransi' : r.status}</span>
+                                                <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${statusMeta(r.status).cls}`}>{statusMeta(r.status).label}</span>
                                             </td>
                                         </tr>
                                     ))}

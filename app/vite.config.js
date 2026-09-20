@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { fileURLToPath, URL } from 'node:url';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import tailwindcss from '@tailwindcss/vite';
@@ -8,7 +9,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
     resolve: {
         alias: {
-            '@': '/Users/rada/Documents/sul proyek/app/resources/js',
+            // Relatif terhadap file ini — jangan pakai path absolut, karena akan
+            // gagal begitu repo di-clone ke direktori lain (mis. di VPS).
+            '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
         },
     },
     plugins: [
@@ -47,7 +50,9 @@ export default defineConfig({
                 globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
                 runtimeCaching: [
                     {
-                        urlPattern: /^https:\/\/.*\.s3\.amazonaws\.com\/.*/i,
+                        // Media disimpan di object storage (S3-compatible).
+                        // Cocokkan host AWS maupun endpoint S3-compatible seperti Neva Objects.
+                        urlPattern: /^https:\/\/([a-z0-9.-]*\.)?(s3\.[a-z0-9.-]+\.amazonaws\.com|s3\.nevaobjects\.id)\/.*/i,
                         handler: 'CacheFirst',
                         options: { cacheName: 's3-media', expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 } },
                     },

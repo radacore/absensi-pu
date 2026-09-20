@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Employee;
 use App\Models\Region;
 use App\Support\AdminPresenter;
 use Illuminate\Http\Request;
@@ -73,9 +74,20 @@ class RegionController extends Controller
     {
         abort_if($this->scopeRegion(), 403, 'Hanya Super Admin yang dapat menghapus wilayah.');
 
+        // `employees.region_id` memakai cascadeOnDelete pada level basis data, dan
+        // cascade itu TIDAK memicu event model Eloquent. Tanpa pengaman di sini,
+        // satu permintaan menghapus seluruh karyawan wilayah beserta absensi,
+        // cuti, dan pengajuan dinasnya — sekaligus meninggalkan berkas yatim di
+        // object storage (foto profil & dokumen dinas tidak ikut terhapus).
+        $jumlahKaryawan = Employee::where('region_id', $region->id)->count();
+
+        if ($jumlahKaryawan > 0) {
+            return back()->with('error', "Wilayah ini masih memiliki {$jumlahKaryawan} karyawan. Pindahkan atau hapus karyawannya terlebih dahulu.");
+        }
+
         $region->delete();
 
-        return back()->with('success', 'Wilayah beserta data terkait dihapus.');
+        return back()->with('success', 'Wilayah dihapus.');
     }
 
     private function validateRegion(Request $request): array

@@ -18,7 +18,17 @@ class DinasDokumenTest extends TestCase
     {
         parent::setUp();
         $this->seed();
-        Storage::fake('local');
+
+        // Uji mengikuti disk yang benar-benar dipakai aplikasi (local atau s3),
+        // lalu dipalsukan agar tidak menyentuh bucket sungguhan saat test jalan.
+        Storage::fake(config('filesystems.uploads.private_disk'));
+        Storage::fake(config('filesystems.uploads.public_disk'));
+    }
+
+    /** Nama disk privat yang sedang dikonfigurasi aplikasi. */
+    private function disk(): string
+    {
+        return config('filesystems.uploads.private_disk');
     }
 
     private function empGowa(): Employee
@@ -97,7 +107,7 @@ class DinasDokumenTest extends TestCase
         $this->assertFalse($dinas->dokumenIsImage());
         $this->assertStringStartsWith('dinas/', $dinas->dokumen_path);
 
-        Storage::disk('local')->assertExists($dinas->dokumen_path);
+        Storage::disk($this->disk())->assertExists($dinas->dokumen_path);
     }
 
     public function test_pengajuan_dinas_dengan_dokumen_gambar_tersimpan(): void
@@ -111,7 +121,7 @@ class DinasDokumenTest extends TestCase
         $this->assertSame('surat-scan.jpg', $dinas->dokumen_nama);
         $this->assertSame('image/jpeg', $dinas->dokumen_mime);
         $this->assertTrue($dinas->dokumenIsImage());
-        Storage::disk('local')->assertExists($dinas->dokumen_path);
+        Storage::disk($this->disk())->assertExists($dinas->dokumen_path);
     }
 
     public function test_pengajuan_dinas_tanpa_dokumen_ditolak(): void
@@ -223,7 +233,7 @@ class DinasDokumenTest extends TestCase
         $emp = $this->empGowa();
         $dinas = $this->ajukan($emp, ['dokumen' => $this->pdfFile()]);
 
-        Storage::disk('local')->delete($dinas->dokumen_path);
+        Storage::disk($this->disk())->delete($dinas->dokumen_path);
 
         $this->actingAs($emp, 'employee')
             ->get("/karyawan/dinas/{$dinas->id}/dokumen")
@@ -264,7 +274,7 @@ class DinasDokumenTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertDatabaseMissing('dinas_claims', ['id' => $dinas->id]);
-        Storage::disk('local')->assertMissing($path);
+        Storage::disk($this->disk())->assertMissing($path);
     }
 
     public function test_admin_hapus_pengajuan_ikut_menghapus_dokumen(): void
@@ -278,7 +288,7 @@ class DinasDokumenTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertDatabaseMissing('dinas_claims', ['id' => $dinas->id]);
-        Storage::disk('local')->assertMissing($path);
+        Storage::disk($this->disk())->assertMissing($path);
     }
 
     public function test_halaman_karyawan_dan_admin_mengirim_info_dokumen(): void

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
 use App\Models\DinasClaim;
+use App\Support\StreamsDokumen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,8 @@ use Inertia\Inertia;
 
 class DinasController extends Controller
 {
+    use StreamsDokumen;
+
     /** Ekstensi dokumen pendukung yang diizinkan. */
     public const DOKUMEN_MIMES = 'pdf,jpg,jpeg,png,webp';
 
@@ -84,11 +87,13 @@ class DinasController extends Controller
         $file = $request->file('dokumen');
         unset($data['dokumen']);
 
+        $disk = config('filesystems.uploads.private_disk');
+
         DinasClaim::create($data + [
             'employee_id' => $me->id,
             'tanggal_pengajuan' => now('Asia/Makassar')->toDateString(),
             'status' => 'Menunggu',
-            'dokumen_path' => $file->store('dinas', 'local'),
+            'dokumen_path' => $file->store('dinas', ['disk' => $disk, 'visibility' => 'private']),
             'dokumen_nama' => $file->getClientOriginalName(),
             'dokumen_mime' => $file->getMimeType() ?: $file->getClientMimeType(),
             'dokumen_size' => $file->getSize(),
@@ -104,7 +109,7 @@ class DinasController extends Controller
         abort_if($dinas->status !== 'Menunggu', 403, 'Hanya pengajuan menunggu yang bisa dibatalkan.');
 
         if ($dinas->hasDokumen()) {
-            Storage::disk('local')->delete($dinas->dokumen_path);
+            Storage::disk(config('filesystems.uploads.private_disk'))->delete($dinas->dokumen_path);
         }
 
         $dinas->delete();
@@ -119,12 +124,6 @@ class DinasController extends Controller
         abort_if((int) $dinas->employee_id !== (int) $me->id, 403);
         abort_unless($dinas->hasDokumen(), 404);
 
-        $disk = Storage::disk('local');
-        abort_unless($disk->exists($dinas->dokumen_path), 404);
-
-        return $disk->response($dinas->dokumen_path, $dinas->dokumen_nama, [
-            'Content-Type' => $dinas->dokumen_mime ?: 'application/octet-stream',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return $this->streamDokumen($dinas);
     }
 }

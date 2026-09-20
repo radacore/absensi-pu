@@ -3,10 +3,10 @@
 namespace App\Support;
 
 use App\Models\Announcement;
-use App\Models\AnnouncementRead;
 use App\Models\Attendance;
 use App\Models\AttendanceSetting;
 use App\Models\Employee;
+use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\Region;
 use App\Models\ToleranceClaim;
@@ -104,7 +104,7 @@ class AdminPresenter
     {
         $s = AttendanceSetting::first();
         if (! $s) {
-            return ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15, 'loveMax' => 4, 'hariKerja' => ['1','2','3','4','5'], 'timezone' => 'Asia/Makassar'];
+            return ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15, 'loveMax' => 4, 'hariKerja' => ['1', '2', '3', '4', '5'], 'timezone' => 'Asia/Makassar', 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak'];
         }
 
         return [
@@ -112,8 +112,10 @@ class AdminPresenter
             'jamPulang' => substr((string) $s->jam_pulang, 0, 5),
             'toleransi' => (int) $s->toleransi_late_menit,
             'loveMax' => (int) $s->love_max,
-            'hariKerja' => $s->hari_kerja ?? ['1','2','3','4','5'],
+            'hariKerja' => $s->hari_kerja ?? ['1', '2', '3', '4', '5'],
             'timezone' => $s->timezone,
+            'absenLiburAktif' => (bool) $s->absen_libur_aktif,
+            'absenLiburMode' => $s->absen_libur_mode ?: 'tolak',
         ];
     }
 
@@ -157,6 +159,26 @@ class AdminPresenter
         })->values()->all();
     }
 
+    /**
+     * Label hari non-kerja untuk tanggal tertentu, atau null kalau hari kerja.
+     *
+     * Non-kerja = bukan anggota `hari_kerja` (ISO-8601: 1=Senin … 7=Minggu)
+     * ATAU tanggalnya terdaftar di tabel `holidays`.
+     */
+    public static function nonWorkDayLabel(AttendanceSetting $s, Carbon $date): ?string
+    {
+        $holiday = Holiday::whereDate('tanggal', $date->toDateString())->first();
+        if ($holiday) {
+            return 'Hari libur: '.$holiday->nama;
+        }
+
+        if (! in_array((string) $date->dayOfWeekIso, $s->hariKerjaList(), true)) {
+            return 'Bukan hari kerja ('.$date->locale('id')->isoFormat('dddd').')';
+        }
+
+        return null;
+    }
+
     /** Haversine distance in meters. */
     public static function haversineM(float $lat1, float $lng1, float $lat2, float $lng2): int
     {
@@ -173,7 +195,7 @@ class AdminPresenter
 
     public static function leavesFor(?int $regionId): array
     {
-        return Leave::with('employee.region')
+        return Leave::with(['employee.region', 'approver', 'approvedBy'])
             ->when($regionId, fn ($q) => $q->whereHas('employee', fn ($qq) => $qq->where('region_id', $regionId)))
             ->orderByDesc('created_at')
             ->limit(500)->get()
@@ -203,6 +225,10 @@ class AdminPresenter
                     'status' => $l->status,
                     'level' => (int) $l->level,
                     'note' => $l->note,
+                    'approver_id' => $l->approver_id,
+                    'approver_nama' => $l->approver?->name ?? '',
+                    'approved_by' => $l->approved_by,
+                    'approved_by_nama' => $l->approvedBy?->name ?? '',
                     'createdAt' => $l->created_at?->toIsoString(),
                 ];
             })->values()->all();
@@ -300,7 +326,44 @@ class AdminPresenter
             $rows = User::with('region')->where('role', 'admin_wilayah')->where('region_id', $regionId)->where('is_active', true)->orderBy('name')->get();
         }
 
-        return $rows->map(fn (User $u) => [
+        return $rows->map(fn (User $u) => self::presentApprover($u))->values()->all();
+    }
+
+    /**
+     * Approver CUTI — hanya akun admin (kebijakan: "admin saja").
+     *
+     * Level 1–2 = admin_wilayah di wilayah/site karyawan.
+     * Level 3    = Kantor Pusat (super_admin), ikut ditampilkan sebagai approver final.
+     * Akun non-admin (mis. akun karyawan) tidak pernah muncul di sini.
+     */
+    public static function leaveApproversFor(?int $regionId, ?int $siteId): array
+    {
+        $wilayah = User::with('region')
+            ->where('role', 'admin_wilayah')
+            ->where('is_active', true)
+            ->when($regionId !== null, fn ($q) => $q->where('region_id', $regionId))
+            ->orderBy('name')
+            ->get();
+
+        // Admin wilayah tanpa site_id = kantor wilayah → selalu boleh jadi approver.
+        // Admin wilayah dengan site_id hanya relevan untuk site yang sama.
+        $wilayah = $wilayah->filter(fn (User $u) => $u->site_id === null || (int) $u->site_id === (int) $siteId);
+
+        $pusat = User::with('region')
+            ->where('role', 'super_admin')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return $wilayah->concat($pusat)
+            ->map(fn (User $u) => self::presentApprover($u) + ['level' => $u->role === 'super_admin' ? 3 : null])
+            ->values()->all();
+    }
+
+    /** Bentuk data approver yang dipakai UI (Love & Cuti). */
+    private static function presentApprover(User $u): array
+    {
+        return [
             'id' => $u->id,
             'nama' => $u->name,
             'nip' => $u->nip ?? '',
@@ -308,9 +371,9 @@ class AdminPresenter
             'wilayah' => $u->region?->name ?? '',
             'regionId' => $u->region_id,
             'office_location_id' => $u->site_id,
-            'scope' => $u->site_id ? ($u->region?->name ?? '') : ($u->region?->name ? 'Kantor '.str_replace(['Kab. ','Kota '], '', $u->region->name) : 'Kantor'),
+            'scope' => $u->site_id ? ($u->region?->name ?? '') : ($u->region?->name ? 'Kantor '.str_replace(['Kab. ', 'Kota '], '', $u->region->name) : 'Kantor Pusat'),
             'email' => $u->email,
-        ])->values()->all();
+        ];
     }
 
     public static function loveQuota(int $employeeId, int $loveMax): array

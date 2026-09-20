@@ -22,6 +22,8 @@ class Leave extends Model
         'status',
         'level',
         'note',
+        'approver_id',
+        'approved_by',
     ];
 
     protected function casts(): array
@@ -35,5 +37,17 @@ class Leave extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    /** Admin yang ditunjuk karyawan sebagai approver level 1. */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approver_id');
+    }
+
+    /** Admin yang menekan approve terakhir kali. */
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 }

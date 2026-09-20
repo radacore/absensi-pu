@@ -12,15 +12,42 @@ use Inertia\Inertia;
 
 class CutiController extends Controller
 {
+    /** Peran yang boleh menyetujui cuti — kebijakan: "admin saja". */
+    private const APPROVER_ROLES = ['super_admin', 'admin_wilayah'];
+
     private function scope(): ?int
     {
         $u = Auth::guard('web')->user();
+
         return $u->role === 'super_admin' ? null : $u->region_id;
+    }
+
+    /**
+     * Gerbang approver: hanya akun admin, dan admin wilayah hanya untuk
+     * cuti di wilayahnya sendiri. Dipakai approve() dan reject().
+     */
+    private function ensureApprover(Leave $cuti): void
+    {
+        $u = Auth::guard('web')->user();
+        abort_unless(
+            in_array($u->role, self::APPROVER_ROLES, true),
+            403,
+            'Hanya akun admin yang boleh menyetujui cuti.'
+        );
+
+        $scope = $u->role === 'super_admin' ? null : $u->region_id;
+        abort_if($scope !== null && (int) $cuti->employee?->region_id !== $scope, 403);
+
+        // Kalau karyawan menunjuk approver tertentu, hanya dia (atau Super Admin) yang boleh level 1.
+        if ((int) $cuti->level === 0 && $cuti->approver_id && $u->role !== 'super_admin') {
+            abort_if((int) $cuti->approver_id !== (int) $u->id, 403, 'Cuti ini ditugaskan ke approver lain.');
+        }
     }
 
     public function index()
     {
         $scope = $this->scope();
+
         return Inertia::render('Admin/Cuti', [
             'regions' => AdminPresenter::regionsFor($scope),
             'list' => AdminPresenter::leavesFor($scope),
@@ -33,6 +60,7 @@ class CutiController extends Controller
         $leave = Leave::with(['employee.region'])->findOrFail($id);
         $empRegion = $leave->employee?->region_id;
         abort_if($scope !== null && (int) $empRegion !== $scope, 403, 'Cuti di luar cakupan Anda.');
+
         return Inertia::render('Admin/CutiDetail', [
             'id' => $leave->id,
             'regions' => AdminPresenter::regionsFor($scope),
@@ -43,12 +71,16 @@ class CutiController extends Controller
 
     public function approve(Leave $cuti)
     {
-        $scope = $this->scope();
-        abort_if($scope !== null && (int) $cuti->employee?->region_id !== $scope, 403);
-        if ($cuti->status !== 'Menunggu') return back()->with('error', 'Hanya yang Menunggu bisa di-approve.');
+        $this->ensureApprover($cuti);
+        if ($cuti->status !== 'Menunggu') {
+            return back()->with('error', 'Hanya yang Menunggu bisa di-approve.');
+        }
+
+        $a = Auth::guard('web')->user();
         $next = (int) $cuti->level + 1;
         $cuti->level = $next;
         $cuti->status = $next >= 3 ? 'Disetujui' : 'Menunggu';
+        $cuti->approved_by = $a->id;
         $cuti->save();
 
         $empName = $cuti->employee?->name ?? '-';
@@ -57,9 +89,9 @@ class CutiController extends Controller
             subject: $cuti,
             label: "Cuti #{$cuti->id} {$empName}",
             description: $next >= 3
-                ? "Approve final cuti {$empName} ({$cuti->jenis})"
-                : "Approve cuti {$empName} ke level {$next}",
-            meta: ['level' => $next, 'jenis' => $cuti->jenis, 'status' => $cuti->status]
+                ? "Approve final cuti {$empName} ({$cuti->jenis}) oleh {$a->name}"
+                : "Approve cuti {$empName} ke level {$next} oleh {$a->name}",
+            meta: ['level' => $next, 'jenis' => $cuti->jenis, 'status' => $cuti->status, 'approver_role' => $a->role]
         );
 
         return back()->with('success', $next >= 3 ? 'Cuti disetujui final' : "Cuti naik ke level {$next}");
@@ -67,11 +99,15 @@ class CutiController extends Controller
 
     public function reject(Request $request, Leave $cuti)
     {
-        $scope = $this->scope();
-        abort_if($scope !== null && (int) $cuti->employee?->region_id !== $scope, 403);
-        if ($cuti->status !== 'Menunggu') return back()->with('error', 'Hanya yang Menunggu bisa ditolak.');
+        $this->ensureApprover($cuti);
+        if ($cuti->status !== 'Menunggu') {
+            return back()->with('error', 'Hanya yang Menunggu bisa ditolak.');
+        }
+
+        $a = Auth::guard('web')->user();
         $cuti->status = 'Ditolak';
         $cuti->note = $request->input('note') ?: $cuti->note;
+        $cuti->approved_by = $a->id;
         $cuti->save();
 
         $empName = $cuti->employee?->name ?? '-';
@@ -79,8 +115,8 @@ class CutiController extends Controller
             'cuti.reject',
             subject: $cuti,
             label: "Cuti #{$cuti->id} {$empName}",
-            description: "Tolak cuti {$empName} ({$cuti->jenis})",
-            meta: ['note' => $cuti->note, 'jenis' => $cuti->jenis]
+            description: "Tolak cuti {$empName} ({$cuti->jenis}) oleh {$a->name}",
+            meta: ['note' => $cuti->note, 'jenis' => $cuti->jenis, 'approver_role' => $a->role]
         );
 
         return back()->with('success', 'Cuti ditolak');

@@ -9,6 +9,7 @@ export default function Cuti() {
     const me = props.me ?? { nama: '—', region: '' };
     const assigned = props.assigned ?? null;
     const list = props.list ?? [];
+    const approvers = props.approvers ?? [];
     const confirm = useConfirm();
 
     const [showForm, setShowForm] = useState(false);
@@ -16,14 +17,15 @@ export default function Cuti() {
     const [mulai, setMulai] = useState('');
     const [selesai, setSelesai] = useState('');
     const [alasan, setAlasan] = useState('');
+    const [approverId, setApproverId] = useState('');
 
     const handleSubmit = () => {
         if (!mulai || !selesai) { toast.error('Tanggal mulai & selesai wajib'); return; }
         if (mulai > selesai) { toast.error('Tanggal mulai tidak boleh setelah selesai'); return; }
         if (!alasan.trim()) { toast.error('Alasan wajib diisi'); return; }
-        router.post('/karyawan/cuti', { jenis, mulai, selesai, alasan: alasan.trim() }, {
+        router.post('/karyawan/cuti', { jenis, mulai, selesai, alasan: alasan.trim(), approver_id: approverId || null }, {
             preserveScroll: true,
-            onSuccess: () => { setJenis('Tahunan'); setMulai(''); setSelesai(''); setAlasan(''); setShowForm(false); },
+            onSuccess: () => { setJenis('Tahunan'); setMulai(''); setSelesai(''); setAlasan(''); setApproverId(''); setShowForm(false); },
         });
     };
     const handleCancel = async (id) => {
@@ -75,6 +77,14 @@ export default function Cuti() {
                             <label htmlFor="alasan" className="text-xs font-medium text-[#334155]">Alasan</label>
                             <textarea id="alasan" rows={2} value={alasan} onChange={(e)=>setAlasan(e.target.value)} placeholder="Tuliskan alasan cuti" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#94A3B8] outline-none"></textarea>
                         </div>
+                        <div>
+                            <label htmlFor="approver" className="text-xs font-medium text-[#334155]">Approver level 1 <span className="text-[#94A3B8]">— akun admin (opsional)</span></label>
+                            <select id="approver" value={approverId} onChange={(e)=>setApproverId(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white outline-none">
+                                <option value="">— pilih approver —</option>
+                                {approvers.map((a) => (<option key={a.id} value={a.id}>{a.nama}{a.scope ? ` • ${a.scope}` : ''}</option>))}
+                            </select>
+                            <p className="text-xs text-[#94A3B8] mt-1">Hanya akun admin yang bisa menyetujui cuti. Level 3 (final) oleh Kantor Pusat.</p>
+                        </div>
                         <button type="button" onClick={handleSubmit} className="w-full bg-[#0F172A] text-white rounded-xl py-3 text-sm font-semibold hover:bg-[#1E3A8A] transition">Kirim pengajuan</button>
                     </div>
                 )}
@@ -89,6 +99,13 @@ export default function Cuti() {
                                     <p className="font-medium text-sm text-[#0F172A]">{r.jenis} • {r.tgl}</p>
                                     <p className="text-sm text-[#475569] mt-1">{r.alasan}</p>
                                     <p className="text-xs text-[#94A3B8] mt-1">{r.wilayah} • titik {r.office_location_id}</p>
+                                    {(r.approver_nama || r.approved_by_nama) && (
+                                        <p className="text-xs text-[#94A3B8] mt-0.5">
+                                            {r.approver_nama && `Approver: ${r.approver_nama}`}
+                                            {r.approver_nama && r.approved_by_nama && ' • '}
+                                            {r.approved_by_nama && `Diputus oleh: ${r.approved_by_nama}`}
+                                        </p>
+                                    )}
                                 </div>
                                 <span className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${tone(r.status)}`}>{r.status}</span>
                             </div>
