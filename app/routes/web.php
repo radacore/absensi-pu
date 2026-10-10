@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\PengumumanController as AdminPengumumanController
 use App\Http\Controllers\Admin\RegionController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SiteController;
+use App\Http\Controllers\AttendanceSelfieController;
 use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\Auth\EmployeeAuthController;
 use App\Http\Controllers\Karyawan\AttendanceController as KaryawanAttendanceController;
@@ -32,6 +33,14 @@ Route::get('/', function () {
     return redirect()->route('karyawan.login');
 });
 
+// ── Swafoto absensi (disk privat, ber-otorisasi) ──────────────
+// Dipakai bersama karyawan (miliknya sendiri) dan admin (sesuai cakupan).
+// Di luar grup guard mana pun supaya kedua jenis akun bisa memakainya;
+// otorisasi dilakukan di dalam controller.
+Route::get('/absensi/{attendance}/selfie/{jenis}', [AttendanceSelfieController::class, 'show'])
+    ->whereIn('jenis', ['masuk', 'pulang'])
+    ->name('attendance.selfie');
+
 // ── Karyawan PWA ──────────────────────────────────────────────
 Route::prefix('karyawan')->group(function () {
     // Sesi karyawan masih aktif → langsung ke dasbor (mis. membuka PWA yang start di halaman ini).
@@ -46,7 +55,7 @@ Route::prefix('karyawan')->group(function () {
         ->middleware('throttle:login')
         ->name('karyawan.login.store');
 
-    Route::middleware('employee')->group(function () {
+    Route::middleware(['employee', 'password.changed'])->group(function () {
         Route::post('/logout', [EmployeeAuthController::class, 'destroy'])->name('karyawan.logout');
         Route::get('/', [KaryawanDashboardController::class, 'index'])->name('karyawan.dashboard');
         Route::get('/absensi', [KaryawanAttendanceController::class, 'index'])->name('karyawan.absensi');
@@ -72,7 +81,9 @@ Route::prefix('karyawan')->group(function () {
             ->middleware('throttle:uploads')
             ->name('karyawan.profil.update');
         Route::delete('/profil/foto', [KaryawanProfilController::class, 'destroyFoto'])->name('karyawan.profil.foto.destroy');
-        Route::put('/profil/password', [KaryawanProfilController::class, 'updatePassword'])->name('karyawan.profil.password');
+        Route::put('/profil/password', [KaryawanProfilController::class, 'updatePassword'])
+            ->middleware('throttle:password')
+            ->name('karyawan.profil.password');
     });
 });
 
@@ -178,5 +189,9 @@ Route::prefix('wilayah')->group(function () {
 });
 adminMasterRoutes('wilayah', 'admin_wilayah', 'wilayah');
 
-// Fallback: handle Inertia 404 in PWA
-Route::fallback(fn () => Inertia::render('Karyawan/Dashboard'));
+// Fallback: halaman 404 yang benar (status 404, bukan 200) untuk PWA/Inertia.
+Route::fallback(function (\Illuminate\Http\Request $request) {
+    return Inertia::render('Errors/Error', ['status' => 404])
+        ->toResponse($request)
+        ->setStatusCode(404);
+});

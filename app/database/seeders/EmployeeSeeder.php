@@ -18,9 +18,15 @@ class EmployeeSeeder extends Seeder
         ];
 
         foreach ($employees as $e) {
-            Employee::updateOrCreate(
+            // firstOrCreate, BUKAN updateOrCreate: seeder tidak boleh menimpa
+            // kata sandi karyawan yang sudah diganti. Versi lama mereset
+            // semuanya ke 'password123' setiap kali dijalankan.
+            Employee::firstOrCreate(
                 ['nik' => $e['nik']],
-                array_merge($e, ['password' => 'password123'])
+                array_merge($e, [
+                    'password' => env('SEED_EMPLOYEE_PASSWORD', 'password123'),
+                    'must_change_password' => false,
+                ])
             );
         }
     }

@@ -43,8 +43,9 @@ class SiteSeeder extends Seeder
         ];
 
         foreach ($sites as [$slug, $id, $nama, $lat, $lng, $radius, $address]) {
-            Site::create([
-                'id' => $id,
+            // updateOrCreate agar seeder idempoten: dijalankan dua kali tidak
+            // melanggar primary key seperti Site::create sebelumnya.
+            Site::updateOrCreate(['id' => $id], [
                 'region_id' => $bySlug[$slug],
                 'nama_lokasi' => $nama,
                 'lat' => $lat,

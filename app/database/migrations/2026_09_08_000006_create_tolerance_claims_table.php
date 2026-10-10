@@ -20,7 +20,9 @@ return new class extends Migration
             $table->text('alasan');
             $table->unsignedBigInteger('site_id');
             $table->unsignedBigInteger('region_id');
-            $table->foreignId('approver_id')->constrained('users')->cascadeOnDelete();
+            // nullOnDelete: menghapus akun admin TIDAK boleh ikut menghapus
+            // klaim toleransi karyawan — hanya melepas kaitannya.
+            $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->text('note')->nullable();
             $table->timestamps();

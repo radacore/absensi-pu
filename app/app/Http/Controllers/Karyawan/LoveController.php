@@ -19,7 +19,7 @@ class LoveController extends Controller
         $loveMax = $settings ? (int)$settings->love_max : 4;
         $quota = AdminPresenter::loveQuota($me->id, $loveMax);
         $assigned = $me->site ? ['site'=>['nama_lokasi'=>$me->site->nama_lokasi,'radius'=>(int)$me->site->radius_m,'id'=>$me->site->id], 'regionName'=>$me->region?->name ?? ''] : null;
-        $myClaims = ToleranceClaim::with('approver')->where('employee_id',$me->id)->orderByDesc('created_at')->get()->map(function (ToleranceClaim $c) {
+        $myClaims = ToleranceClaim::with('approver.region')->where('employee_id',$me->id)->orderByDesc('created_at')->get()->map(function (ToleranceClaim $c) {
             $tgl = $c->claim_date instanceof \Illuminate\Support\Carbon ? $c->claim_date->format('Y-m-d') : (string)$c->claim_date;
             return [
                 'id'=>$c->id,'jenis'=>$c->jenis,'tgl'=>$tgl,'jam'=> $c->jam ? substr((string)$c->jam,0,5):'','alasan'=>$c->alasan,

@@ -74,5 +74,20 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             });
         });
+
+        /*
+         * Batasi percobaan ganti kata sandi: 5 per 5 menit per akun.
+         * Tanpa ini, kolom "kata sandi lama" bisa dipakai untuk menebak
+         * sandi pengguna yang sedang login (kombinasi current_password).
+         */
+        RateLimiter::for('password', function (Request $request) {
+            $actor = Auth::guard('employee')->id() ?? $request->ip();
+
+            return Limit::perMinutes(5, 5)->by('password|'.$actor)->response(function () {
+                return back()->withErrors([
+                    'current_password' => 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.',
+                ]);
+            });
+        });
     }
 }

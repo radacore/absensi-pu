@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\AttendanceSetting;
 use App\Models\Leave;
 use App\Support\AdminPresenter;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -32,7 +33,7 @@ class AttendanceController extends Controller
                 'pulang' => $a->clock_out_at ? Carbon::parse($a->clock_out_at)->format('H:i') : '',
                 'status' => $a->status ?? 'on_time',
                 'jarak' => (int) ($a->distance_in_m ?? 0),
-                'selfie' => $a->selfie_url,
+                'selfie' => $a->selfieRouteUrl('masuk'),
             ])->values()->all();
 
         $assigned = $me->site ? [
@@ -94,7 +95,8 @@ class AttendanceController extends Controller
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
             // Kebijakan: swafoto live dari kamera wajib (bukan foto profil).
-            // Disimpan di disk publik yang sama dengan foto profil — nama berkas dibuat server.
+            // Disimpan di disk PRIVAT — hanya bisa dilihat lewat route
+            // ber-otorisasi (AttendanceSelfieController), bukan URL publik.
             'selfie' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
         ]);
 
@@ -136,21 +138,30 @@ class AttendanceController extends Controller
             $status = 'libur';
         }
 
-        $disk = config('filesystems.uploads.public_disk');
-        $selfiePath = $request->file('selfie')->store("selfie/{$today}", ['disk' => $disk, 'visibility' => 'public']);
+        $disk = config('filesystems.uploads.private_disk');
+        $selfiePath = $request->file('selfie')->store("selfie/{$today}", $disk);
 
-        Attendance::create([
-            'employee_id' => $me->id,
-            'work_date' => $today,
-            'clock_in_at' => $now->format('H:i:s'),
-            'status' => $status,
-            'lat_in' => $data['lat'],
-            'lng_in' => $data['lng'],
-            'distance_in_m' => $dist,
-            'selfie_url' => Storage::disk($disk)->url($selfiePath),
-            'site_id' => $site->id,
-            'region_id' => $me->region_id,
-        ]);
+        try {
+            Attendance::create([
+                'employee_id' => $me->id,
+                'work_date' => $today,
+                'clock_in_at' => $now->format('H:i:s'),
+                'status' => $status,
+                'lat_in' => $data['lat'],
+                'lng_in' => $data['lng'],
+                'distance_in_m' => $dist,
+                'selfie_url' => $selfiePath,
+                'site_id' => $site->id,
+                'region_id' => $me->region_id,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            // Dua clock-in nyaris bersamaan: unique(employee_id, work_date)
+            // menangkap yang kalah balapan di level DB, bukan jadi 500.
+            // Berkas yang sudah terunggah dibersihkan agar tidak jadi sampah.
+            Storage::disk($disk)->delete($selfiePath);
+
+            throw ValidationException::withMessages(['work_date' => 'Sudah absen hari ini.']);
+        }
 
         $pesan = match ($status) {
             'late' => 'Absen tercatat — Terlambat',
@@ -190,13 +201,13 @@ class AttendanceController extends Controller
         }
 
         $now = now('Asia/Makassar');
-        $disk = config('filesystems.uploads.public_disk');
-        $pulangPath = $request->file('selfie_pulang')->store("selfie/{$today}", ['disk' => $disk, 'visibility' => 'public']);
+        $disk = config('filesystems.uploads.private_disk');
+        $pulangPath = $request->file('selfie_pulang')->store("selfie/{$today}", $disk);
         $row->update([
             'clock_out_at' => $now->format('H:i:s'),
             'lat_out' => $data['lat'],
             'lng_out' => $data['lng'],
-            'selfie_pulang_url' => Storage::disk($disk)->url($pulangPath),
+            'selfie_pulang_url' => $pulangPath,
         ]);
 
         return back()->with('success', 'Absen pulang tercatat');

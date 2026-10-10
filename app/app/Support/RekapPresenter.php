@@ -25,6 +25,10 @@ class RekapPresenter
         $lastDay = (int) $end->format('d');
 
         $settings = AttendanceSetting::first();
+        // Hari kerja mengikuti setelan (bisa Sabtu/Minggu ikut kerja).
+        // Jangan hardcode Sabtu+Minggu — rekap akan salah untuk kantor
+        // dengan pola hari kerja berbeda.
+        $hariKerja = $settings ? $settings->hariKerjaList() : AttendanceSetting::HARI_KERJA_DEFAULT;
         $jamMasuk = $settings ? substr((string) $settings->jam_masuk, 0, 5) : '07:30';
         $jamPulang = $settings ? substr((string) $settings->jam_pulang, 0, 5) : '16:00';
         $toleransi = $settings ? (int) $settings->toleransi_late_menit : 15;
@@ -123,7 +127,7 @@ class RekapPresenter
             $date = Carbon::create($year, $month, $day, 0, 0, 0, 'Asia/Makassar');
             $dateKey = $date->format('Y-m-d');
             $dow = $date->dayOfWeek; // 0 Sunday, 6 Saturday
-            $isWeekend = $dow === 0 || $dow === 6;
+            $isWeekend = ! in_array((string) $date->dayOfWeekIso, $hariKerja, true);
             $isHoliday = isset($holidays[$dateKey]);
             $isCuti = isset($cutiDates[$dateKey]);
             $isDinas = isset($dinasDates[$dateKey]);
@@ -139,10 +143,10 @@ class RekapPresenter
             $zonaMasuk = null;
 
             if ($isWeekend && ! $isHoliday) {
-                $catatan = "Akhir pekan ({$hariFull})";
+                $catatan = "Bukan hari kerja ({$hariFull})";
             }
             if ($isHoliday) {
-                $catatan = ($isWeekend ? 'Akhir pekan & ' : '').'Libur nasional: '.$holidays[$dateKey]['nama'];
+                $catatan = ($isWeekend ? 'Bukan hari kerja & ' : '').'Libur nasional: '.$holidays[$dateKey]['nama'];
             }
             if ($isCuti) {
                 $catatan = 'Cuti '.$cutiDates[$dateKey]['jenis'];
@@ -350,7 +354,7 @@ class RekapPresenter
                 'nama_lokasi_aktif' => $siteName,
                 'koordinat_lokasi_aktif' => sprintf('%.6f, %.6f', $siteLat, $siteLng),
                 'unit_kerja' => $unitKerja,
-                'selfie_url' => $att->selfie_url,
+                'selfie_url' => $att->selfieRouteUrl('masuk'),
             ];
         }
 

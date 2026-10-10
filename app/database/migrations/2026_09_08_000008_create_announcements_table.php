@@ -18,7 +18,8 @@ return new class extends Migration
             $table->enum('scope', ['Global', 'Wilayah'])->default('Global');
             $table->foreignId('region_id')->nullable()->constrained('regions')->nullOnDelete();
             $table->boolean('pin')->default(false);
-            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
+            // nullOnDelete: pengumuman tetap ada walau pembuatnya dihapus.
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->index(['scope', 'region_id']);
         });

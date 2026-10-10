@@ -83,7 +83,12 @@ class Employee extends Authenticatable
     protected static function booted(): void
     {
         static::deleting(function (Employee $employee): void {
+            // cascadeOnDelete di level basis data menghapus baris anak TANPA
+            // memicu event model Eloquent, sehingga berkas di object storage
+            // (dokumen dinas, swafoto absensi) akan tertinggal sebagai yatim.
+            // Karena itu baris anak dihapus lewat Eloquent lebih dulu.
             $employee->dinasClaims()->get()->each->delete();
+            $employee->attendances()->get()->each->delete();
 
             MediaCleanup::deleteByPublicUrl($employee->foto_url);
         });

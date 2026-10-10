@@ -16,9 +16,11 @@ class AdminUserSeeder extends Seeder
         ];
 
         foreach ($users as $u) {
-            User::updateOrCreate(
+            // firstOrCreate: jangan timpa kata sandi akun admin yang sudah
+            // ada. Password default hanya dipakai saat akun pertama dibuat.
+            User::firstOrCreate(
                 ['email' => $u['email']],
-                array_merge($u, ['password' => 'password123'])
+                array_merge($u, ['password' => env('SEED_ADMIN_PASSWORD', 'password123')])
             );
         }
     }

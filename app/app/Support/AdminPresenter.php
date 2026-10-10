@@ -154,8 +154,8 @@ class AdminPresenter
                 'lat' => (float) ($a->lat_in ?? 0),
                 'lng' => (float) ($a->lng_in ?? 0),
                 'foto' => $emp?->foto_url ?: self::DEFAULT_AVATAR,
-                'selfie' => $a->selfie_url ?: ($emp?->foto_url ?: self::DEFAULT_AVATAR),
-                'selfie_pulang' => $a->selfie_pulang_url ?? null,
+                'selfie' => $a->selfieRouteUrl('masuk') ?: ($emp?->foto_url ?: self::DEFAULT_AVATAR),
+                'selfie_pulang' => $a->selfieRouteUrl('pulang'),
             ];
         })->values()->all();
     }
@@ -237,7 +237,7 @@ class AdminPresenter
 
     public static function lovesFor(?int $regionId): array
     {
-        return ToleranceClaim::with(['employee.region', 'approver'])
+        return ToleranceClaim::with(['employee.region', 'approver.region'])
             ->when($regionId, fn ($q) => $q->where('region_id', $regionId))
             ->orderByDesc('created_at')
             ->limit(500)->get()
