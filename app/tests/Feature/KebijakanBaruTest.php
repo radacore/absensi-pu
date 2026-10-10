@@ -85,6 +85,21 @@ class KebijakanBaruTest extends TestCase
         Carbon::setTestNow(Carbon::parse("{$tanggal} {$jam}", 'Asia/Makassar'));
     }
 
+    /**
+     * Tanggal cuti relatif terhadap hari ini. Dipakai pada payload POST
+     * /karyawan/cuti yang divalidasi `after_or_equal:today` — tanggal
+     * hardcode akan basi dan membuat tes gagal begitu waktu berjalan lewat.
+     */
+    private function cutiMulai(): string
+    {
+        return Carbon::now('Asia/Makassar')->addDays(7)->toDateString();
+    }
+
+    private function cutiSelesai(): string
+    {
+        return Carbon::now('Asia/Makassar')->addDays(8)->toDateString();
+    }
+
     /** Simpan pengaturan lewat HTTP, seperti Super Admin dari /super-admin/settings. */
     private function setAbsenLibur(bool $aktif, string $mode = 'tolak'): void
     {
@@ -440,8 +455,8 @@ class KebijakanBaruTest extends TestCase
         $this->actingAs($emp, 'employee')
             ->post('/karyawan/cuti', [
                 'jenis' => 'Tahunan',
-                'mulai' => '2026-10-01',
-                'selesai' => '2026-10-02',
+                'mulai' => $this->cutiMulai(),
+                'selesai' => $this->cutiSelesai(),
                 'alasan' => 'Keperluan keluarga',
                 'approver_id' => $nonAdmin->id,
             ])
@@ -458,8 +473,8 @@ class KebijakanBaruTest extends TestCase
         $this->actingAs($emp, 'employee')
             ->post('/karyawan/cuti', [
                 'jenis' => 'Tahunan',
-                'mulai' => '2026-10-01',
-                'selesai' => '2026-10-02',
+                'mulai' => $this->cutiMulai(),
+                'selesai' => $this->cutiSelesai(),
                 'alasan' => 'Keperluan keluarga',
                 'approver_id' => $admin->id,
             ])
@@ -477,8 +492,8 @@ class KebijakanBaruTest extends TestCase
         $this->actingAs($emp, 'employee')
             ->post('/karyawan/cuti', [
                 'jenis' => 'Tahunan',
-                'mulai' => '2026-10-01',
-                'selesai' => '2026-10-02',
+                'mulai' => $this->cutiMulai(),
+                'selesai' => $this->cutiSelesai(),
                 'alasan' => 'Keperluan keluarga',
                 'approver_id' => $this->adminBone()->id, // Bone ≠ Gowa
             ])
@@ -492,8 +507,8 @@ class KebijakanBaruTest extends TestCase
         $this->actingAs($emp, 'employee')
             ->post('/karyawan/cuti', [
                 'jenis' => 'Tahunan',
-                'mulai' => '2026-10-01',
-                'selesai' => '2026-10-02',
+                'mulai' => $this->cutiMulai(),
+                'selesai' => $this->cutiSelesai(),
                 'alasan' => 'Keperluan keluarga',
             ])
             ->assertSessionHasNoErrors();

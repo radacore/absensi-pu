@@ -222,11 +222,15 @@ class AdminMasterDataTest extends TestCase
             ->post("/super-admin/employees/{$emp->id}/reset-password");
         $this->assertTrue($emp->fresh()->must_change_password);
 
-        // login karyawan → shared prop membawa flag true
+        // login karyawan → flag true. Gerbang EnsurePasswordChanged
+        // mengalihkan halaman karyawan mana pun ke profil sampai kata sandi
+        // diganti, jadi flag-nya diperiksa di halaman profil.
         $this->post('/karyawan/logout');
         $this->post('/karyawan/login', ['login' => $emp->email, 'password' => $emp->nik]);
 
-        $this->get('/karyawan')->assertOk()
+        $this->get('/karyawan')->assertRedirect('/karyawan/profil');
+
+        $this->get('/karyawan/profil')->assertOk()
             ->assertInertia(fn (\Inertia\Testing\AssertableInertia $p) => $p->where('auth.employee.must_change_password', true));
 
         // ganti password baru yang valid → flag false
