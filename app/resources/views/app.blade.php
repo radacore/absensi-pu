@@ -8,6 +8,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title inertia>{{ config('app.name', 'BBWS Pompengan Jeneberang') }}</title>
+    <link rel="manifest" href="/build/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/pwa-192x192.png">
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
     @inertiaHead

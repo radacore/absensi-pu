@@ -12,7 +12,9 @@ use App\Models\User;
 use App\Support\AdminPresenter;
 use App\Support\RekapPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -40,6 +42,8 @@ class KebijakanBaruTest extends TestCase
     {
         parent::setUp();
         $this->seed();
+        Storage::fake(config('filesystems.uploads.private_disk'));
+        Storage::fake(config('filesystems.uploads.public_disk'));
     }
 
     protected function tearDown(): void
@@ -101,6 +105,7 @@ class KebijakanBaruTest extends TestCase
         return $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-in', [
             'lat' => $emp->site->lat,
             'lng' => $emp->site->lng,
+            'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200),
         ]);
     }
 

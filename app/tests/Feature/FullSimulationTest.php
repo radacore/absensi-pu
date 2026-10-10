@@ -187,30 +187,40 @@ class FullSimulationTest extends TestCase
     // 1. AUTENTIKASI & BATAS PERAN
     // ==================================================================
 
-    public function test_login_karyawan_pakai_nip(): void
+    public function test_login_karyawan_pakai_email(): void
     {
         $this->post('/karyawan/login', [
-            'login' => '198501012010011001',
+            'login' => 'andi@bbws-pj.go.id',
             'password' => 'password123',
         ])->assertRedirect('/karyawan');
 
         $this->assertAuthenticatedAs($this->karyawan(), 'employee');
     }
 
-    public function test_login_karyawan_pakai_nik(): void
+    public function test_login_karyawan_email_case_insensitive(): void
     {
         $this->post('/karyawan/login', [
-            'login' => '7371001234567890',
+            'login' => 'ANDI@BBWS-PJ.GO.ID',
             'password' => 'password123',
         ])->assertRedirect('/karyawan');
 
         $this->assertAuthenticatedAs($this->karyawan(), 'employee');
+    }
+
+    public function test_login_karyawan_nik_nip_ditolak(): void
+    {
+        $this->from('/karyawan/login')->post('/karyawan/login', [
+            'login' => '7371001234567890',
+            'password' => 'password123',
+        ])->assertRedirect('/karyawan/login')->assertSessionHasErrors('login');
+
+        $this->assertGuest('employee');
     }
 
     public function test_login_karyawan_password_salah_ditolak(): void
     {
         $this->from('/karyawan/login')->post('/karyawan/login', [
-            'login' => '7371001234567890',
+            'login' => 'andi@bbws-pj.go.id',
             'password' => 'salah-sekali',
         ])->assertRedirect('/karyawan/login')->assertSessionHasErrors('login');
 
@@ -295,7 +305,7 @@ class FullSimulationTest extends TestCase
             ->post('/karyawan/absensi/clock-in', [
                 'lat' => $site->lat,
                 'lng' => $site->lng,
-                'selfie_url' => 'data:image/jpeg;base64,/9j/AAAA',
+                'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200),
             ])
             ->assertRedirect('/karyawan/absensi')
             ->assertSessionHasNoErrors();
@@ -305,14 +315,16 @@ class FullSimulationTest extends TestCase
         $this->assertSame(0, (int) $row->distance_in_m);
         $this->assertSame($site->id, $row->site_id);
         $this->assertNotNull($row->clock_in_at);
+        $this->assertNotNull($row->selfie_url);
 
         $this->actingAs($me, 'employee')
             ->from('/karyawan/absensi')
-            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng])
+            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200)])
             ->assertRedirect('/karyawan/absensi')
             ->assertSessionHasNoErrors();
 
         $this->assertNotNull($row->fresh()->clock_out_at);
+        $this->assertNotNull($row->fresh()->selfie_pulang_url);
     }
 
     public function test_absensi_ditolak_di_luar_radius(): void
@@ -326,6 +338,7 @@ class FullSimulationTest extends TestCase
             ->post('/karyawan/absensi/clock-in', [
                 'lat' => (float) $site->lat + 1,
                 'lng' => $site->lng,
+                'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200),
             ])
             ->assertSessionHasErrors('distance');
 
@@ -351,7 +364,7 @@ class FullSimulationTest extends TestCase
 
         $this->actingAs($me, 'employee')
             ->from('/karyawan/absensi')
-            ->post('/karyawan/absensi/clock-in', ['lat' => $site->lat, 'lng' => $site->lng])
+            ->post('/karyawan/absensi/clock-in', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200)])
             ->assertSessionHasErrors('work_date');
 
         $this->assertSame(1, Attendance::where('employee_id', $me->id)->count());
@@ -364,7 +377,7 @@ class FullSimulationTest extends TestCase
 
         $this->actingAs($me, 'employee')
             ->from('/karyawan/absensi')
-            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng])
+            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200)])
             ->assertSessionHasErrors('work_date');
     }
 
@@ -388,7 +401,7 @@ class FullSimulationTest extends TestCase
 
         $this->actingAs($me, 'employee')
             ->from('/karyawan/absensi')
-            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng])
+            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200)])
             ->assertSessionHasErrors('work_date');
     }
 
@@ -401,7 +414,7 @@ class FullSimulationTest extends TestCase
 
         $this->actingAs($me, 'employee')
             ->from('/karyawan/absensi')
-            ->post('/karyawan/absensi/clock-in', ['lat' => $site->lat, 'lng' => $site->lng])
+            ->post('/karyawan/absensi/clock-in', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200)])
             ->assertSessionHasNoErrors();
 
         $this->assertSame('late', Attendance::where('employee_id', $me->id)->firstOrFail()->status);
@@ -413,7 +426,7 @@ class FullSimulationTest extends TestCase
 
         $this->actingAs($me, 'employee')
             ->from('/karyawan/absensi')
-            ->post('/karyawan/absensi/clock-in', ['lat' => 999, 'lng' => 'bukan-angka'])
+            ->post('/karyawan/absensi/clock-in', ['lat' => 999, 'lng' => 'bukan-angka', 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200)])
             ->assertSessionHasErrors(['lat', 'lng']);
     }
 
@@ -1110,7 +1123,7 @@ class FullSimulationTest extends TestCase
 
         // Password baru harus benar-benar bisa dipakai login.
         Auth::guard('employee')->logout();
-        $this->post('/karyawan/login', ['login' => '7371001234567890', 'password' => 'KuatSekali123'])
+        $this->post('/karyawan/login', ['login' => 'andi@bbws-pj.go.id', 'password' => 'KuatSekali123'])
             ->assertRedirect('/karyawan');
     }
 
@@ -1447,13 +1460,6 @@ class FullSimulationTest extends TestCase
         $this->asAdmin($this->superAdmin())
             ->get("/super-admin/employees/{$me->id}/rekap?bulan=".now('Asia/Makassar')->format('Y-m'))
             ->assertOk();
-    }
-
-    public function test_rekap_karyawan_menolak_format_bulan_salah(): void
-    {
-        $this->actingAs($this->karyawan(), 'employee')
-            ->get('/karyawan/rekap/detail?bulan=2026-9')
-            ->assertSessionHasErrors('bulan');
     }
 
     public function test_audit_log_tercatat_dan_hanya_super_admin(): void

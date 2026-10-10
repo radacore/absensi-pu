@@ -1,7 +1,7 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
 import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 function haversineM(lat1, lng1, lat2, lng2) {
     const R = 6371000;
@@ -37,8 +37,74 @@ export default function Absensi() {
     const [myPos, setMyPos] = useState(null);
     const [geoError, setGeoError] = useState(null);
     const [geoLoading, setGeoLoading] = useState(false);
+    const [stream, setStream] = useState(null);
+    const [camError, setCamError] = useState(null);
+    const [selfieFile, setSelfieFile] = useState(null);
+    const [selfiePreview, setSelfiePreview] = useState(null);
+    const [mode, setMode] = useState('masuk'); // 'masuk' | 'pulang'
+    const videoRef = useRef(null);
 
     useEffect(() => { if (me.foto) setPhotoPreview(me.foto); }, [me.foto]);
+    useEffect(() => {
+        if (videoRef.current && stream) videoRef.current.srcObject = stream;
+    }, [stream, captured]);
+    useEffect(() => () => stopStream(), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const stopStream = () => {
+        setStream((s) => {
+            if (s) s.getTracks().forEach((t) => t.stop());
+            return null;
+        });
+    };
+    const resetCapture = () => {
+        stopStream();
+        setCaptured(false); setMyPos(null); setGeoError(null);
+        setCamError(null);
+        if (selfiePreview) URL.revokeObjectURL(selfiePreview);
+        setSelfieFile(null); setSelfiePreview(null);
+    };
+
+    const openRow = useMemo(
+        () => history.some((h) => h.tgl === todayISO && !h.pulang),
+        [history, todayISO],
+    );
+
+    const startCamera = async () => {
+        if (!navigator.mediaDevices?.getUserMedia) {
+            setCamError('Kamera wajib untuk absen — perangkat/browser ini tidak mendukung kamera');
+            return;
+        }
+        try {
+            const s = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 } },
+                audio: false,
+            });
+            setCamError(null);
+            setStream(s);
+        } catch (e) {
+            setCamError('Kamera wajib untuk absen — izinkan akses kamera di browser ini');
+        }
+    };
+
+    const takePhoto = () => {
+        const video = videoRef.current;
+        if (!video || !stream) { toast.error('Kamera belum siap'); return; }
+        const w = video.videoWidth || 720;
+        const h = video.videoHeight || 720;
+        const scale = Math.min(1, 720 / Math.max(w, h));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(w * scale);
+        canvas.height = Math.round(h * scale);
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+            if (!blob) { toast.error('Gagal mengambil foto'); return; }
+            const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
+            if (selfiePreview) URL.revokeObjectURL(selfiePreview);
+            setSelfieFile(file);
+            setSelfiePreview(URL.createObjectURL(file));
+            stopStream();
+        }, 'image/jpeg', 0.82);
+    };
 
     const jarak = useMemo(() => {
         if (!assigned || !myPos) return null;
@@ -47,19 +113,23 @@ export default function Absensi() {
     const inRadius = assigned && jarak != null ? jarak <= assigned.radius : false;
     const tanpaTitik = !assigned;
 
-    const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-
     const requestPos = () => {
         if (!assigned) return;
-        if (!navigator.geolocation) { setGeoError('Geolocation tidak didukung — pakai demo 39m'); setMyPos({ lat: assigned.lat + 0.00035, lng: assigned.lng }); return; }
+        if (!navigator.geolocation) { setGeoError('Perangkat tidak mendukung GPS — aktifkan layanan lokasi'); setMyPos(null); return; }
         setGeoLoading(true); setGeoError(null);
         navigator.geolocation.getCurrentPosition(
             (p) => { setMyPos({ lat: p.coords.latitude, lng: p.coords.longitude }); setGeoLoading(false); },
-            (err) => { setGeoError(err.message || 'Gagal GPS — pakai demo 39m'); setMyPos({ lat: assigned.lat + 0.00035, lng: assigned.lng }); setGeoLoading(false); },
+            (err) => { setGeoError(`Gagal membaca GPS (${err.message || 'coba lagi di area terbuka'}) — absen diblokir sampai lokasi asli tersedia`); setMyPos(null); setGeoLoading(false); },
             { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
         );
     };
-    const handleOpenCapture = () => { setCaptured(true); requestPos(); };
+    const openPanel = (next) => {
+        setMode(next);
+        if (!captured) setCaptured(true);
+        requestPos();
+        startCamera();
+    };
+    const handleOpenCapture = () => openPanel('masuk');
 
     const handleKirim = () => {
         if (tanpaTitik) { toast.error('Titik belum di-assign — tidak bisa absen'); return; }
@@ -67,27 +137,31 @@ export default function Absensi() {
         if (jarak == null) { toast.error(geoLoading ? 'Menunggu GPS...' : 'Lokasi belum siap — aktifkan GPS'); return; }
         if (!inRadius) { toast.error(`${jarak} m / ${assigned.radius} m — di luar radius`); return; }
         if (alreadyToday) { toast.error('Sudah absen hari ini'); return; }
+        if (!selfieFile) { toast.error('Ambil foto selfie dulu — wajib untuk absen masuk'); return; }
         router.post('/karyawan/absensi/clock-in', {
             lat: myPos.lat,
             lng: myPos.lng,
-            selfie_url: photoPreview || null,
+            selfie: selfieFile,
         }, {
             preserveScroll: true,
-            onSuccess: () => setCaptured(false),
+            onSuccess: () => { resetCapture(); setMode('masuk'); },
         });
     };
 
     const handlePulang = () => {
         if (tanpaTitik) { toast.error('Titik belum di-assign'); return; }
-        if (!history.some((h) => h.tgl === todayISO && !h.pulang)) { toast.error('Belum absen masuk hari ini'); return; }
-        if (jarak == null) {
-            if (!captured) { setCaptured(true); requestPos(); }
-            toast.error('Aktifkan GPS lalu tekan Absen pulang lagi');
+        if (!openRow) { toast.error('Belum absen masuk hari ini'); return; }
+        if (!captured || mode !== 'pulang') {
+            openPanel('pulang');
+            toast.success('Ambil foto selfie lalu kirim absen pulang');
             return;
         }
+        if (jarak == null) { toast.error(geoLoading ? 'Menunggu GPS...' : 'Aktifkan GPS lalu tekan kirim lagi'); return; }
         if (!inRadius) { toast.error(`${jarak} m / ${assigned.radius} m — di luar radius`); return; }
-        router.post('/karyawan/absensi/clock-out', { lat: myPos.lat, lng: myPos.lng }, {
+        if (!selfieFile) { toast.error('Ambil foto selfie dulu — wajib untuk absen pulang'); return; }
+        router.post('/karyawan/absensi/clock-out', { lat: myPos.lat, lng: myPos.lng, selfie_pulang: selfieFile }, {
             preserveScroll: true,
+            onSuccess: () => { resetCapture(); setMode('masuk'); },
         });
     };
 
@@ -107,8 +181,7 @@ export default function Absensi() {
             <div className="space-y-5">
                 <div>
                     <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Absensi</h2>
-                    <p className="text-sm text-[#64748B] mt-1">{assigned.regionName} • {assigned.nama_lokasi} • Radius {assigned.radius} m • 1 karyawan = 1 titik</p>
-                    <p className="text-xs text-[#94A3B8] mt-1">Valid hanya di titik assigned dalam radius titiknya — di luar / titik lain ditolak 422 • Jam {settings.jamMasuk}–{settings.jamPulang} WITA kelonggaran {settings.toleransi}m</p>
+                    <p className="text-sm text-[#64748B] mt-1">Radius {assigned.radius} m</p>
                 </div>
 
                 {absenLibur.hariIniLibur && (
@@ -126,53 +199,80 @@ export default function Absensi() {
                 )}
 
                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-4">
-                    <p className="text-xs font-medium text-[#94A3B8]">Titik assigned kamu</p>
+                    <p className="text-xs font-medium text-[#94A3B8]">Titik assigned kamu • {assigned.regionName}</p>
                     <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.nama_lokasi}</p>
-                    <p className="text-xs font-mono text-[#64748B]">{assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)} • {assigned.radius} m</p>
+                    <p className="text-xs font-mono text-[#64748B]">{assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)} • {assigned.radius} m • Jam {settings.jamMasuk}–{settings.jamPulang} WITA</p>
                     {assigned.address && <p className="text-xs text-[#94A3B8] mt-1">{assigned.address}</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
-                    <div className="rounded-2xl bg-[#F8FAFC] h-[240px] flex flex-col items-center justify-center p-6">
+                    <div className="rounded-2xl bg-[#F8FAFC] p-4">
                         {!captured ? (
-                            <>
+                            <div className="flex flex-col items-center justify-center text-center py-8 px-6">
                                 <span className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><path d="M14 4a2 2 0 012 2v1h2a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2V6a2 2 0 012-2h4z" /><circle cx="12" cy="13" r="3.5" /><path d="M16 6h1" /></svg>
                                 </span>
                                 <p className="text-sm font-medium text-[#0F172A] mt-3">Siap absen</p>
-                                <p className="text-xs text-[#64748B] text-center mt-1">Kamera + lokasi untuk pratinjau jarak ke <span className="font-medium text-[#0F172A]">{assigned.nama_lokasi}</span> — hitung haversine ke {assigned.radius} m</p>
+                                <p className="text-xs text-[#64748B] text-center mt-1">Ambil swafoto + kunci GPS di titik ini</p>
                                 <button type="button" onClick={handleOpenCapture} disabled={blokirAbsen} title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : ''} className={`mt-4 rounded-xl px-5 py-2.5 text-sm font-semibold ${blokirAbsen ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Buka kamera &amp; lokasi</button>
-                            </>
+                            </div>
                         ) : (
                             <div className="w-full text-center">
-                                <div className="mx-auto w-20 h-20 rounded-full bg-white shadow-sm flex items-center justify-center overflow-hidden">
-                                    {photoPreview ? <img src={photoPreview} alt="selfie" className="w-full h-full object-cover" /> : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="8" r="4" /><path d="M4 20a8 8 0 0116 0" /></svg>}
+                                <div className="relative mx-auto w-full aspect-[4/3] max-h-[380px] rounded-2xl bg-white shadow-sm flex items-center justify-center overflow-hidden">
+                                    {selfiePreview ? <img src={selfiePreview} alt="selfie" className="w-full h-full object-cover" />
+                                        : stream ? <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
+                                        : photoPreview ? <img src={photoPreview} alt="foto profil" className="w-full h-full object-cover" />
+                                        : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="8" r="4" /><path d="M4 20a8 8 0 0116 0" /></svg>}
+                                    {(stream || selfiePreview) && (
+                                        <button
+                                            type="button"
+                                            onClick={selfiePreview ? () => { URL.revokeObjectURL(selfiePreview); setSelfieFile(null); setSelfiePreview(null); startCamera(); } : takePhoto}
+                                            className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-[#0F172A]/85 px-5 py-2 text-sm font-semibold text-white backdrop-blur"
+                                        >
+                                            {selfiePreview ? 'Foto ulang' : 'Ambil foto'}
+                                        </button>
+                                    )}
                                 </div>
-                                <p className="text-sm font-semibold text-[#0F172A] mt-3">Pratinjau selfie</p>
+                                {camError && <p className="text-xs text-[#92400E] mt-2">{camError}</p>}
                                 {geoLoading ? (
                                     <p className="text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 bg-[#F1F5F9] text-[#64748B]">Mengambil lokasi GPS...</p>
                                 ) : jarak == null ? (
                                     <p className="text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 bg-[#FEF2F2] text-[#991B1B]">Lokasi belum siap</p>
                                 ) : (
-                                    <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{jarak} m / {assigned.radius} m • {inRadius ? 'Dalam radius titik assigned' : 'Di luar radius — ditolak 422'}</p>
+                                    <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{jarak} m / {assigned.radius} m • {inRadius ? 'Dalam radius' : 'Di luar radius'}</p>
                                 )}
                                 {geoError && <p className="text-xs text-[#92400E] mt-1">{geoError}</p>}
-                                {myPos && <p className="text-xs font-mono text-[#94A3B8] mt-1">{myPos.lat.toFixed(6)}, {myPos.lng.toFixed(6)}</p>}
-                                <p className="text-xs text-[#94A3B8] mt-1">{nowStr} WITA • {assigned.regionName} • {assigned.nama_lokasi}</p>
                                 <div className="flex gap-2 justify-center mt-4">
-                                    <button type="button" onClick={() => { setCaptured(false); setMyPos(null); setGeoError(null); }} className="rounded-xl bg-white shadow-sm px-4 py-2 text-sm font-medium text-[#334155]">Ulangi</button>
-                                    <button type="button" onClick={requestPos} className="rounded-xl bg-white border border-[#E2E8F0] px-4 py-2 text-sm font-medium text-[#334155]">Refresh GPS</button>
-                                    <button type="button" onClick={handleKirim} disabled={jarak == null || !inRadius || alreadyToday || blokirAbsen} title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : alreadyToday ? 'Sudah absen hari ini' : ''} className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && !alreadyToday && !blokirAbsen ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}>Kirim absen masuk</button>
+                                    {mode === 'pulang' ? (
+                                        <button
+                                            type="button"
+                                            onClick={handlePulang}
+                                            disabled={jarak == null || !inRadius || !selfieFile || !openRow}
+                                            title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : ''}
+                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && openRow ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}
+                                        >
+                                            Absen Pulang
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={handleKirim}
+                                            disabled={jarak == null || !inRadius || !selfieFile || alreadyToday || blokirAbsen}
+                                            title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : alreadyToday ? 'Sudah absen hari ini' : ''}
+                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && !alreadyToday && !blokirAbsen ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}
+                                        >
+                                            Absen Masuk
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button type="button" onClick={handlePulang} className="rounded-xl py-3 text-sm font-medium bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF]">Absen pulang</button>
-                        <button type="button" onClick={handleOpenCapture} disabled={captured && jarak != null && !inRadius} title={captured && jarak != null && !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : ''} className={`rounded-xl py-3 text-sm font-semibold ${captured && jarak != null && !inRadius ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Absen masuk</button>
+                        <button type="button" onClick={() => openPanel('pulang')} className={`rounded-xl py-3 text-sm font-semibold ${openRow ? 'bg-[#0F172A] text-white' : 'bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF] font-medium'}`}>Absen pulang</button>
+                        <button type="button" onClick={() => openPanel('masuk')} className={`rounded-xl py-3 text-sm font-semibold ${!alreadyToday ? 'bg-[#0F172A] text-white' : 'bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF] font-medium'}`}>Absen masuk</button>
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3 text-center">{captured && jarak != null && !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius ${assigned.nama_lokasi}` : `Absen hanya dapat dilakukan di dalam radius titik penugasan`}</p>
-                    {alreadyToday && <p className="text-xs text-center text-[#92400E] mt-2">Sudah absen hari ini ({todayISO}) — lihat riwayat</p>}
+                    <p className="text-xs text-[#94A3B8] mt-3 text-center">Absen tercatat hanya di dalam radius titik penugasan</p>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
@@ -186,18 +286,16 @@ export default function Absensi() {
                                 <p className="text-xs text-[#64748B]">{history.length} entri</p>
                             </div>
                         </div>
-                        <span className="text-xs text-[#64748B] bg-[#F8FAFC] rounded-full px-3 py-1.5 whitespace-nowrap">{assigned.nama_lokasi}</span>
                     </div>
                     {history.length === 0 ? (
                         <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada absensi</p>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[440px] text-sm border-collapse">
+                        <div>
+                            <table className="w-full text-sm border-collapse">
                                 <thead>
                                     <tr className="border-b border-[#E2E8F0]">
                                         <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Tanggal</th>
-                                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Jam masuk<span className="normal-case font-normal text-[#94A3B8]"> WITA</span></th>
-                                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Jam keluar<span className="normal-case font-normal text-[#94A3B8]"> WITA</span></th>
+                                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Jam<span className="normal-case font-normal text-[#94A3B8]"> WITA</span></th>
                                         <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Status</th>
                                     </tr>
                                 </thead>
@@ -206,10 +304,11 @@ export default function Absensi() {
                                         <tr key={`${r.tgl}-${r.datang}-${r.id}`} className={`hover:bg-[#F8FAFC]/50 ${r.tgl === todayISO ? 'bg-[#F0F7FF]' : ''}`}>
                                             <td className="px-5 py-3">
                                                 <p className="font-medium text-[#0F172A] whitespace-nowrap">{new Date(r.tgl + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                                                <p className="text-xs text-[#64748B]">{r.jarak} m {r.tgl === todayISO && <span className="text-[#1E3A8A] font-medium">• Hari ini</span>}</p>
                                             </td>
-                                            <td className="px-5 py-3 font-mono text-[#0F172A] whitespace-nowrap tabular-nums">{r.datang}</td>
-                                            <td className="px-5 py-3 font-mono whitespace-nowrap tabular-nums">{r.pulang ? <span className="text-[#0F172A]">{r.pulang}</span> : <span className="text-[#CBD5E1]">—</span>}</td>
+                                            <td className="px-5 py-3 whitespace-nowrap">
+                                                <p className="font-medium text-[#0F172A]"><span className="text-[11px] font-normal text-[#94A3B8] inline-block w-12">Masuk</span>{r.datang}</p>
+                                                <p className="mt-0.5">{r.pulang ? <><span className="text-[11px] font-normal text-[#94A3B8] inline-block w-12">Pulang</span><span className="font-medium text-[#0F172A]">{r.pulang}</span></> : <span className="text-[#CBD5E1]">— belum pulang</span>}</p>
+                                            </td>
                                             <td className="px-5 py-3">
                                                 <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${statusMeta(r.status).cls}`}>{statusMeta(r.status).label}</span>
                                             </td>

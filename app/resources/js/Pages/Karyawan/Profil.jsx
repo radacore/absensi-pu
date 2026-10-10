@@ -7,7 +7,6 @@ import { useEffect, useRef, useState } from 'react';
 export default function Profil(){
     const { props } = usePage();
     const me0 = props.me ?? { nama:'—', email:'', phone:'', foto:'', region:'', jabatan:'', unit:'', status:'', gol:'-', nip:'', nik:'' };
-    const assigned0 = props.assigned ?? null;
     const confirm = useConfirm();
 
     const [phone,setPhone]=useState(me0.phone || '');
@@ -110,18 +109,7 @@ export default function Profil(){
                     <p className="text-sm text-[#64748B]">{me0.jabatan} • {me0.unit}</p>
                     <p className="text-xs text-[#94A3B8] mt-1">{me0.status} • {me0.gol} • NIK {String(me0.nik||'').slice(-4)} • NIP {String(me0.nip||'').slice(0,4) || '—'}</p>
                     <span className="inline-block mt-3 text-xs font-medium bg-[#F1F5F9] text-[#334155] px-3 py-1 rounded-full">{me0.region}</span>
-                    {assigned0 && <p className="mt-3 text-xs bg-[#EFF6FF] text-[#1E3A8A] px-3 py-1.5 rounded-full inline-flex">{assigned0.nama_lokasi} • {assigned0.radius} m</p>}
                 </div>
-
-                {assigned0 && (
-                    <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
-                        <p className="text-xs font-medium text-[#94A3B8]">Titik assigned</p>
-                        <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned0.nama_lokasi}</p>
-                        <p className="text-xs font-mono text-[#64748B]">{Number(assigned0.lat).toFixed(4)}, {Number(assigned0.lng).toFixed(4)} • {assigned0.radius} m</p>
-                        {assigned0.address && <p className="text-xs text-[#94A3B8] mt-1">{assigned0.address}</p>}
-                        <p className="text-xs text-[#94A3B8] mt-2">Absen valid hanya dalam radius titik penugasan</p>
-                    </div>
-                )}
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
                     <h3 className="font-medium text-sm text-[#0F172A]">Data pribadi</h3>

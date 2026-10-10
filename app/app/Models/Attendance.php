@@ -22,6 +22,7 @@ class Attendance extends Model
         'lng_out',
         'distance_in_m',
         'selfie_url',
+        'selfie_pulang_url',
         'site_id',
         'region_id',
         'tolerance_claim_id',

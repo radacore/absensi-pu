@@ -7,7 +7,9 @@ use App\Models\Employee;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -19,6 +21,8 @@ class AttendanceFase2Test extends TestCase
     {
         parent::setUp();
         $this->seed();
+        Storage::fake(config('filesystems.uploads.private_disk'));
+        Storage::fake(config('filesystems.uploads.public_disk'));
     }
 
     private function superAdmin(): User { return User::where('role', 'super_admin')->first(); }
@@ -67,23 +71,23 @@ class AttendanceFase2Test extends TestCase
         $site = $emp->site;
 
         // outside radius → 422 validation error (distance key)
-        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-in', ['lat'=> $site->lat + 0.02, 'lng'=> $site->lng])->assertSessionHasErrors('distance');
+        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-in', ['lat'=> $site->lat + 0.02, 'lng'=> $site->lng, 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200)])->assertSessionHasErrors('distance');
 
         // inside radius → success
-        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-in', ['lat'=> $site->lat, 'lng'=> $site->lng])->assertSessionHas('success');
+        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-in', ['lat'=> $site->lat, 'lng'=> $site->lng, 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200)])->assertSessionHas('success');
         $today = Carbon::now('Asia/Makassar')->toDateString();
         $todayDt = Carbon::parse($today)->startOfDay();
         $this->assertDatabaseHas('attendances', ['employee_id'=>$emp->id,'work_date'=>$todayDt]);
 
         // duplicate same day → error work_date
-        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-in', ['lat'=> $site->lat, 'lng'=> $site->lng])->assertSessionHasErrors('work_date');
+        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-in', ['lat'=> $site->lat, 'lng'=> $site->lng, 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200)])->assertSessionHasErrors('work_date');
 
         // clock-out inside radius → success
-        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-out', ['lat'=> $site->lat, 'lng'=> $site->lng])->assertSessionHas('success');
+        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-out', ['lat'=> $site->lat, 'lng'=> $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200)])->assertSessionHas('success');
         $this->assertNotNull(Attendance::where('employee_id',$emp->id)->whereDate('work_date',$today)->first()->clock_out_at);
 
         // second clock-out → error
-        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-out', ['lat'=> $site->lat, 'lng'=> $site->lng])->assertSessionHasErrors('work_date');
+        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-out', ['lat'=> $site->lat, 'lng'=> $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200)])->assertSessionHasErrors('work_date');
     }
 
     public function test_karyawan_rekap_and_absensi_index_have_assigned(): void

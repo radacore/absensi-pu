@@ -98,7 +98,7 @@ export default function Dinas() {
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Perjalanan Dinas</h2>
                         <p className="text-sm text-[#64748B]">Ajukan surat perjalanan dinas untuk direkap sebagai hadir</p>
                     </div>
-                    <button type="button" onClick={() => setShowForm(!showForm)} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">{showForm ? 'Tutup' : 'Ajukan Dinas'}</button>
+                    <button type="button" onClick={() => setShowForm(!showForm)} className="shrink-0 whitespace-nowrap bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">{showForm ? 'Tutup' : 'Ajukan Dinas'}</button>
                 </div>
 
                 {showForm && (
@@ -143,8 +143,8 @@ export default function Dinas() {
                         <div>
                             <span className="text-xs font-medium text-[#334155]">Dokumen Surat Tugas <span className="text-[#DC2626]">*</span></span>
                             <input ref={fileRef} type="file" accept={DOKUMEN_ACCEPT} onChange={pickFile} className="hidden" />
-                            <button type="button" onClick={() => fileRef.current?.click()} className="mt-1 w-full rounded-xl bg-white border border-dashed border-[#CBD5E1] py-3 text-sm font-medium text-[#334155] hover:bg-[#F8FAFC] transition">
-                                {dokumen ? '📎 Ganti dokumen' : '📎 Pilih dokumen (PDF / JPG / PNG / WEBP)'}
+                            <button type="button" onClick={() => fileRef.current?.click()} className="mt-1 w-full whitespace-nowrap rounded-xl bg-white border border-dashed border-[#CBD5E1] py-3 text-sm font-medium text-[#334155] hover:bg-[#F8FAFC] transition">
+                                {dokumen ? '📎 Ganti dokumen' : '📎 Pilih dokumen'}
                             </button>
                             {dokumen ? (
                                 <p className="mt-1.5 text-xs text-[#0D9488] break-all">✓ {dokumen.name} • {formatBytes(dokumen.size)}</p>

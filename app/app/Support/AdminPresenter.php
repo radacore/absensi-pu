@@ -155,6 +155,7 @@ class AdminPresenter
                 'lng' => (float) ($a->lng_in ?? 0),
                 'foto' => $emp?->foto_url ?: self::DEFAULT_AVATAR,
                 'selfie' => $a->selfie_url ?: ($emp?->foto_url ?: self::DEFAULT_AVATAR),
+                'selfie_pulang' => $a->selfie_pulang_url ?? null,
             ];
         })->values()->all();
     }

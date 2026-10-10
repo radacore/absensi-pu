@@ -10,6 +10,7 @@ use App\Support\AdminPresenter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -92,7 +93,9 @@ class AttendanceController extends Controller
         $data = $request->validate([
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
-            'selfie_url' => ['nullable', 'string', 'max:2000'],
+            // Kebijakan: swafoto live dari kamera wajib (bukan foto profil).
+            // Disimpan di disk publik yang sama dengan foto profil — nama berkas dibuat server.
+            'selfie' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
         ]);
 
         $now = now('Asia/Makassar');
@@ -133,6 +136,9 @@ class AttendanceController extends Controller
             $status = 'libur';
         }
 
+        $disk = config('filesystems.uploads.public_disk');
+        $selfiePath = $request->file('selfie')->store("selfie/{$today}", ['disk' => $disk, 'visibility' => 'public']);
+
         Attendance::create([
             'employee_id' => $me->id,
             'work_date' => $today,
@@ -141,7 +147,7 @@ class AttendanceController extends Controller
             'lat_in' => $data['lat'],
             'lng_in' => $data['lng'],
             'distance_in_m' => $dist,
-            'selfie_url' => $data['selfie_url'] ?? null,
+            'selfie_url' => Storage::disk($disk)->url($selfiePath),
             'site_id' => $site->id,
             'region_id' => $me->region_id,
         ]);
@@ -165,6 +171,8 @@ class AttendanceController extends Controller
         $data = $request->validate([
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
+            // Kebijakan: swafoto live dari kamera wajib juga saat pulang.
+            'selfie_pulang' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
         ]);
 
         $today = now('Asia/Makassar')->toDateString();
@@ -182,10 +190,13 @@ class AttendanceController extends Controller
         }
 
         $now = now('Asia/Makassar');
+        $disk = config('filesystems.uploads.public_disk');
+        $pulangPath = $request->file('selfie_pulang')->store("selfie/{$today}", ['disk' => $disk, 'visibility' => 'public']);
         $row->update([
             'clock_out_at' => $now->format('H:i:s'),
             'lat_out' => $data['lat'],
             'lng_out' => $data['lng'],
+            'selfie_pulang_url' => Storage::disk($disk)->url($pulangPath),
         ]);
 
         return back()->with('success', 'Absen pulang tercatat');

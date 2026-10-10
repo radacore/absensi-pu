@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -53,7 +54,8 @@ class ProfilController extends Controller
 
         $data = $request->validate([
             'phone' => ['nullable', 'string', 'max:20'],
-            'email' => ['nullable', 'email', 'max:255'],
+            // Email adalah kredensial login — harus unik agar tidak ambigu.
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('employees', 'email')->ignore($me->id)],
             'foto' => ['nullable', 'image', 'max:2048'],
             'foto_url' => ['nullable', 'string', 'max:2000'],
         ]);

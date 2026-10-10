@@ -177,7 +177,18 @@ export default function Attendances() {
                                     <button type="button" onClick={() => setDetail(null)} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center">✕</button>
                                 </div>
                                 <div className="p-5 space-y-4">
-                                    <img src={detail.selfie} alt="selfie" className="w-full h-[280px] object-cover rounded-xl" />
+                                    <div>
+                                        <p className="text-xs font-medium text-[#94A3B8] mb-1.5">Swafoto datang • {detail.datang} WITA</p>
+                                        <img src={detail.selfie} alt="selfie datang" className="w-full h-[280px] object-cover rounded-xl" />
+                                    </div>
+                                    {detail.selfie_pulang ? (
+                                        <div>
+                                            <p className="text-xs font-medium text-[#94A3B8] mb-1.5">Swafoto pulang • {detail.pulang} WITA</p>
+                                            <img src={detail.selfie_pulang} alt="selfie pulang" className="w-full h-[280px] object-cover rounded-xl" />
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-[#94A3B8] bg-[#F8FAFC] rounded-xl px-3 py-2">Belum ada swafoto pulang{detail.pulang && detail.pulang !== '— belum pulang' ? ' (baris lama, sebelum kebijakan foto pulang)' : ''}</p>
+                                    )}
                                     <div className="grid grid-cols-2 gap-3 text-sm">
                                         <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#94A3B8]">Waktu datang</p><p className="font-medium text-[#0F172A]">{detail.datang} WITA</p></div>
                                         <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#94A3B8]">Waktu pulang</p><p className="font-medium text-[#0F172A]">{detail.pulang || '— belum pulang'}</p></div>

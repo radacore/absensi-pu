@@ -172,10 +172,10 @@ class AdminMasterDataTest extends TestCase
         $this->assertTrue(\Illuminate\Support\Facades\Hash::check($emp->nik, $emp->password));
         $this->assertTrue($emp->must_change_password);
 
-        // login karyawan pakai NIK sebagai password
+        // login karyawan pakai email sebagai password
         $this->post('/karyawan/logout');
         $login = $this->post('/karyawan/login', [
-            'login' => $emp->nip ?: $emp->nik,
+            'login' => $emp->email,
             'password' => $emp->nik,
         ]);
         $login->assertRedirect('/karyawan');
@@ -224,7 +224,7 @@ class AdminMasterDataTest extends TestCase
 
         // login karyawan → shared prop membawa flag true
         $this->post('/karyawan/logout');
-        $this->post('/karyawan/login', ['login' => $emp->nik, 'password' => $emp->nik]);
+        $this->post('/karyawan/login', ['login' => $emp->email, 'password' => $emp->nik]);
 
         $this->get('/karyawan')->assertOk()
             ->assertInertia(fn (\Inertia\Testing\AssertableInertia $p) => $p->where('auth.employee.must_change_password', true));
@@ -252,7 +252,7 @@ class AdminMasterDataTest extends TestCase
         $emp->forceFill(['password' => bcrypt($emp->nik), 'must_change_password' => true])->save();
 
         $this->post('/karyawan/logout');
-        $this->post('/karyawan/login', ['login' => $emp->nik, 'password' => $emp->nik]);
+        $this->post('/karyawan/login', ['login' => $emp->email, 'password' => $emp->nik]);
 
         // tanpa huruf besar → gagal
         $this->put('/karyawan/profil/password', [

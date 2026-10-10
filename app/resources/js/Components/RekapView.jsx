@@ -10,7 +10,7 @@ function formatTimestamp(iso) {
 
 /**
  * RekapView — komponen halaman rekap presensi perorangan.
- * Dipakai oleh Admin/EmployeeRekap dan Karyawan/RekapDetail.
+ * Dipakai oleh Admin/EmployeeRekap.
  *
  * Props:
  *  - rekap: hasil RekapPresenter::buildRekap()
@@ -66,7 +66,7 @@ export default function RekapView({ rekap, onChangeBulan, backHref }) {
                             {bulanOptions.map((b) => <option key={b.val} value={b.val}>{b.label}</option>)}
                         </select>
                     </label>
-                    <button type="button" onClick={cetakPDF} className="bg-[#0F172A] hover:bg-[#1E3A8A] text-white rounded-lg px-4 py-2 text-sm font-semibold transition">⬇ Cetak PDF</button>
+                    <button type="button" onClick={cetakPDF} className="bg-[#0F172A] hover:bg-[#1E3A8A] text-white rounded-lg px-4 py-2 text-sm font-semibold transition">Cetak PDF</button>
                 </div>
             </div>
 

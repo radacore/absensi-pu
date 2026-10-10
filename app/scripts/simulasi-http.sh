@@ -16,7 +16,8 @@
 #   3. Jalankan skrip:
 #        bash scripts/simulasi-http.sh
 #
-# Variabel opsional: BASE (default http://127.0.0.1:8392), DB (default absensi_sim)
+# Variabel opsional: BASE (default http://127.0.0.1:8392), DB (default absensi_sim).
+# MYSQL dan PY otomatis mengikuti PATH bila tidak diisi.
 
 set -uo pipefail
 
@@ -24,19 +25,40 @@ BASE="${BASE:-http://127.0.0.1:8392}"
 DB="${DB:-absensi_sim}"
 DB_USER="${DB_USER:-absensi_pu}"
 DB_PASS="${DB_PASS:-absensi_dev_pass}"
-MYSQL="${MYSQL:-/usr/local/bin/mysql}"
-PY="${PY:-/Users/rada/.workbuddy-ai/binaries/python/versions/3.13.12/bin/python3}"
+MYSQL="${MYSQL:-$(command -v mysql)}"
+PY="${PY:-$(command -v python3)}"
+
+# --skip-ssl dihapus di kelien MySQL 8.0+ (mis. Ubuntu 24.04) — deteksi dukungan
+# agar helper sql() tidak gagal diam-diam di semua baris yang memakainya.
+MYSQL_SSL=()
+if "$MYSQL" --help 2>/dev/null | grep -q -- '--skip-ssl'; then
+  MYSQL_SSL=(--skip-ssl)
+elif "$MYSQL" --help 2>/dev/null | grep -q -- 'ssl-mode'; then
+  MYSQL_SSL=(--ssl-mode=DISABLED)
+fi
+
+# Tanggal acuan = zona waktu aplikasi (Asia/Makassar — lihat clockIn/clockOut),
+# BUKAN tanggal server MySQL. Keduanya bisa beda hari di sekitar tengah malam,
+# sehingga CURDATE()/NOW() membuat asersi tanggal gagal padahal aplikasi benar.
+HARI_INI="${HARI_INI:-$(TZ=Asia/Makassar date +%F)}"
+TIGA_HARI_LALU="${TIGA_HARI_LALU:-$(TZ=Asia/Makassar date -d '3 days ago' +%F 2>/dev/null || TZ=Asia/Makassar date -v-3d +%F)}"
+KINI="${KINI:-$(TZ=Asia/Makassar date '+%F %T')}"
 
 JAR="$(mktemp)"
 BODY="$(mktemp)"
 PDF="$(mktemp -u).pdf"
+JPG="$(mktemp -u).jpg"
 PASS=0
 FAIL=0
 
-cleanup() { rm -f "$JAR" "$BODY" "$PDF"; }
+cleanup() { rm -f "$JAR" "$BODY" "$PDF" "$JPG"; }
 trap cleanup EXIT
 
-sql() { "$MYSQL" -h 127.0.0.1 -u "$DB_USER" -p"$DB_PASS" --skip-ssl -N -e "$1" 2>/dev/null; }
+# JPEG 1px valid untuk field selfie (aturan image Laravel memakai finfo).
+printf '%s' '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGpqSTd3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN2d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d/9oADAMBAAIRAxEAPwD/AD/9k=' \
+  | "$PY" -c 'import sys,base64; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))' > "$JPG"
+
+sql() { "$MYSQL" -h 127.0.0.1 -u "$DB_USER" -p"$DB_PASS" "${MYSQL_SSL[@]}" -N -e "$1" 2>/dev/null; }
 
 csrf() {
   grep XSRF-TOKEN "$JAR" 2>/dev/null | awk '{print $NF}' | tail -1 | \
@@ -90,7 +112,10 @@ echo
 echo "[1] Halaman publik & login"
 # ------------------------------------------------------------------
 code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -c "$JAR" "$BASE/")
-check "GET /" 200 "$code"
+check "GET / dialihkan ke login karyawan" 302 "$code"
+redir=$(curl -s -o /dev/null -w '%{redirect_url}' --noproxy '*' "$BASE/")
+redir_path=$(printf '%s' "$redir" | sed 's|^https\?://[^/]*||')
+check "GET / mengarah ke /karyawan/login" "/karyawan/login" "$redir_path"
 code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -b "$JAR" -c "$JAR" "$BASE/karyawan/login")
 check "GET /karyawan/login" 200 "$code"
 code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -b "$JAR" -c "$JAR" "$BASE/admin/login")
@@ -99,8 +124,8 @@ code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -b "$JAR" -c "$JAR" 
 check "GET /super-admin/login" 200 "$code"
 
 code=$(req POST /karyawan/login \
-  -d "login=7371001234567890" -d "password=password123")
-check "POST /karyawan/login (NIK + sandi benar)" 302 "$code"
+  -d "login=andi@bbws-pj.go.id" -d "password=password123")
+check "POST /karyawan/login (email + sandi benar)" 302 "$code"
 
 code=$(req GET /karyawan)
 check "GET /karyawan (dasbor karyawan)" 200 "$code"
@@ -127,61 +152,61 @@ read -r SITE_LAT SITE_LNG SITE_RADIUS <<< "$(sql "SELECT lat, lng, radius_m FROM
 note "titik 201: lat=$SITE_LAT lng=$SITE_LNG radius=${SITE_RADIUS}m"
 
 # Hari ini mungkin sudah terisi dari simulasi sebelumnya → bersihkan dulu.
-sql "DELETE FROM $DB.attendances WHERE employee_id = 1 AND work_date = CURDATE();" >/dev/null
+sql "DELETE FROM $DB.attendances WHERE employee_id = 1 AND work_date = '$HARI_INI';" >/dev/null
 
 code=$(req POST /karyawan/absensi/clock-in \
-  -d "lat=$SITE_LAT" -d "lng=$SITE_LNG")
+  -F "lat=$SITE_LAT" -F "lng=$SITE_LNG" -F "selfie=@$JPG;type=image/jpeg")
 check "POST clock-in di dalam radius" 302 "$code"
-rows=$(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = 1 AND work_date = CURDATE();")
+rows=$(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = 1 AND work_date = '$HARI_INI';")
 check "baris absensi terbentuk" 1 "$rows"
 
 code=$(req POST /karyawan/absensi/clock-in \
-  -d "lat=$(awk -v v="$SITE_LAT" 'BEGIN{printf "%.8f", v+1}')" -d "lng=$SITE_LNG")
+  -F "lat=$(awk -v v="$SITE_LAT" 'BEGIN{printf "%.8f", v+1}')" -F "lng=$SITE_LNG" -F "selfie=@$JPG;type=image/jpeg")
 # Request XHR yang gagal validasi membalas 422 (bukan 302), sesuai perilaku Laravel.
 check "POST clock-in di luar radius ditolak" 422 "$code"
-rows=$(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = 1 AND work_date = CURDATE();")
+rows=$(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = 1 AND work_date = '$HARI_INI';")
 check "tidak ada baris ganda" 1 "$rows"
 
 code=$(req POST /karyawan/absensi/clock-out \
-  -d "lat=$SITE_LAT" -d "lng=$SITE_LNG")
+  -F "lat=$SITE_LAT" -F "lng=$SITE_LNG" -F "selfie_pulang=@$JPG;type=image/jpeg")
 check "POST clock-out" 302 "$code"
-pulang=$(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = 1 AND work_date = CURDATE() AND clock_out_at IS NOT NULL;")
+pulang=$(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = 1 AND work_date = '$HARI_INI' AND clock_out_at IS NOT NULL;")
 check "jam pulang tercatat" 1 "$pulang"
 
 # ------------------------------------------------------------------
 echo
 echo "[2b] Gerbang absen di luar hari kerja (kebijakan Super Admin)"
 # ------------------------------------------------------------------
-sql "DELETE FROM $DB.attendances WHERE employee_id = 1 AND work_date = CURDATE();" >/dev/null
-LIBUR_SEBELUM=$(sql "SELECT COUNT(*) FROM $DB.holidays WHERE tanggal = CURDATE();")
+sql "DELETE FROM $DB.attendances WHERE employee_id = 1 AND work_date = '$HARI_INI';" >/dev/null
+LIBUR_SEBELUM=$(sql "SELECT COUNT(*) FROM $DB.holidays WHERE tanggal = '$HARI_INI';")
 sql "INSERT INTO $DB.holidays (tanggal, nama, cuti_bersama, created_at, updated_at)
-     VALUES (CURDATE(), 'Libur Uji HTTP', 0, NOW(), NOW())
+     VALUES ('$HARI_INI', 'Libur Uji HTTP', 0, '$KINI', '$KINI')
      ON DUPLICATE KEY UPDATE nama = 'Libur Uji HTTP';" >/dev/null
 
 sql "UPDATE $DB.attendance_settings SET absen_libur_aktif = 1, absen_libur_mode = 'tolak';" >/dev/null
-code=$(req POST /karyawan/absensi/clock-in -d "lat=$SITE_LAT" -d "lng=$SITE_LNG")
+code=$(req POST /karyawan/absensi/clock-in -F "lat=$SITE_LAT" -F "lng=$SITE_LNG" -F "selfie=@$JPG;type=image/jpeg")
 check "mode tolak: clock-in di hari libur ditolak" 422 "$code"
-rows=$(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = 1 AND work_date = CURDATE();")
+rows=$(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = 1 AND work_date = '$HARI_INI';")
 check "mode tolak: tidak ada baris absensi dibuat" 0 "$rows"
 
 sql "UPDATE $DB.attendance_settings SET absen_libur_mode = 'catat';" >/dev/null
-code=$(req POST /karyawan/absensi/clock-in -d "lat=$SITE_LAT" -d "lng=$SITE_LNG")
+code=$(req POST /karyawan/absensi/clock-in -F "lat=$SITE_LAT" -F "lng=$SITE_LNG" -F "selfie=@$JPG;type=image/jpeg")
 check "mode catat: clock-in tetap diterima" 302 "$code"
-status=$(sql "SELECT status FROM $DB.attendances WHERE employee_id = 1 AND work_date = CURDATE() ORDER BY id DESC LIMIT 1;")
+status=$(sql "SELECT status FROM $DB.attendances WHERE employee_id = 1 AND work_date = '$HARI_INI' ORDER BY id DESC LIMIT 1;")
 check "mode catat: status khusus 'libur'" "libur" "$status"
 
 # Kembalikan pengaturan & bersihkan sisa uji
 sql "UPDATE $DB.attendance_settings SET absen_libur_aktif = 0, absen_libur_mode = 'tolak';" >/dev/null
-if [ "$LIBUR_SEBELUM" = "0" ]; then sql "DELETE FROM $DB.holidays WHERE tanggal = CURDATE();" >/dev/null; fi
-sql "DELETE FROM $DB.attendances WHERE employee_id = 1 AND work_date = CURDATE();" >/dev/null
+if [ "$LIBUR_SEBELUM" = "0" ]; then sql "DELETE FROM $DB.holidays WHERE tanggal = '$HARI_INI';" >/dev/null; fi
+sql "DELETE FROM $DB.attendances WHERE employee_id = 1 AND work_date = '$HARI_INI';" >/dev/null
 
 # ------------------------------------------------------------------
 echo
 echo "[3] Cuti"
 # ------------------------------------------------------------------
 sql "DELETE FROM $DB.leaves WHERE employee_id = 1;" >/dev/null
-MULAI=$(date -v+3d +%Y-%m-%d 2>/dev/null || date -d '+3 days' +%Y-%m-%d)
-SELESAI=$(date -v+5d +%Y-%m-%d 2>/dev/null || date -d '+5 days' +%Y-%m-%d)
+MULAI=$(TZ=Asia/Makassar date -d '+3 days' +%Y-%m-%d 2>/dev/null || date -v+3d +%Y-%m-%d 2>/dev/null || date -d '+3 days' +%Y-%m-%d)
+SELESAI=$(TZ=Asia/Makassar date -d '+5 days' +%Y-%m-%d 2>/dev/null || date -v+5d +%Y-%m-%d 2>/dev/null || date -d '+5 days' +%Y-%m-%d)
 APPROVER_GOWA=$(sql "SELECT id FROM $DB.users WHERE email = 'admin.gowa@bbws-pj.go.id' LIMIT 1;")
 APPROVER_BONE=$(sql "SELECT id FROM $DB.users WHERE email = 'admin.bone@bbws-pj.go.id' LIMIT 1;")
 
@@ -280,13 +305,13 @@ echo
 echo "[7b] Klaim toleransi (love) → tertaut ke baris absensi"
 # ------------------------------------------------------------------
 EMP_ID=$(sql "SELECT id FROM $DB.employees WHERE region_id = 2 ORDER BY id LIMIT 1;")
-LOVE_DATE=$(sql "SELECT DATE_FORMAT(CURDATE() - INTERVAL 3 DAY, '%Y-%m-%d');")
+LOVE_DATE="$TIGA_HARI_LALU"
 sql "DELETE FROM $DB.attendances WHERE employee_id = $EMP_ID AND work_date = '$LOVE_DATE';" >/dev/null
 sql "DELETE FROM $DB.tolerance_claims WHERE employee_id = $EMP_ID;" >/dev/null
 sql "INSERT INTO $DB.tolerance_claims
        (employee_id, jenis, claim_date, jam, alasan, site_id, region_id, approver_id, status, created_at, updated_at)
      SELECT e.id, 'lupa_absen', '$LOVE_DATE', '07:35:00', 'Uji tautan absensi',
-            e.site_id, e.region_id, $APPROVER_GOWA, 'pending', NOW(), NOW()
+            e.site_id, e.region_id, $APPROVER_GOWA, 'pending', '$KINI', '$KINI'
        FROM $DB.employees e WHERE e.id = $EMP_ID;" >/dev/null
 LOVE_ID=$(sql "SELECT id FROM $DB.tolerance_claims WHERE employee_id = $EMP_ID ORDER BY id DESC LIMIT 1;")
 note "klaim id=$LOVE_ID tanggal=$LOVE_DATE (sebelum approve: $(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = $EMP_ID AND work_date = '$LOVE_DATE';") baris absensi)"

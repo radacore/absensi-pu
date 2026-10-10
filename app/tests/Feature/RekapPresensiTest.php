@@ -157,17 +157,6 @@ class RekapPresensiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_karyawan_bisa_lihat_rekap_detail_sendiri(): void
-    {
-        $emp = $this->empGowa();
-        $bulan = now('Asia/Makassar')->format('Y-m');
-
-        $this->actingAs($emp, 'employee')
-            ->get("/karyawan/rekap/detail?bulan={$bulan}")
-            ->assertOk()
-            ->assertInertia(fn (Assert $p) => $p->component('Karyawan/RekapDetail')->has('rekap.karyawan')->where('rekap.karyawan.id', $emp->id));
-    }
-
     public function test_dinas_karyawan_crud_dan_admin_approve(): void
     {
         Storage::fake(config('filesystems.uploads.private_disk'));

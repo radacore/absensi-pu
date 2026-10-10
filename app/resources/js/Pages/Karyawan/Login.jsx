@@ -33,13 +33,14 @@ export default function Login() {
                     <form onSubmit={submit} className="space-y-4">
                         {errors.login && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{errors.login}</p>}
                         <div>
-                            <label htmlFor="login" className="text-xs font-medium text-[#334155]">NIP atau NIK</label>
+                            <label htmlFor="login" className="text-xs font-medium text-[#334155]">Email</label>
                             <input
                                 id="login"
-                                type="text"
+                                type="email"
+                                autoComplete="email"
                                 value={form.login}
                                 onChange={(e) => setForm({ ...form, login: e.target.value })}
-                                placeholder="Masukkan NIP atau NIK"
+                                placeholder="Masukkan email"
                                 className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
                             />
                         </div>

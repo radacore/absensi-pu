@@ -21,20 +21,27 @@ use App\Http\Controllers\Karyawan\CutiController as KaryawanCutiController;
 use App\Http\Controllers\Karyawan\DashboardController as KaryawanDashboardController;
 use App\Http\Controllers\Karyawan\DinasController as KaryawanDinasController;
 use App\Http\Controllers\Karyawan\LoveController as KaryawanLoveController;
-use App\Http\Controllers\Karyawan\RekapDetailController as KaryawanRekapDetailController;
 use App\Http\Controllers\Karyawan\PengumumanController as KaryawanPengumumanController;
 use App\Http\Controllers\Karyawan\ProfilController as KaryawanProfilController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // ── Public ────────────────────────────────────────────────────
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('karyawan.login');
 });
 
 // ── Karyawan PWA ──────────────────────────────────────────────
 Route::prefix('karyawan')->group(function () {
-    Route::get('/login', fn () => Inertia::render('Karyawan/Login'))->name('karyawan.login');
+    // Sesi karyawan masih aktif → langsung ke dasbor (mis. membuka PWA yang start di halaman ini).
+    Route::get('/login', function () {
+        if (Auth::guard('employee')->check()) {
+            return redirect()->route('karyawan.dashboard');
+        }
+
+        return Inertia::render('Karyawan/Login');
+    })->name('karyawan.login');
     Route::post('/login', [EmployeeAuthController::class, 'store'])
         ->middleware('throttle:login')
         ->name('karyawan.login.store');
@@ -46,7 +53,6 @@ Route::prefix('karyawan')->group(function () {
         Route::post('/absensi/clock-in', [KaryawanAttendanceController::class, 'clockIn'])->name('karyawan.absensi.clock_in');
         Route::post('/absensi/clock-out', [KaryawanAttendanceController::class, 'clockOut'])->name('karyawan.absensi.clock_out');
         Route::get('/rekap', [KaryawanAttendanceController::class, 'rekap'])->name('karyawan.rekap');
-        Route::get('/rekap/detail', [KaryawanRekapDetailController::class, 'show'])->name('karyawan.rekap.detail');
         Route::get('/cuti', [KaryawanCutiController::class, 'index'])->name('karyawan.cuti');
         Route::post('/cuti', [KaryawanCutiController::class, 'store'])->name('karyawan.cuti.store');
         Route::delete('/cuti/{cuti}', [KaryawanCutiController::class, 'destroy'])->name('karyawan.cuti.destroy');

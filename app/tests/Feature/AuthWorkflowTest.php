@@ -25,14 +25,14 @@ class AuthWorkflowTest extends TestCase
         $this->get('/karyawan')->assertRedirect('/karyawan/login');
     }
 
-    public function test_employee_can_login_with_nik_and_access_pages(): void
+    public function test_employee_can_login_with_email_and_access_pages(): void
     {
         $this->post('/karyawan/login', [
-            'login' => '7371001234567890',
+            'login' => 'andi@bbws-pj.go.id',
             'password' => 'password123',
         ])->assertRedirect('/karyawan');
 
-        $this->assertAuthenticatedAs(Employee::where('nik', '7371001234567890')->first(), 'employee');
+        $this->assertAuthenticatedAs(Employee::where('email', 'andi@bbws-pj.go.id')->first(), 'employee');
 
         $this->get('/karyawan')->assertOk();
         $this->get('/karyawan/absensi')->assertOk();
@@ -41,7 +41,7 @@ class AuthWorkflowTest extends TestCase
     public function test_employee_login_rejected_on_wrong_password(): void
     {
         $this->post('/karyawan/login', [
-            'login' => '7371001234567890',
+            'login' => 'andi@bbws-pj.go.id',
             'password' => 'salah',
         ])->assertSessionHasErrors('login');
     }

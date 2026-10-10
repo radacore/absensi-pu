@@ -54,7 +54,7 @@ export default function Cuti() {
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Cuti</h2>
                         <p className="text-sm text-[#64748B]">Berjenjang 3 tahap • {assigned.site.nama_lokasi} • {assigned.site.radius}m</p>
                     </div>
-                    <button type="button" onClick={() => setShowForm(!showForm)} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">{showForm ? 'Tutup' : 'Ajukan cuti'}</button>
+                    <button type="button" onClick={() => setShowForm(!showForm)} className="shrink-0 whitespace-nowrap bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">{showForm ? 'Tutup' : 'Ajukan cuti'}</button>
                 </div>
 
                 {showForm && (

@@ -12,7 +12,8 @@ use Illuminate\Validation\ValidationException;
 class EmployeeAuthController extends Controller
 {
     /**
-     * Login karyawan (guard employee) memakai NIP atau NIK.
+     * Login karyawan (guard employee) memakai email saja.
+     * NIP/NIK tidak lagi diterima sebagai kredensial login.
      */
     public function store(Request $request)
     {
@@ -21,13 +22,14 @@ class EmployeeAuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $employee = Employee::where('nip', $data['login'])
-            ->orWhere('nik', $data['login'])
+        // Pencarian case-insensitive agar Andi@x.id == andi@x.id,
+        // konsisten di MySQL (collation _ci) maupun SQLite (tes).
+        $employee = Employee::whereRaw('LOWER(email) = ?', [mb_strtolower(trim($data['login']), 'UTF-8')])
             ->first();
 
         if (! $employee || ! Hash::check($data['password'], $employee->password)) {
             throw ValidationException::withMessages([
-                'login' => 'NIP/NIK atau kata sandi salah.',
+                'login' => 'Email atau kata sandi salah.',
             ]);
         }
 
