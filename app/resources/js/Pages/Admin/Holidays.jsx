@@ -122,7 +122,7 @@ export default function Holidays() {
                             })}
                         </tbody>
                     </table>
-                    {holidays.length === 0 && <p className="text-center text-sm text-[#94A3B8] py-8">Belum ada hari libur di tahun {filterYear}.</p>}
+                    {holidays.length === 0 && <p className="text-center text-sm text-[#64748B] py-8">Belum ada hari libur di tahun {filterYear}.</p>}
                 </div>
             </div>
         </AdminLayout>

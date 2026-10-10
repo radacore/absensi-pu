@@ -202,8 +202,8 @@ export default function Regions() {
                         {isWilayah && <span className="inline-block mt-1 text-xs font-medium bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full border border-[#FCB833]/20">Mode Admin Wilayah — kelola titik own region + anggota per titik</span>}
                     </div>
                     <div className="flex gap-2">
-                        {!isWilayah && <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari Gowa, Bone, Parepare..." className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm w-[220px] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10" />}
-                        {isWilayah && liveOwn && <span className="text-xs text-[#94A3B8] self-center">{liveOwn.kantor} • {liveOwn.locations.length} titik</span>}
+                        {!isWilayah && <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari Gowa, Bone, Parepare..." className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm w-[220px] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10" />}
+                        {isWilayah && liveOwn && <span className="text-xs text-[#64748B] self-center">{liveOwn.kantor} • {liveOwn.locations.length} titik</span>}
                         {!isWilayah && <button type="button" onClick={openAddWilayah} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0">+ Tambah Wilayah</button>}
                     </div>
                 </div>
@@ -219,11 +219,11 @@ export default function Regions() {
                                     const canEditRegion = isWilayah ? r.name === OWN_REGION : true;
                                     return (
                                         <tr key={r.id} className="hover:bg-[#F8FAFC]/50">
-                                            <td className="px-4 py-3.5 align-top"><span className="font-medium text-[#0F172A]">{r.name}</span> {r.tipe === 'pusat' && <span className="ml-1 text-xs bg-[#0F172A] text-white px-1.5 py-0.5 rounded">Pusat</span>}<br /><span className="text-xs text-[#94A3B8]">{r.address}</span></td>
+                                            <td className="px-4 py-3.5 align-top"><span className="font-medium text-[#0F172A]">{r.name}</span> {r.tipe === 'pusat' && <span className="ml-1 text-xs bg-[#0F172A] text-white px-1.5 py-0.5 rounded">Pusat</span>}<br /><span className="text-xs text-[#64748B]">{r.address}</span></td>
                                             <td className="px-4 py-3.5 text-[#334155] text-xs align-top">{r.kantor}</td>
                                             <td className="px-4 py-3.5 align-top">
                                                 {r.locations.length === 0 ? (
-                                                    <span className="text-xs text-[#94A3B8]">Belum ada titik — tambah 1 titik untuk aktifkan absen</span>
+                                                    <span className="text-xs text-[#64748B]">Belum ada titik — tambah 1 titik untuk aktifkan absen</span>
                                                 ) : (
                                                     <div className="space-y-1.5">
                                                         {r.locations.map((s) => (
@@ -244,7 +244,7 @@ export default function Regions() {
                                             </td>
                                             <td className="px-4 py-3.5 text-right align-top">
                                                 <div className="flex gap-1 justify-end">
-                                                    <button type="button" onClick={() => openEditWilayah(r)} className={`text-xs font-medium px-3 py-1.5 rounded-lg ${canEditRegion ? 'text-[#1E3A8A] bg-[#EFF6FF]' : 'text-[#94A3B8] bg-[#F1F5F9] cursor-not-allowed'}`}>Edit Wilayah</button>
+                                                    <button type="button" onClick={() => openEditWilayah(r)} className={`text-xs font-medium px-3 py-1.5 rounded-lg ${canEditRegion ? 'text-[#1E3A8A] bg-[#EFF6FF]' : 'text-[#64748B] bg-[#F1F5F9] cursor-not-allowed'}`}>Edit Wilayah</button>
                                                     {!isWilayah && <button type="button" onClick={() => handleDeleteWilayah(r.id)} className="text-xs font-medium text-[#991B1B] bg-[#FEF2F2] px-3 py-1.5 rounded-lg">Hapus</button>}
                                                 </div>
                                             </td>
@@ -298,7 +298,7 @@ export default function Regions() {
                                     <button type="button" onClick={closeWilayah} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
                                     <button type="button" onClick={handleSaveWilayah} className="flex-1 rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Simpan Wilayah</button>
                                 </div>
-                                <p className="text-xs text-[#94A3B8] text-center">Titik proyek ditambah terpisah per 1 titik dengan peta (tombol + Tambah Titik di tabel).</p>
+                                <p className="text-xs text-[#64748B] text-center">Titik proyek ditambah terpisah per 1 titik dengan peta (tombol + Tambah Titik di tabel).</p>
                             </div>
                         </div>
                     </div>
@@ -323,7 +323,7 @@ export default function Regions() {
                                 <div>
                                     <label className="text-xs font-medium text-[#334155]">Peta — klik untuk tentukan titik</label>
                                     <div ref={siteMapRef} className="mt-1.5 h-[280px] rounded-xl overflow-hidden border border-[#E2E8F0] bg-[#F1F5F9]" />
-                                    <p className="text-xs text-[#94A3B8] mt-1">Klik peta untuk set lat/lng • Drag marker untuk geser</p>
+                                    <p className="text-xs text-[#64748B] mt-1">Klik peta untuk set lat/lng • Drag marker untuk geser</p>
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
                                     <input value={siteForm.lat} onChange={(e) => setSiteForm({ ...siteForm, lat: e.target.value })} placeholder="Lat" type="number" step="0.000001" className="rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm outline-none" />
@@ -337,7 +337,7 @@ export default function Regions() {
                                     <button type="button" onClick={closeAddSite} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
                                     <button type="button" onClick={handleSaveSite} className="flex-1 rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Simpan Titik</button>
                                 </div>
-                                <p className="text-xs text-[#94A3B8] text-center">Setelah simpan, buka Kelola → halaman titik untuk atur anggota (karyawan per titik saja).</p>
+                                <p className="text-xs text-[#64748B] text-center">Setelah simpan, buka Kelola → halaman titik untuk atur anggota (karyawan per titik saja).</p>
                             </div>
                         </div>
                     </div>

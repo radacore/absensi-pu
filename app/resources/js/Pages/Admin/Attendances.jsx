@@ -89,7 +89,7 @@ export default function Attendances() {
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Absensi — ${OWN_REGION}` : 'Absensi'}</h1>
                         <p className="text-sm text-[#64748B]">{isWilayah ? `Hanya own region • 1 karyawan = 1 titik` : 'Filter wilayah → titik proyek → status • 1 karyawan = 1 titik • di luar titik assigned ditolak 422'}</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">Radius per titik 50–1000 m — absen valid hanya di titik penugasan dalam radius • Jam {jamLabel} WITA</p>
+                        <p className="text-xs text-[#64748B] mt-1">Radius per titik 50–1000 m — absen valid hanya di titik penugasan dalam radius • Jam {jamLabel} WITA</p>
                     </div>
                     <button type="button" onClick={handleExport} className="bg-white border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-sm font-medium text-[#334155] shrink-0">⬇ Export CSV{isWilayah ? ` ${OWN_REGION}` : ''}</button>
                 </div>
@@ -121,8 +121,8 @@ export default function Attendances() {
                         <option value="excused_love">Toleransi (excused)</option>
                         <option value="early_leave">Pulang awal</option>
                     </select>
-                    <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / email..." className="flex-1 min-w-[160px] rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
-                    <span className="text-xs text-[#94A3B8]">{filtered.length} hasil • {tgl}</span>
+                    <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / email..." className="flex-1 min-w-[160px] rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#64748B] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                    <span className="text-xs text-[#64748B]">{filtered.length} hasil • {tgl}</span>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
@@ -156,7 +156,7 @@ export default function Attendances() {
                             </tbody>
                         </table>
                     </div>
-                    {filtered.length === 0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada data untuk filter ini</p>}
+                    {filtered.length === 0 && <p className="text-center text-sm text-[#64748B] py-8">Tidak ada data untuk filter ini</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
                         <span>{isWilayah ? `Admin Wilayah: hanya ${OWN_REGION}` : 'Super Admin lihat semua • Admin Wilayah own region saja'}</span>
                         <span>1 karyawan = 1 titik • Jam {jamLabel} WITA</span>
@@ -178,22 +178,22 @@ export default function Attendances() {
                                 </div>
                                 <div className="p-5 space-y-4">
                                     <div>
-                                        <p className="text-xs font-medium text-[#94A3B8] mb-1.5">Swafoto datang • {detail.datang} WITA</p>
+                                        <p className="text-xs font-medium text-[#64748B] mb-1.5">Swafoto datang • {detail.datang} WITA</p>
                                         <img src={detail.selfie} alt="selfie datang" className="w-full h-[280px] object-cover rounded-xl" />
                                     </div>
                                     {detail.selfie_pulang ? (
                                         <div>
-                                            <p className="text-xs font-medium text-[#94A3B8] mb-1.5">Swafoto pulang • {detail.pulang} WITA</p>
+                                            <p className="text-xs font-medium text-[#64748B] mb-1.5">Swafoto pulang • {detail.pulang} WITA</p>
                                             <img src={detail.selfie_pulang} alt="selfie pulang" className="w-full h-[280px] object-cover rounded-xl" />
                                         </div>
                                     ) : (
-                                        <p className="text-xs text-[#94A3B8] bg-[#F8FAFC] rounded-xl px-3 py-2">Belum ada swafoto pulang{detail.pulang && detail.pulang !== '— belum pulang' ? ' (baris lama, sebelum kebijakan foto pulang)' : ''}</p>
+                                        <p className="text-xs text-[#64748B] bg-[#F8FAFC] rounded-xl px-3 py-2">Belum ada swafoto pulang{detail.pulang && detail.pulang !== '— belum pulang' ? ' (baris lama, sebelum kebijakan foto pulang)' : ''}</p>
                                     )}
                                     <div className="grid grid-cols-2 gap-3 text-sm">
-                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#94A3B8]">Waktu datang</p><p className="font-medium text-[#0F172A]">{detail.datang} WITA</p></div>
-                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#94A3B8]">Waktu pulang</p><p className="font-medium text-[#0F172A]">{detail.pulang || '— belum pulang'}</p></div>
-                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#94A3B8]">Koordinat absen</p><p className="font-mono text-xs text-[#0F172A]">{Number(detail.lat).toFixed(4)}, {Number(detail.lng).toFixed(4)}</p></div>
-                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#94A3B8]">Jarak ke titik assigned</p><p className={`font-medium ${hit && inRadius ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{detail.jarak} m {hit ? `/${hit.site.radius}m • ${inRadius ? 'Dalam' : 'Di luar'}` : ''}</p></div>
+                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Waktu datang</p><p className="font-medium text-[#0F172A]">{detail.datang} WITA</p></div>
+                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Waktu pulang</p><p className="font-medium text-[#0F172A]">{detail.pulang || '— belum pulang'}</p></div>
+                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Koordinat absen</p><p className="font-mono text-xs text-[#0F172A]">{Number(detail.lat).toFixed(4)}, {Number(detail.lng).toFixed(4)}</p></div>
+                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Jarak ke titik assigned</p><p className={`font-medium ${hit && inRadius ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{detail.jarak} m {hit ? `/${hit.site.radius}m • ${inRadius ? 'Dalam' : 'Di luar'}` : ''}</p></div>
                                     </div>
                                     {hit && (
                                         <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className="flex items-center justify-between bg-[#EFF6FF] rounded-xl p-3 hover:bg-[#DBEAFE]">

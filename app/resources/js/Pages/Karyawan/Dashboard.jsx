@@ -25,7 +25,13 @@ export default function Dashboard(){
             <div className="space-y-5">
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] relative pt-10 pb-5 px-5 mt-8">
                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full border-[3px] border-white shadow-[0_4px_16px_rgba(15,23,42,0.12)] overflow-hidden bg-[#F1F5F9]">
-                        <img src={me.foto || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face&auto=format'} alt="Foto profil" className="w-full h-full object-cover" />
+                        {me.foto ? (
+                            <img src={me.foto} alt={`Foto profil ${me.nama || ''}`.trim()} className="w-full h-full object-cover" />
+                        ) : (
+                            <span aria-hidden="true" className="w-full h-full flex items-center justify-center bg-[#1E3A8A] text-white text-lg font-semibold">
+                                {(me.nama || '—').split(/\s+/).filter(Boolean).slice(0, 2).map((kata) => kata[0]).join('').toUpperCase()}
+                            </span>
+                        )}
                     </div>
                     <h2 className="font-semibold text-[18px] tracking-tight text-[#0F172A] mt-1 text-center">{greeting}, {me.nama || '—'}</h2>
                     <p className="text-sm text-[#64748B] text-center mt-1">{dateStr} • {timeStr} WITA</p>

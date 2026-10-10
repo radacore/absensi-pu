@@ -205,7 +205,7 @@ export default function SiteDetail({ regionId, siteId }) {
                                 <div className="flex justify-between gap-2"><dt className="text-[#64748B]">Radius</dt><dd className="font-medium text-[#92400E] bg-[#FFF7E6] px-2 py-0.5 rounded-full border border-[#FCB833]/20 text-xs">{site.radius} m</dd></div>
                                 {site.address && <div className="flex justify-between gap-2"><dt className="text-[#64748B]">Alamat</dt><dd className="text-xs text-[#334155] text-right max-w-[60%]">{site.address}</dd></div>}
                             </dl>
-                            <p className="mt-3 text-xs text-[#94A3B8]">Absen valid hanya jika karyawan assigned ke titik ini & dalam radius — 1 karyawan = 1 titik saja.</p>
+                            <p className="mt-3 text-xs text-[#64748B]">Absen valid hanya jika karyawan assigned ke titik ini & dalam radius — 1 karyawan = 1 titik saja.</p>
                         </div>
 
                         <div className="bg-[#FFF7E6] rounded-2xl p-4 flex gap-3">
@@ -253,7 +253,7 @@ export default function SiteDetail({ regionId, siteId }) {
                             </tbody>
                         </table>
                     </div>
-                    {anggota.length === 0 && <p className="text-center text-sm text-[#94A3B8] py-8">Belum ada anggota di titik ini — tambah karyawan own region.</p>}
+                    {anggota.length === 0 && <p className="text-center text-sm text-[#64748B] py-8">Belum ada anggota di titik ini — tambah karyawan own region.</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">1 karyawan = 1 titik — dipindah lewat tombol Pindah • Di luar titik assigned ditolak 422.</div>
                 </div>
 
@@ -286,9 +286,9 @@ export default function SiteDetail({ regionId, siteId }) {
                                 <div>
                                     <label className="text-xs font-medium text-[#334155]">Radius {form.radius} m</label>
                                     <input value={form.radius} onChange={(e) => setForm({ ...form, radius: e.target.value })} type="range" min="50" max="1000" step="10" className="mt-1 w-full accent-[#FCB833]" />
-                                    <div className="flex justify-between text-xs text-[#94A3B8]"><span>50m</span><span>1000m</span></div>
+                                    <div className="flex justify-between text-xs text-[#64748B]"><span>50m</span><span>1000m</span></div>
                                 </div>
-                                <p className="text-xs text-[#94A3B8]">Klik atau drag pin di peta untuk ubah titik</p>
+                                <p className="text-xs text-[#64748B]">Klik atau drag pin di peta untuk ubah titik</p>
                                 <div className="flex gap-2 pt-2">
                                     <button type="button" onClick={() => setEditOpen(false)} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
                                     <button type="button" onClick={handleSaveSite} className="flex-1 rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Simpan Titik</button>
@@ -328,14 +328,14 @@ export default function SiteDetail({ regionId, siteId }) {
                                 ))}
                                 {kandidatTambah.length === 0 && (
                                     <div className="py-8 px-6 text-center">
-                                        <p className="text-sm text-[#94A3B8]">Tidak ada kandidat — semua karyawan {region.name} sudah di titik ini, atau filter tidak cocok.</p>
+                                        <p className="text-sm text-[#64748B]">Tidak ada kandidat — semua karyawan {region.name} sudah di titik ini, atau filter tidak cocok.</p>
                                         <Link href={`${base}/employees`} className="mt-3 inline-block text-xs font-semibold bg-[#0F172A] text-white px-4 py-2 rounded-xl">+ Buat karyawan baru di {region.name} →</Link>
                                     </div>
                                 )}
                             </div>
                             <div className="px-4 py-3 flex items-center justify-between gap-2 border-t bg-white shrink-0">
                                 <p className="text-xs text-[#64748B]">{selectedIds.size === 0 ? 'Centang beberapa, atau +1 per baris' : `${selectedIds.size} akan ditambah ke ${site.nama_lokasi}`}</p>
-                                <button type="button" onClick={handleBulkAssign} disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? 'Pilih minimal 1 karyawan' : `Tambah ${selectedIds.size} ke titik`} className={`text-sm font-semibold px-4 py-2 rounded-xl shrink-0 ${selectedIds.size === 0 ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Tambah ({selectedIds.size})</button>
+                                <button type="button" onClick={handleBulkAssign} disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? 'Pilih minimal 1 karyawan' : `Tambah ${selectedIds.size} ke titik`} className={`text-sm font-semibold px-4 py-2 rounded-xl shrink-0 ${selectedIds.size === 0 ? 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Tambah ({selectedIds.size})</button>
                             </div>
                         </div>
                     </div>
@@ -349,7 +349,7 @@ export default function SiteDetail({ regionId, siteId }) {
                                 <p className="text-xs text-[#64748B]">Dari {site.nama_lokasi} ke titik lain di {region.name} — 1 karyawan = 1 titik.</p>
                             </div>
                             <div className="p-4 space-y-2">
-                                {otherSitesInRegion.length === 0 && <p className="text-sm text-[#94A3B8] text-center py-4">Tidak ada titik lain di wilayah ini — tambah titik dulu.</p>}
+                                {otherSitesInRegion.length === 0 && <p className="text-sm text-[#64748B] text-center py-4">Tidak ada titik lain di wilayah ini — tambah titik dulu.</p>}
                                 {otherSitesInRegion.map((s) => (
                                     <button key={s.id} type="button" onClick={() => handleMove(s.id)} className="w-full text-left bg-[#F8FAFC] hover:bg-[#EFF6FF] rounded-xl px-4 py-3 flex items-center justify-between">
                                         <span>
@@ -359,7 +359,7 @@ export default function SiteDetail({ regionId, siteId }) {
                                         <span className="text-xs font-semibold text-[#1E3A8A]">Pindah →</span>
                                     </button>
                                 ))}
-                                <p className="text-xs text-[#94A3B8] mt-2 text-center">1 karyawan wajib punya titik — tidak ada opsi tanpa titik.</p>
+                                <p className="text-xs text-[#64748B] mt-2 text-center">1 karyawan wajib punya titik — tidak ada opsi tanpa titik.</p>
                             </div>
                         </div>
                     </div>

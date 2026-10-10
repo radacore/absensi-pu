@@ -14,18 +14,18 @@ function getAdminBase(url) {
 }
 
 const menuDefs = [
-    { path: '', label: 'Dashboard', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>, exact: true },
-    { path: '/regions', label: 'Kantor Wilayah', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg> },
-    { path: '/employees', label: 'Karyawan', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0116 0"/><path d="M8 12h8"/></svg> },
-    { path: '/admin-wilayah', label: 'Admin Wilayah', superOnly: true, icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
-    { path: '/attendances', label: 'Absensi', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><path d="M12 22a10 10 0 100-20 10 10 0 000 20z"/><path d="M12 6v6l4 2"/></svg> },
-    { path: '/cuti', label: 'Cuti', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg> },
-    { path: '/love', label: 'Klaim Toleransi', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill={a ? '#FCB833' : 'none'} stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><path d="M12 21s-6.5-4.2-8.5-8.5A4.5 4.5 0 0112 5a4.5 4.5 0 018.5 7.5C18.5 16.8 12 21 12 21z"/></svg> },
-    { path: '/dinas', label: 'Dinas', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg> },
-    { path: '/pengumuman', label: 'Pengumuman', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><path d="M15 17h5l-1.5-1.5A6 6 0 0118 9V7a6 6 0 00-6-6 6 6 0 00-6 6v2a6 6 0 01-.5 5.5L4 16h5"/><path d="M9 17a3 3 0 006 0"/></svg> },
-    { path: '/holidays', label: 'Hari Libur', superOnly: true, icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg> },
-    { path: '/settings', label: 'Pengaturan', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>, readOnlyWilayah: true },
-    { path: '/audit-log', label: 'Audit Log', superOnly: true, icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#94A3B8'} strokeWidth="1.6"><path d="M12 2H5a2 2 0 00-2 2v16a2 2 0 002 2h14a2 2 0 002-2V9z"/><path d="M12 2v7h7"/><path d="M9 13h6M9 17h6"/></svg> },
+    { path: '', label: 'Dashboard', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>, exact: true },
+    { path: '/regions', label: 'Kantor Wilayah', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg> },
+    { path: '/employees', label: 'Karyawan', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0116 0"/><path d="M8 12h8"/></svg> },
+    { path: '/admin-wilayah', label: 'Admin Wilayah', superOnly: true, icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
+    { path: '/attendances', label: 'Absensi', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><path d="M12 22a10 10 0 100-20 10 10 0 000 20z"/><path d="M12 6v6l4 2"/></svg> },
+    { path: '/cuti', label: 'Cuti', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg> },
+    { path: '/love', label: 'Klaim Toleransi', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill={a ? '#FCB833' : 'none'} stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><path d="M12 21s-6.5-4.2-8.5-8.5A4.5 4.5 0 0112 5a4.5 4.5 0 018.5 7.5C18.5 16.8 12 21 12 21z"/></svg> },
+    { path: '/dinas', label: 'Dinas', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg> },
+    { path: '/pengumuman', label: 'Pengumuman', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><path d="M15 17h5l-1.5-1.5A6 6 0 0118 9V7a6 6 0 00-6-6 6 6 0 00-6 6v2a6 6 0 01-.5 5.5L4 16h5"/><path d="M9 17a3 3 0 006 0"/></svg> },
+    { path: '/holidays', label: 'Hari Libur', superOnly: true, icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg> },
+    { path: '/settings', label: 'Pengaturan', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>, readOnlyWilayah: true },
+    { path: '/audit-log', label: 'Audit Log', superOnly: true, icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><path d="M12 2H5a2 2 0 00-2 2v16a2 2 0 002 2h14a2 2 0 002-2V9z"/><path d="M12 2v7h7"/><path d="M9 13h6M9 17h6"/></svg> },
 ];
 
 export default function AdminLayout({ children }) {
@@ -84,8 +84,15 @@ export default function AdminLayout({ children }) {
             <div className="flex-1 flex flex-col min-w-0">
                 <header className="lg:hidden sticky top-0 z-20 bg-[#0F172A] text-white px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <button type="button" onClick={() => setOpen(!open)} className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                        <button
+                            type="button"
+                            onClick={() => setOpen(!open)}
+                            aria-label={open ? 'Tutup menu navigasi' : 'Buka menu navigasi'}
+                            aria-expanded={open}
+                            aria-controls="admin-sidebar-drawer"
+                            className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FCB833]"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
                         </button>
                         <img src="/logo.png" alt="BBWS" className="w-8 h-8 rounded-xl object-cover bg-white" />
                         <span className="font-semibold text-sm">BBWS PJ</span>
@@ -94,7 +101,14 @@ export default function AdminLayout({ children }) {
                 </header>
                 {open && (
                     <div className="lg:hidden fixed inset-0 z-30 bg-black/40" onClick={() => setOpen(false)}>
-                        <div className="w-[280px] h-full bg-[#0F172A] p-4 flex flex-col gap-1 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <div
+                            id="admin-sidebar-drawer"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Navigasi admin"
+                            className="w-[280px] h-full bg-[#0F172A] p-4 flex flex-col gap-1 overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <div className="px-1 py-2 flex items-center gap-2.5 border-b border-white/10 mb-2 pb-3">
                                 <span className="w-9 h-9 rounded-full bg-[#FCB833] text-[#0F172A] font-semibold text-sm flex items-center justify-center shrink-0">{initials(usr?.name)}</span>
                                 <div className="min-w-0">

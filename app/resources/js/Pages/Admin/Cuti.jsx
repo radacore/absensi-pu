@@ -109,8 +109,8 @@ export default function CutiAdmin(){
                         <option value="Disetujui">Disetujui</option>
                         <option value="Ditolak">Ditolak</option>
                     </select>
-                    <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Cari nama / email / jenis..." className="flex-1 min-w-[180px] rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
-                    <span className="text-xs text-[#94A3B8]">{filtered.length} dari {list.length}</span>
+                    <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Cari nama / email / jenis..." className="flex-1 min-w-[180px] rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#64748B] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                    <span className="text-xs text-[#64748B]">{filtered.length} dari {list.length}</span>
                 </div>
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="overflow-x-auto">
@@ -121,11 +121,11 @@ export default function CutiAdmin(){
                                     const hit=siteById(c.office_location_id);
                                     return (
                                         <tr key={c.id} className="hover:bg-[#F8FAFC]/50">
-                                            <td className="px-4 py-3"><p className="font-medium text-[#0F172A]">{c.nama}</p><p className="text-xs text-[#64748B]">{c.email}</p><p className="text-xs text-[#94A3B8] line-clamp-1">{c.alasan}</p><span className="text-xs bg-[#F1F5F9] px-2 py-0.5 rounded-full">{c.wilayah}</span></td>
+                                            <td className="px-4 py-3"><p className="font-medium text-[#0F172A]">{c.nama}</p><p className="text-xs text-[#64748B]">{c.email}</p><p className="text-xs text-[#64748B] line-clamp-1">{c.alasan}</p><span className="text-xs bg-[#F1F5F9] px-2 py-0.5 rounded-full">{c.wilayah}</span></td>
                                             <td className="px-4 py-3 text-xs">{hit ? <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className="bg-[#EFF6FF] text-[#1E3A8A] px-2 py-1 rounded-full font-medium hover:bg-[#DBEAFE]">{hit.site.nama_lokasi}</Link> : <span className="bg-[#F1F5F9] text-[#64748B] px-2 py-1 rounded-full">—</span>}</td>
                                             <td className="px-4 py-3 text-xs"><span className="bg-[#EFF6FF] text-[#1E3A8A] px-2 py-1 rounded-full font-medium">{c.jenis}</span></td>
                                             <td className="px-4 py-3 text-xs text-[#334155]">{c.tgl}</td>
-                                            <td className="px-4 py-3"><div className="flex gap-1">{[1,2,3].map((l)=>(<span key={l} className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${l < c.level ? 'bg-[#0F172A] text-white' : l===c.level ? 'bg-[#FCB833] text-[#0F172A]' : 'bg-[#F1F5F9] text-[#94A3B8]'}`}>{l}</span>))}</div></td>
+                                            <td className="px-4 py-3"><div className="flex gap-1">{[1,2,3].map((l)=>(<span key={l} className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${l < c.level ? 'bg-[#0F172A] text-white' : l===c.level ? 'bg-[#FCB833] text-[#0F172A]' : 'bg-[#F1F5F9] text-[#64748B]'}`}>{l}</span>))}</div></td>
                                             <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-1 rounded-full ${c.status==='Disetujui' ? 'bg-[#ECFDF5] text-[#065F46]' : c.status==='Menunggu' ? 'bg-[#FFF7E6] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{c.status}</span></td>
                                             <td className="px-4 py-3">
                                                 <div className="flex gap-1 justify-end flex-wrap">
@@ -134,7 +134,7 @@ export default function CutiAdmin(){
                                                             <button type="button" onClick={()=>handleApprove(c.id)} className="text-xs font-medium bg-[#0F172A] text-white px-2.5 py-1.5 rounded-lg">Setujui</button>
                                                             <button type="button" onClick={()=>handleReject(c.id)} className="text-xs font-medium bg-[#F1F5F9] text-[#64748B] px-2.5 py-1.5 rounded-lg">Tolak</button>
                                                         </>
-                                                    ) : <span className="text-xs text-[#94A3B8]">—</span>}
+                                                    ) : <span className="text-xs text-[#64748B]">—</span>}
                                                     <Link href={`${base}/cuti/${c.id}`} className="text-xs font-medium bg-white border px-2.5 py-1.5 rounded-lg">Detail</Link>
                                                     <button type="button" onClick={()=>handleDelete(c.id, c.nama)} className="text-xs font-medium bg-[#FEF2F2] text-[#991B1B] px-2.5 py-1.5 rounded-lg">Hapus</button>
                                                 </div>
@@ -145,7 +145,7 @@ export default function CutiAdmin(){
                             </tbody>
                         </table>
                     </div>
-                    {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada data untuk filter ini</p>}
+                    {filtered.length===0 && <p className="text-center text-sm text-[#64748B] py-8">Tidak ada data untuk filter ini</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
                         <span>{isWilayah ? `Admin Wilayah: review & approve hanya ${ownRegion} • level sesuai kewenangan` : 'Super Admin approve semua level • Admin Wilayah approve own region level sesuai kewenangan'} • 1 karyawan = 1 titik</span>
                         <span>Karyawan mengajukan → Admin menyetujui/menolak/menghapus</span>

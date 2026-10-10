@@ -149,7 +149,7 @@ export default function Dinas() {
                             {dokumen ? (
                                 <p className="mt-1.5 text-xs text-[#0D9488] break-all">✓ {dokumen.name} • {formatBytes(dokumen.size)}</p>
                             ) : (
-                                <p className="mt-1.5 text-xs text-[#94A3B8]">Wajib diunggah. Format PDF atau gambar, maksimal 5 MB.</p>
+                                <p className="mt-1.5 text-xs text-[#64748B]">Wajib diunggah. Format PDF atau gambar, maksimal 5 MB.</p>
                             )}
                         </div>
                         <button type="button" onClick={submit} className="w-full rounded-xl bg-[#0D9488] text-white py-2.5 text-sm font-semibold">Kirim Pengajuan</button>
@@ -157,7 +157,7 @@ export default function Dinas() {
                 )}
 
                 {list.length === 0 ? (
-                    <p className="text-sm text-[#94A3B8] bg-white rounded-2xl p-6 text-center">Belum ada pengajuan dinas</p>
+                    <p className="text-sm text-[#64748B] bg-white rounded-2xl p-6 text-center">Belum ada pengajuan dinas</p>
                 ) : (
                     <div className="space-y-3">
                         {list.map((r) => (
@@ -167,7 +167,7 @@ export default function Dinas() {
                                         <p className="font-medium text-sm text-[#0F172A] truncate">{r.tglLabel}</p>
                                         <p className="text-xs text-[#64748B] mt-1">📄 {r.nomor_surat} • 🎯 {r.tujuan}</p>
                                         <p className="text-xs text-[#475569] mt-2">{r.keterangan}</p>
-                                        {r.transportasi && <p className="text-xs text-[#94A3B8] mt-1">🚗 {r.transportasi}{r.pembebanan_anggaran ? ` • 💰 ${r.pembebanan_anggaran}` : ''}</p>}
+                                        {r.transportasi && <p className="text-xs text-[#64748B] mt-1">🚗 {r.transportasi}{r.pembebanan_anggaran ? ` • 💰 ${r.pembebanan_anggaran}` : ''}</p>}
                                         {r.dokumen_url && (
                                             <a href={r.dokumen_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-[#0D9488] bg-[#F0FDFA] border border-[#99F6E4] px-2.5 py-1.5 rounded-lg">
                                                 {r.dokumen_is_image ? '🖼' : '📄'} Lihat dokumen{r.dokumen_size ? ` • ${r.dokumen_size}` : ''}

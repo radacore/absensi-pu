@@ -1,6 +1,7 @@
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import { ConfirmProvider } from './Components/ConfirmDialog';
+import PwaUpdateBanner from './Components/PwaUpdateBanner';
 import ToastHost from './Components/ToastHost';
 import '../css/app.css';
 
@@ -22,8 +23,11 @@ if ('serviceWorker' in navigator) {
                     const sw = reg.installing;
                     if (!sw) return;
                     sw.addEventListener('statechange', () => {
+                        // Ada versi baru siap. Jangan reload sendiri — biarkan
+                        // PwaUpdateBanner yang menawarkan, supaya isian
+                        // formulir yang sedang diketik tidak hilang.
                         if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-                            window.location.reload();
+                            window.dispatchEvent(new Event('bbws:update-ready'));
                         }
                     });
                 });
@@ -32,20 +36,42 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+// Inertia v3 memancarkan event DOM `inertia:httpException` untuk setiap respons
+// >= 400. Galat validasi (422) sudah otomatis muncul karena ToastHost membaca
+// props.errors, tetapi kegagalan lain (403/419/429/500/503) hanya akan terlihat
+// sebagai halaman error. Teruskan ke `bbws:toast` supaya alasannya jelas.
+document.addEventListener('inertia:httpException', (event) => {
+    const status = event.detail && event.detail.response ? event.detail.response.status : null;
+    const pesan = {
+        403: 'Akses ditolak untuk tindakan ini.',
+        419: 'Sesi sudah kedaluwarsa. Muat ulang halaman lalu coba lagi.',
+        429: 'Terlalu banyak permintaan. Coba lagi sebentar lagi.',
+        500: 'Terjadi gangguan pada server.',
+        503: 'Layanan sedang tidak tersedia.',
+    }[status];
+    if (!pesan) return;
+    window.dispatchEvent(new CustomEvent('bbws:toast', { detail: { kind: 'error', msg: pesan } }));
+});
+
 createInertiaApp({
     resolve: async (name) => {
-        const pages = import.meta.glob('./Pages/**/*.jsx', { eager: true });
-        const module = pages[`./Pages/${name}.jsx`];
-        if (!module) {
+        // Lazy: tiap halaman jadi chunk terpisah dan hanya diunduh saat
+        // dikunjungi. Sebelumnya `eager: true` membundel SEMUA halaman ke
+        // dalam satu berkas sehingga muat pertama berat.
+        const pages = import.meta.glob('./Pages/**/*.jsx');
+        const load = pages[`./Pages/${name}.jsx`];
+        if (!load) {
             console.error(`Page not found: ./Pages/${name}.jsx`);
-            return module;
+            return;
         }
+        const module = await load();
         const page = module.default;
         // wrap tiap page dengan providers global (toast + confirm) di dalam
         // Inertia context supaya usePage bisa dipakai di ToastHost.
         page.layout = page.layout || ((children) => (
             <ConfirmProvider>
                 <ToastHost />
+                <PwaUpdateBanner />
                 {children}
             </ConfirmProvider>
         ));

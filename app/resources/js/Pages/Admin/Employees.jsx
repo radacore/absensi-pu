@@ -132,7 +132,7 @@ export default function Employees() {
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Karyawan — ${OWN_REGION}` : 'Karyawan — Lengkap HR'}</h1>
                         <p className="text-sm text-[#64748B]">{isWilayah ? `${scopedList.length} karyawan • own region` : `${list.length} karyawan • 24 wilayah`}</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">1 karyawan = 1 titik — wajib titik saat tambah/edit. Pindah via halaman titik (Kelola).</p>
+                        <p className="text-xs text-[#64748B] mt-1">1 karyawan = 1 titik — wajib titik saat tambah/edit. Pindah via halaman titik (Kelola).</p>
                         {isWilayah && <span className="inline-block mt-2 text-xs bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full border border-[#FCB833]/20">Write own region saja</span>}
                     </div>
                     <button type="button" onClick={openAdd} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0">+ Tambah Karyawan</button>
@@ -179,11 +179,11 @@ export default function Employees() {
                                                     <div>
                                                         <p className="font-medium text-[#0F172A]">{e.nama}</p>
                                                         <p className="text-xs text-[#64748B]">{e.gol} • {e.unit} • {e.status}</p>
-                                                        <p className="text-xs text-[#94A3B8]">{e.email}</p>
+                                                        <p className="text-xs text-[#64748B]">{e.email}</p>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3 text-xs"><span className="font-mono text-[#0F172A]">{e.nik}</span><br /><span className="text-[#94A3B8]">{e.nip || '-'}</span></td>
+                                            <td className="px-4 py-3 text-xs"><span className="font-mono text-[#0F172A]">{e.nik}</span><br /><span className="text-[#64748B]">{e.nip || '-'}</span></td>
                                             <td className="px-4 py-3 text-xs text-[#334155]">{e.jabatan}</td>
                                             <td className="px-4 py-3 text-xs"><span className="bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full border border-[#FCB833]/20">{e.region}</span></td>
                                             <td className="px-4 py-3 text-xs">
@@ -210,7 +210,7 @@ export default function Employees() {
                             </tbody>
                         </table>
                     </div>
-                    {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada karyawan — coba ubah filter atau tambah di halaman titik.</p>}
+                    {filtered.length===0 && <p className="text-center text-sm text-[#64748B] py-8">Tidak ada karyawan — coba ubah filter atau tambah di halaman titik.</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
                         <span>{isWilayah ? `Admin Wilayah: tulis hanya ${OWN_REGION}` : 'Super Admin tulis semua • Admin Wilayah tulis own region'}</span>
                         <span>1 karyawan = 1 titik (wajib)</span>
@@ -229,7 +229,7 @@ export default function Employees() {
                             <div className="px-6 py-5 space-y-4">
                                 <div className="flex gap-4">
                                     <div className="w-20 h-20 rounded-full bg-[#F1F5F9] overflow-hidden flex items-center justify-center shrink-0 border-2 border-white shadow-sm">
-                                        {preview ? <img src={preview} alt="preview" className="w-full h-full object-cover" /> : <span className="text-xs text-[#94A3B8]">Foto</span>}
+                                        {preview ? <img src={preview} alt="preview" className="w-full h-full object-cover" /> : <span className="text-xs text-[#64748B]">Foto</span>}
                                     </div>
                                     <div className="flex-1">
                                         <label className="text-xs font-medium text-[#334155]">Foto (S3)</label>
@@ -271,7 +271,7 @@ export default function Employees() {
                                         <input value={form.unit} onChange={(e)=>setForm({...form, unit:e.target.value})} placeholder="Bidang Jalan" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
                                     </div>
                                     <div className="col-span-2">
-                                        <label className="text-xs font-medium text-[#334155]">Wilayah {isWilayah && <span className="text-[#94A3B8]">— terkunci own</span>}</label>
+                                        <label className="text-xs font-medium text-[#334155]">Wilayah {isWilayah && <span className="text-[#64748B]">— terkunci own</span>}</label>
                                         {isWilayah ? (
                                             <div className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#0F172A] font-medium">{OWN_REGION}</div>
                                         ) : (

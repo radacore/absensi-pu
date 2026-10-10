@@ -104,7 +104,7 @@ export default function PengumumanAdmin(){
                             </tbody>
                         </table>
                     </div>
-                    {list.length===0 && <p className="text-sm text-[#94A3B8] text-center py-8">Belum ada pengumuman</p>}
+                    {list.length===0 && <p className="text-sm text-[#64748B] text-center py-8">Belum ada pengumuman</p>}
                 </div>
                 {open && (
                     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={close}>
@@ -120,11 +120,11 @@ export default function PengumumanAdmin(){
                                 </div>
                                 <div>
                                     <label className="text-xs font-medium text-[#334155]">Konten</label>
-                                    <textarea value={form.konten} onChange={(e)=>setForm({...form, konten:e.target.value})} rows={3} placeholder="Isi pengumuman..." className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10 placeholder:text-[#94A3B8]" />
+                                    <textarea value={form.konten} onChange={(e)=>setForm({...form, konten:e.target.value})} rows={3} placeholder="Isi pengumuman..." className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10 placeholder:text-[#64748B]" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs font-medium text-[#334155]">Scope {isWilayah && <span className="text-[#94A3B8]">— Wilayah only</span>}</label>
+                                        <label className="text-xs font-medium text-[#334155]">Scope {isWilayah && <span className="text-[#64748B]">— Wilayah only</span>}</label>
                                         {isWilayah ? (
                                             <div className="mt-1.5 w-full rounded-xl bg-[#F1F5F9] px-3 py-2.5 text-sm text-[#0F172A] font-medium">Wilayah targeted — {ownRegion}</div>
                                         ) : (
@@ -136,7 +136,7 @@ export default function PengumumanAdmin(){
                                     </div>
                                     {form.scope==='Wilayah' && (
                                         <div>
-                                            <label className="text-xs font-medium text-[#334155]">Wilayah {isWilayah && <span className="text-[#94A3B8]">— terkunci</span>}</label>
+                                            <label className="text-xs font-medium text-[#334155]">Wilayah {isWilayah && <span className="text-[#64748B]">— terkunci</span>}</label>
                                             {isWilayah ? (
                                                 <div className="mt-1.5 w-full rounded-xl bg-[#F1F5F9] px-3 py-2.5 text-sm text-[#0F172A] font-medium">{ownRegion}</div>
                                             ) : (

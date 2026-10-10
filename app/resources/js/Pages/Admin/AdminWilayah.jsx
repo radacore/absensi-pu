@@ -75,7 +75,7 @@ export default function AdminWilayah() {
                 <div className="bg-white rounded-2xl p-8 text-center shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <p className="text-sm font-medium text-[#991B1B]">Akses ditolak</p>
                     <p className="text-sm text-[#64748B] mt-1">Menu Admin Wilayah hanya untuk Super Admin — gunakan /super-admin/admin-wilayah</p>
-                    <p className="text-xs text-[#94A3B8] mt-2">Admin Wilayah tidak bisa kelola akun lain (least privilege)</p>
+                    <p className="text-xs text-[#64748B] mt-2">Admin Wilayah tidak bisa kelola akun lain (least privilege)</p>
                 </div>
             </AdminLayout>
         );

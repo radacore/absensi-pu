@@ -108,16 +108,16 @@ export default function Dinas() {
                                     <tr key={r.id} className="hover:bg-[#F8FAFC]/60 align-top">
                                         <td className="px-4 py-3">
                                             <p className="font-medium text-[#0F172A]">{r.nama}</p>
-                                            <p className="text-xs text-[#94A3B8]">{r.wilayah}</p>
+                                            <p className="text-xs text-[#64748B]">{r.wilayah}</p>
                                         </td>
                                         <td className="px-4 py-3 text-xs font-mono text-[#0F172A]">{r.nomor_surat}</td>
                                         <td className="px-4 py-3 text-xs text-[#334155]">
                                             {r.tglLabel}
-                                            <p className="text-[#94A3B8]">Diajukan {r.tanggal_pengajuan}</p>
+                                            <p className="text-[#64748B]">Diajukan {r.tanggal_pengajuan}</p>
                                         </td>
                                         <td className="px-4 py-3 text-xs text-[#334155]">
                                             {r.tujuan}
-                                            {r.transportasi && <p className="text-[#94A3B8]">🚗 {r.transportasi}</p>}
+                                            {r.transportasi && <p className="text-[#64748B]">🚗 {r.transportasi}</p>}
                                         </td>
                                         <td className="px-4 py-3">
                                             {r.dokumen_nama ? (
@@ -125,7 +125,7 @@ export default function Dinas() {
                                                     <a href={`${base}/dinas/${r.id}/dokumen`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-[#0D9488] bg-[#F0FDFA] border border-[#99F6E4] px-2 py-1.5 rounded-lg">
                                                         {r.dokumen_is_image ? '🖼' : '📄'} Lihat
                                                     </a>
-                                                    <p className="text-[10px] text-[#94A3B8] max-w-[150px] truncate" title={r.dokumen_nama}>{r.dokumen_nama} • {r.dokumen_size}</p>
+                                                    <p className="text-[10px] text-[#64748B] max-w-[150px] truncate" title={r.dokumen_nama}>{r.dokumen_nama} • {r.dokumen_size}</p>
                                                 </div>
                                             ) : (
                                                 <span className="text-xs text-[#CBD5E1]">—</span>
@@ -151,7 +151,7 @@ export default function Dinas() {
                             </tbody>
                         </table>
                     </div>
-                    {filtered.length === 0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada pengajuan dinas untuk filter ini.</p>}
+                    {filtered.length === 0 && <p className="text-center text-sm text-[#64748B] py-8">Tidak ada pengajuan dinas untuk filter ini.</p>}
                 </div>
 
                 {rejectForm.id && (
@@ -159,7 +159,7 @@ export default function Dinas() {
                         <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
                             <div className="px-6 py-4 border-b border-[#F1F5F9]">
                                 <h3 className="font-semibold text-[#0F172A]">Tolak Pengajuan Dinas</h3>
-                                <p className="text-xs text-[#94A3B8] mt-1">Tulis alasan singkat (minimal 3 karakter). Alasan akan dilihat karyawan.</p>
+                                <p className="text-xs text-[#64748B] mt-1">Tulis alasan singkat (minimal 3 karakter). Alasan akan dilihat karyawan.</p>
                             </div>
                             <div className="px-6 py-4">
                                 <textarea rows="3" value={rejectForm.note} onChange={(e) => setRejectForm({ ...rejectForm, note: e.target.value })} placeholder="Alasan penolakan..." className="w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm outline-none resize-none" />

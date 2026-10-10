@@ -199,10 +199,10 @@ export default function Absensi() {
                 )}
 
                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-4">
-                    <p className="text-xs font-medium text-[#94A3B8]">Titik assigned kamu • {assigned.regionName}</p>
+                    <p className="text-xs font-medium text-[#64748B]">Titik assigned kamu • {assigned.regionName}</p>
                     <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.nama_lokasi}</p>
                     <p className="text-xs font-mono text-[#64748B]">{assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)} • {assigned.radius} m • Jam {settings.jamMasuk}–{settings.jamPulang} WITA</p>
-                    {assigned.address && <p className="text-xs text-[#94A3B8] mt-1">{assigned.address}</p>}
+                    {assigned.address && <p className="text-xs text-[#64748B] mt-1">{assigned.address}</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
@@ -214,7 +214,7 @@ export default function Absensi() {
                                 </span>
                                 <p className="text-sm font-medium text-[#0F172A] mt-3">Siap absen</p>
                                 <p className="text-xs text-[#64748B] text-center mt-1">Ambil swafoto + kunci GPS di titik ini</p>
-                                <button type="button" onClick={handleOpenCapture} disabled={blokirAbsen} title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : ''} className={`mt-4 rounded-xl px-5 py-2.5 text-sm font-semibold ${blokirAbsen ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Buka kamera &amp; lokasi</button>
+                                <button type="button" onClick={handleOpenCapture} disabled={blokirAbsen} title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : ''} className={`mt-4 rounded-xl px-5 py-2.5 text-sm font-semibold ${blokirAbsen ? 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Buka kamera &amp; lokasi</button>
                             </div>
                         ) : (
                             <div className="w-full text-center">
@@ -249,7 +249,7 @@ export default function Absensi() {
                                             onClick={handlePulang}
                                             disabled={jarak == null || !inRadius || !selfieFile || !openRow}
                                             title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : ''}
-                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && openRow ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}
+                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && openRow ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
                                         >
                                             Absen Pulang
                                         </button>
@@ -259,7 +259,7 @@ export default function Absensi() {
                                             onClick={handleKirim}
                                             disabled={jarak == null || !inRadius || !selfieFile || alreadyToday || blokirAbsen}
                                             title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : alreadyToday ? 'Sudah absen hari ini' : ''}
-                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && !alreadyToday && !blokirAbsen ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed'}`}
+                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && !alreadyToday && !blokirAbsen ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
                                         >
                                             Absen Masuk
                                         </button>
@@ -272,7 +272,7 @@ export default function Absensi() {
                         <button type="button" onClick={() => openPanel('pulang')} className={`rounded-xl py-3 text-sm font-semibold ${openRow ? 'bg-[#0F172A] text-white' : 'bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF] font-medium'}`}>Absen pulang</button>
                         <button type="button" onClick={() => openPanel('masuk')} className={`rounded-xl py-3 text-sm font-semibold ${!alreadyToday ? 'bg-[#0F172A] text-white' : 'bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF] font-medium'}`}>Absen masuk</button>
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3 text-center">Absen tercatat hanya di dalam radius titik penugasan</p>
+                    <p className="text-xs text-[#64748B] mt-3 text-center">Absen tercatat hanya di dalam radius titik penugasan</p>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
@@ -288,14 +288,14 @@ export default function Absensi() {
                         </div>
                     </div>
                     {history.length === 0 ? (
-                        <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada absensi</p>
+                        <p className="text-sm text-[#64748B] text-center py-6">Belum ada absensi</p>
                     ) : (
                         <div>
                             <table className="w-full text-sm border-collapse">
                                 <thead>
                                     <tr className="border-b border-[#E2E8F0]">
                                         <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Tanggal</th>
-                                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Jam<span className="normal-case font-normal text-[#94A3B8]"> WITA</span></th>
+                                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Jam<span className="normal-case font-normal text-[#64748B]"> WITA</span></th>
                                         <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Status</th>
                                     </tr>
                                 </thead>
@@ -306,8 +306,8 @@ export default function Absensi() {
                                                 <p className="font-medium text-[#0F172A] whitespace-nowrap">{new Date(r.tgl + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                                             </td>
                                             <td className="px-5 py-3 whitespace-nowrap">
-                                                <p className="font-medium text-[#0F172A]"><span className="text-[11px] font-normal text-[#94A3B8] inline-block w-12">Masuk</span>{r.datang}</p>
-                                                <p className="mt-0.5">{r.pulang ? <><span className="text-[11px] font-normal text-[#94A3B8] inline-block w-12">Pulang</span><span className="font-medium text-[#0F172A]">{r.pulang}</span></> : <span className="text-[#CBD5E1]">— belum pulang</span>}</p>
+                                                <p className="font-medium text-[#0F172A]"><span className="text-[11px] font-normal text-[#64748B] inline-block w-12">Masuk</span>{r.datang}</p>
+                                                <p className="mt-0.5">{r.pulang ? <><span className="text-[11px] font-normal text-[#64748B] inline-block w-12">Pulang</span><span className="font-medium text-[#0F172A]">{r.pulang}</span></> : <span className="text-[#CBD5E1]">— belum pulang</span>}</p>
                                             </td>
                                             <td className="px-5 py-3">
                                                 <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${statusMeta(r.status).cls}`}>{statusMeta(r.status).label}</span>

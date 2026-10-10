@@ -75,15 +75,15 @@ export default function Cuti() {
                         </div>
                         <div>
                             <label htmlFor="alasan" className="text-xs font-medium text-[#334155]">Alasan</label>
-                            <textarea id="alasan" rows={2} value={alasan} onChange={(e)=>setAlasan(e.target.value)} placeholder="Tuliskan alasan cuti" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#94A3B8] outline-none"></textarea>
+                            <textarea id="alasan" rows={2} value={alasan} onChange={(e)=>setAlasan(e.target.value)} placeholder="Tuliskan alasan cuti" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#64748B] outline-none"></textarea>
                         </div>
                         <div>
-                            <label htmlFor="approver" className="text-xs font-medium text-[#334155]">Approver level 1 <span className="text-[#94A3B8]">— akun admin (opsional)</span></label>
+                            <label htmlFor="approver" className="text-xs font-medium text-[#334155]">Approver level 1 <span className="text-[#64748B]">— akun admin (opsional)</span></label>
                             <select id="approver" value={approverId} onChange={(e)=>setApproverId(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white outline-none">
                                 <option value="">— pilih approver —</option>
                                 {approvers.map((a) => (<option key={a.id} value={a.id}>{a.nama}{a.scope ? ` • ${a.scope}` : ''}</option>))}
                             </select>
-                            <p className="text-xs text-[#94A3B8] mt-1">Hanya akun admin yang bisa menyetujui cuti. Level 3 (final) oleh Kantor Pusat.</p>
+                            <p className="text-xs text-[#64748B] mt-1">Hanya akun admin yang bisa menyetujui cuti. Level 3 (final) oleh Kantor Pusat.</p>
                         </div>
                         <button type="button" onClick={handleSubmit} className="w-full bg-[#0F172A] text-white rounded-xl py-3 text-sm font-semibold hover:bg-[#1E3A8A] transition">Kirim pengajuan</button>
                     </div>
@@ -91,16 +91,16 @@ export default function Cuti() {
 
                 <div className="space-y-3">
                     {list.length === 0 ? (
-                        <p className="text-sm text-[#94A3B8] bg-white rounded-2xl p-6 text-center">Belum ada pengajuan — ajukan cuti pertama</p>
+                        <p className="text-sm text-[#64748B] bg-white rounded-2xl p-6 text-center">Belum ada pengajuan — ajukan cuti pertama</p>
                     ) : list.map((r) => (
                         <div key={r.id} className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <p className="font-medium text-sm text-[#0F172A]">{r.jenis} • {r.tgl}</p>
                                     <p className="text-sm text-[#475569] mt-1">{r.alasan}</p>
-                                    <p className="text-xs text-[#94A3B8] mt-1">{r.wilayah} • titik {r.office_location_id}</p>
+                                    <p className="text-xs text-[#64748B] mt-1">{r.wilayah} • titik {r.office_location_id}</p>
                                     {(r.approver_nama || r.approved_by_nama) && (
-                                        <p className="text-xs text-[#94A3B8] mt-0.5">
+                                        <p className="text-xs text-[#64748B] mt-0.5">
                                             {r.approver_nama && `Approver: ${r.approver_nama}`}
                                             {r.approver_nama && r.approved_by_nama && ' • '}
                                             {r.approved_by_nama && `Diputus oleh: ${r.approved_by_nama}`}

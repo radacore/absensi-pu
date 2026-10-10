@@ -60,7 +60,7 @@ export default function TrenJamChart({ tren, mode, settings }) {
     // Garis referensi
     const refLines = [];
     if (isMasuk) {
-        refLines.push({ y: yFor(settings.jamMasukMin), label: minToLabel(settings.jamMasukMin), stroke: '#94A3B8' });
+        refLines.push({ y: yFor(settings.jamMasukMin), label: minToLabel(settings.jamMasukMin), stroke: '#64748B' });
         refLines.push({ y: yFor(settings.batasToleransiMin), label: minToLabel(settings.batasToleransiMin), stroke: '#F59E0B' });
     } else {
         refLines.push({ y: yFor(settings.jamPulangMin), label: minToLabel(settings.jamPulangMin), stroke: '#10B981' });
@@ -113,7 +113,7 @@ export default function TrenJamChart({ tren, mode, settings }) {
                     <circle key={`m-${p.day}`} cx={xFor(p.day)} cy={H - PAD_B - 2} r="2.5" fill="#EF4444" opacity="0.7" />
                 ))}
             </svg>
-            <p className="text-xs text-[#94A3B8] mt-1">
+            <p className="text-xs text-[#64748B] mt-1">
                 {isMasuk
                     ? 'Zona hijau tepat waktu · Zona kuning toleransi · Zona merah muda terlambat · Titik merah = tanpa absen'
                     : 'Garis putus hijau: jam pulang standar · Titik merah = tanpa absen pulang'}

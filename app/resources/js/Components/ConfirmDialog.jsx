@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState } from 'react';
 
 const ConfirmContext = createContext(null);
 
@@ -64,9 +64,26 @@ function ConfirmDialog({ opts, onConfirm, onCancel }) {
 
     const iconBg = tone === 'danger' ? 'bg-[#FEF2F2] text-[#991B1B]' : tone === 'warning' ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#EFF6FF] text-[#1E3A8A]';
 
+    const titleId = useId();
+
+    // Escape menutup dialog — jalur keyboard untuk aksi "Batal".
+    useEffect(() => {
+        const onKey = (e) => {
+            if (e.key === 'Escape') onCancel();
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onCancel]);
+
     return (
         <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={onCancel}>
-            <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+                className="bg-white rounded-2xl w-full max-w-[420px] shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="px-6 py-5">
                     <div className="flex items-start gap-3">
                         {icon !== false && (
@@ -83,7 +100,7 @@ function ConfirmDialog({ opts, onConfirm, onCancel }) {
                             </span>
                         )}
                         <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-[#0F172A]">{title}</h3>
+                            <h3 id={titleId} className="font-semibold text-[#0F172A]">{title}</h3>
                             {description && <p className="text-sm text-[#64748B] mt-1 leading-relaxed">{description}</p>}
                         </div>
                     </div>

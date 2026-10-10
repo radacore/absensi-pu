@@ -67,7 +67,7 @@ export default function AuditLog() {
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">Audit Log</h1>
                         <p className="text-sm text-[#64748B]">Catatan aksi sensitif oleh Admin dan Super Admin</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">Reset password, delete data, approve/reject cuti dan toleransi, CRUD Admin Wilayah.</p>
+                        <p className="text-xs text-[#64748B] mt-1">Reset password, delete data, approve/reject cuti dan toleransi, CRUD Admin Wilayah.</p>
                     </div>
                     <span className="text-xs bg-[#F1F5F9] text-[#334155] rounded-full px-3 py-1.5 shrink-0">{summary}</span>
                 </div>
@@ -121,14 +121,14 @@ export default function AuditLog() {
                                         <td className="px-4 py-3 text-xs font-mono text-[#334155] whitespace-nowrap">{log.createdAt}</td>
                                         <td className="px-4 py-3">
                                             <p className="text-sm font-medium text-[#0F172A]">{log.actorName || '—'}</p>
-                                            <p className="text-xs text-[#94A3B8]">{log.actorType || 'sistem'}</p>
+                                            <p className="text-xs text-[#64748B]">{log.actorType || 'sistem'}</p>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full border ${actionTone(log.action)}`}>{actionLabel(log.action)}</span>
                                         </td>
                                         <td className="px-4 py-3 text-xs">
                                             <p className="font-medium text-[#0F172A]">{log.subjectLabel || '—'}</p>
-                                            <p className="text-[#94A3B8]">{log.subjectType || '—'}</p>
+                                            <p className="text-[#64748B]">{log.subjectType || '—'}</p>
                                         </td>
                                         <td className="px-4 py-3 text-sm text-[#334155]">{log.description || '—'}</td>
                                         <td className="px-4 py-3 text-xs font-mono text-[#64748B]">{log.ip || '—'}</td>
@@ -137,7 +137,7 @@ export default function AuditLog() {
                             </tbody>
                         </table>
                     </div>
-                    {logs.length === 0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada catatan sesuai filter.</p>}
+                    {logs.length === 0 && <p className="text-center text-sm text-[#64748B] py-8">Tidak ada catatan sesuai filter.</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">Menampilkan maksimal 500 entri terbaru.</div>
                 </div>
             </div>

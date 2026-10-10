@@ -41,7 +41,7 @@ export default function Login() {
                                 value={form.login}
                                 onChange={(e) => setForm({ ...form, login: e.target.value })}
                                 placeholder="Masukkan email"
-                                className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
+                                className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
                             />
                         </div>
                         <div>
@@ -53,7 +53,7 @@ export default function Login() {
                                     value={form.password}
                                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                                     placeholder="Masukkan kata sandi"
-                                    className="w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] pr-14 placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
+                                    className="w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] pr-14 placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
                                 />
                                 <button type="button" onClick={() => setShow(!show)} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs font-medium px-3 py-1.5 rounded-lg bg-white shadow-sm text-[#334155]">
                                     {show ? 'Sembunyi' : 'Lihat'}
@@ -64,7 +64,7 @@ export default function Login() {
                         <button type="submit" disabled={processing} className="block w-full text-center bg-[#0F172A] text-white rounded-xl py-3.5 text-sm font-semibold hover:bg-[#1E3A8A] transition disabled:opacity-60">
                             Masuk
                         </button>
-                        <p className="text-center text-xs text-[#94A3B8]">Lupa kata sandi? Hubungi Admin Wilayah atau Super Admin untuk reset.</p>
+                        <p className="text-center text-xs text-[#64748B]">Lupa kata sandi? Hubungi Admin Wilayah atau Super Admin untuk reset.</p>
                     </form>
                 </div>
             </div>

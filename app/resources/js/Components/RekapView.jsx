@@ -79,7 +79,7 @@ export default function RekapView({ rekap, onChangeBulan, backHref }) {
                     <p className="text-sm text-[#334155]">Golongan: {k.golongan}</p>
                     <p className="text-sm text-[#334155]">Status pegawai: {k.status_kepegawaian}</p>
                     <p className="text-sm text-[#334155]">Unit: {k.unit_kerja}</p>
-                    <p className="text-xs text-[#94A3B8] mt-2 italic">Rekap absensi diproses H-1 tanggal berjalan. Status data tanggal: {p.tanggalStatusData}.</p>
+                    <p className="text-xs text-[#64748B] mt-2 italic">Rekap absensi diproses H-1 tanggal berjalan. Status data tanggal: {p.tanggalStatusData}.</p>
                 </div>
 
                 {/* Distribusi kehadiran */}
@@ -110,7 +110,7 @@ export default function RekapView({ rekap, onChangeBulan, backHref }) {
                         </MetrikGroup>
                         <MetrikGroup title="Dispensasi per jenis">
                             {rekap.dispensasi.length === 0
-                                ? <p className="text-sm text-[#94A3B8]">Tidak ada dispensasi bulan ini.</p>
+                                ? <p className="text-sm text-[#64748B]">Tidak ada dispensasi bulan ini.</p>
                                 : rekap.dispensasi.map((r) => <MetrikRow key={r.jenis} label={r.jenis} value={r.count} tone="info" />)}
                         </MetrikGroup>
                     </div>
@@ -130,7 +130,7 @@ export default function RekapView({ rekap, onChangeBulan, backHref }) {
                         </thead>
                         <tbody className="divide-y divide-[#F1F5F9]">
                             {rekap.keterlambatan.length === 0 && (
-                                <tr><td colSpan="4" className="px-3 py-3 text-center text-[#94A3B8] italic">Tidak ada keterlambatan atau PSW pada periode ini.</td></tr>
+                                <tr><td colSpan="4" className="px-3 py-3 text-center text-[#64748B] italic">Tidak ada keterlambatan atau PSW pada periode ini.</td></tr>
                             )}
                             {rekap.keterlambatan.map((r) => (
                                 <tr key={r.no}>
@@ -200,7 +200,7 @@ export default function RekapView({ rekap, onChangeBulan, backHref }) {
                     </div>
                 </section>
 
-                <div className="text-xs text-[#94A3B8] pt-4 border-t border-[#E2E8F0] mt-6">
+                <div className="text-xs text-[#64748B] pt-4 border-t border-[#E2E8F0] mt-6">
                     Rekap presensi perorangan - {k.nik} ({p.label}) · Di-export: {p.diExportPada} WITA
                 </div>
             </div>

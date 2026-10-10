@@ -89,7 +89,7 @@ export default function Dashboard() {
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Dashboard ${OWN_DASH}` : `Dashboard ${wilayah === 'Semua' ? 'Super Admin' : 'Admin Wilayah'}`}</h1>
                         <p className="text-sm text-[#64748B]">{isWilayah ? `${OWN_DASH} • ${tgl} • WITA` : `Kantor Pusat Makassar • 24 Kantor Wilayah Sulsel • ${tgl} • WITA`}</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">{isWilayah ? `Hanya data ${OWN_DASH}` : wilayah === 'Semua' ? 'Super Admin — semua wilayah' : `Filter: ${wilayah}`}</p>
+                        <p className="text-xs text-[#64748B] mt-1">{isWilayah ? `Hanya data ${OWN_DASH}` : wilayah === 'Semua' ? 'Super Admin — semua wilayah' : `Filter: ${wilayah}`}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 flex-wrap">
                         {isWilayah ? (
@@ -112,7 +112,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {stats.map((s) => (
                         <Link key={s.label} href={s.href} className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_24px_rgba(15,23,42,0.08)] transition text-left">
-                            <p className="text-xs font-medium text-[#94A3B8]">{s.label}</p>
+                            <p className="text-xs font-medium text-[#64748B]">{s.label}</p>
                             <p className="text-2xl font-semibold tracking-tight text-[#0F172A] mt-1">{s.value}</p>
                             <p className="text-xs text-[#64748B] mt-1">{s.sub}</p>
                             <span className={`mt-3 inline-block w-8 h-1 rounded-full ${s.accent === 'gold' ? 'bg-[#FCB833]' : s.accent === 'emerald' ? 'bg-[#10B981]' : 'bg-[#F59E0B]'}`}></span>
@@ -124,7 +124,7 @@ export default function Dashboard() {
                     <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                         <div className="flex items-center justify-between">
                             <h3 className="font-medium text-sm text-[#0F172A]">Breakdown per Titik — {activeRegion.name} • {activeRegion.kantor}</h3>
-                            <span className="text-xs text-[#94A3B8]">{sitesForActive.length} titik • 1 karyawan = 1 titik • {totalForActive} karyawan</span>
+                            <span className="text-xs text-[#64748B]">{sitesForActive.length} titik • 1 karyawan = 1 titik • {totalForActive} karyawan</span>
                         </div>
                         <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {siteCards.map(({ site, anggota }) => (
@@ -135,11 +135,11 @@ export default function Dashboard() {
                                         <span className="text-xs bg-[#0F172A] text-white px-2 py-1 rounded-full">{anggota} anggota</span>
                                         <span className="text-xs font-semibold text-[#1E3A8A]">Kelola →</span>
                                     </div>
-                                    {site.address && <p className="text-xs text-[#94A3B8] mt-2 truncate">{site.address}</p>}
+                                    {site.address && <p className="text-xs text-[#64748B] mt-2 truncate">{site.address}</p>}
                                 </Link>
                             ))}
                         </div>
-                        {sitesForActive.length === 0 && <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada titik di {activeRegion.name} — tambah 1 titik di Kelola Wilayah.</p>}
+                        {sitesForActive.length === 0 && <p className="text-sm text-[#64748B] text-center py-6">Belum ada titik di {activeRegion.name} — tambah 1 titik di Kelola Wilayah.</p>}
                     </div>
                 )}
 
@@ -147,19 +147,19 @@ export default function Dashboard() {
                     <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                         <div className="flex items-center justify-between">
                             <h3 className="font-medium text-sm text-[#0F172A]">{isWilayah ? `Kehadiran ${OWN_DASH} (hari ini)` : 'Kehadiran per wilayah'}</h3>
-                            <span className="text-xs text-[#94A3B8]">{isWilayah ? `1 kantor • ${OWN_DASH}` : `${filtered.length} wilayah`}</span>
+                            <span className="text-xs text-[#64748B]">{isWilayah ? `1 kantor • ${OWN_DASH}` : `${filtered.length} wilayah`}</span>
                         </div>
                         <div className="mt-4 space-y-3 max-h-[320px] overflow-y-auto pr-1">
                             {filtered.map((c) => (
                                 <div key={c.wilayah} className="flex items-center gap-3">
-                                    <span className="text-xs font-medium text-[#334155] w-[160px] truncate" title={c.wilayah}>{c.name} <span className="text-[#94A3B8] font-normal">• {c.wilayah.replace('Kab. ', '').replace('Kota ', '')}</span></span>
+                                    <span className="text-xs font-medium text-[#334155] w-[160px] truncate" title={c.wilayah}>{c.name} <span className="text-[#64748B] font-normal">• {c.wilayah.replace('Kab. ', '').replace('Kota ', '')}</span></span>
                                     <div className="flex-1 h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
                                         <div className="h-full bg-[#0F172A]" style={{ width: `${c.total ? (c.hadir / c.total) * 100 : 0}%` }}></div>
                                     </div>
                                     <span className="text-xs text-[#64748B] whitespace-nowrap">{c.hadir}/{c.total} • <span className="text-[#92400E] font-medium">{c.late} late</span></span>
                                 </div>
                             ))}
-                            {filtered.length === 0 && <p className="text-xs text-[#94A3B8] text-center py-6">Belum ada data kehadiran</p>}
+                            {filtered.length === 0 && <p className="text-xs text-[#64748B] text-center py-6">Belum ada data kehadiran</p>}
                         </div>
                         <div className="mt-4 flex flex-wrap gap-2">
                             {isWilayah ? (
@@ -197,10 +197,10 @@ export default function Dashboard() {
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="px-5 py-4 flex items-center justify-between">
                         <h3 className="font-medium text-sm text-[#0F172A]">{isWilayah ? `Aktivitas terbaru — ${OWN_DASH}` : 'Aktivitas terbaru'}</h3>
-                        <span className="text-xs text-[#94A3B8]">Hari ini • {hadir} hadir {isWilayah ? `• ${OWN_DASH}` : ''}</span>
+                        <span className="text-xs text-[#64748B]">Hari ini • {hadir} hadir {isWilayah ? `• ${OWN_DASH}` : ''}</span>
                     </div>
                     <div className="divide-y divide-[#F1F5F9]">
-                        {activities.length === 0 && <p className="px-5 py-6 text-sm text-[#94A3B8] text-center">Belum ada aktivitas hari ini</p>}
+                        {activities.length === 0 && <p className="px-5 py-6 text-sm text-[#64748B] text-center">Belum ada aktivitas hari ini</p>}
                         {activities.map((a, i) => (
                             <div key={`${a.tag}-${i}-${a.t}`} className="px-5 py-3 flex items-center gap-3">
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${a.color === 'gold' ? 'bg-[#FCB833]' : a.color === 'emerald' ? 'bg-[#10B981]' : a.color === 'amber' ? 'bg-[#F59E0B]' : 'bg-[#0EA5E9]'}`}></span>

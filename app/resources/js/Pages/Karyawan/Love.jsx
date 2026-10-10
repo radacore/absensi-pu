@@ -74,13 +74,13 @@ export default function Love(){
                     <div className="mt-4 flex gap-2">
                         {Array.from({length:max},(_,i)=>(<span key={i} className={`flex-1 h-2.5 rounded-full ${i < sisa ? 'bg-[#FCB833]' : 'bg-[#F1F5F9]'}`}></span>))}
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-3">Pakai 1 toleransi untuk <span className="font-medium text-[#0F172A]">lupa absen datang / lupa absen pulang</span> di titik {assigned.site.nama_lokasi} (bulan sama, cukup alasan) → persetujuan 1 level Admin • kuota {max}/bulan</p>
+                    <p className="text-xs text-[#64748B] mt-3">Pakai 1 toleransi untuk <span className="font-medium text-[#0F172A]">lupa absen datang / lupa absen pulang</span> di titik {assigned.site.nama_lokasi} (bulan sama, cukup alasan) → persetujuan 1 level Admin • kuota {max}/bulan</p>
                     {sisa===0 && <p className="text-xs font-medium text-[#EF4444] mt-2">Sisa 0 — pengajuan berikutnya tidak bisa di-approve</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <h3 className="font-medium text-sm text-[#0F172A]">Ajukan Toleransi</h3>
-                    <p className="text-xs text-[#94A3B8] mt-1">Pilih jenis → isi alasan → pilih atasan</p>
+                    <p className="text-xs text-[#64748B] mt-1">Pilih jenis → isi alasan → pilih atasan</p>
                     <div className="mt-4 flex gap-2 flex-wrap">
                         {LOVE_JENIS.map((j)=>(
                             <button key={j.value} type="button" onClick={()=>setJenis(j.value)} className={`rounded-xl px-3 py-2 text-xs font-semibold border ${jenis===j.value ? 'bg-[#0F172A] text-white border-[#0F172A]' : 'bg-white text-[#334155] border-[#E2E8F0] hover:bg-[#F8FAFC]'}`}>{j.label}</button>
@@ -99,23 +99,23 @@ export default function Love(){
                     <div className="mt-4 space-y-3 border-t border-[#F1F5F9] pt-4">
                         <div className="relative">
                             <label className="text-xs font-medium text-[#334155]">Pilih atasan untuk di-ACC <span className="text-[#EF4444]">*</span></label>
-                            <p className="text-xs text-[#94A3B8]">Cari nama atau NIP atasan</p>
+                            <p className="text-xs text-[#64748B]">Cari nama atau NIP atasan</p>
                             <button type="button" onClick={()=>setOpenApprover((v)=>!v)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] px-3 py-2.5 text-sm text-left flex items-center justify-between outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20">
-                                <span className={selectedApprover ? 'text-[#0F172A] font-medium' : 'text-[#94A3B8]'}>{selectedApprover ? `${selectedApprover.nama} • ${selectedApprover.nip} • ${selectedApprover.scope}` : 'Pilih atasan...'}</span>
-                                <span className="text-[#94A3B8]">▾</span>
+                                <span className={selectedApprover ? 'text-[#0F172A] font-medium' : 'text-[#64748B]'}>{selectedApprover ? `${selectedApprover.nama} • ${selectedApprover.nip} • ${selectedApprover.scope}` : 'Pilih atasan...'}</span>
+                                <span className="text-[#64748B]">▾</span>
                             </button>
                             {openApprover && (
                                 <div className="absolute z-20 mt-2 w-full bg-white rounded-xl border border-[#E2E8F0] shadow-[0_8px_24px_rgba(15,23,42,0.12)] overflow-hidden">
                                     <div className="p-2 border-b border-[#F1F5F9]">
-                                        <input autoFocus value={qApprover} onChange={(e)=>setQApprover(e.target.value)} placeholder="Cari nama atau NIP..." className="w-full rounded-lg bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20" />
+                                        <input autoFocus value={qApprover} onChange={(e)=>setQApprover(e.target.value)} placeholder="Cari nama atau NIP..." className="w-full rounded-lg bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#64748B] outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20" />
                                     </div>
                                     <div className="max-h-44 overflow-auto">
                                         {filteredApprovers.length===0 ? (
-                                            <p className="text-xs text-[#94A3B8] text-center py-4">Tidak ada atasan untuk kata kunci ini</p>
+                                            <p className="text-xs text-[#64748B] text-center py-4">Tidak ada atasan untuk kata kunci ini</p>
                                         ) : filteredApprovers.map((a)=>(
                                             <button key={a.id} type="button" onClick={()=>{ setApproverId(a.id); setOpenApprover(false); setQApprover(''); }} className={`w-full text-left px-3 py-2.5 text-sm hover:bg-[#F8FAFC] ${approverId===a.id ? 'bg-[#FFF7E6]' : ''}`}>
                                                 <p className="font-medium text-[#0F172A]">{a.nama} <span className="font-normal text-[#64748B]">• {a.jabatan}</span></p>
-                                                <p className="text-xs text-[#94A3B8] font-mono">{a.nip} • {a.scope}</p>
+                                                <p className="text-xs text-[#64748B] font-mono">{a.nip} • {a.scope}</p>
                                             </button>
                                         ))}
                                     </div>
@@ -124,24 +124,24 @@ export default function Love(){
                         </div>
                         <div>
                             <label htmlFor="alasan" className="text-xs font-medium text-[#334155]">Alasan (wajib)</label>
-                            <textarea id="alasan" rows={2} value={alasan} onChange={(e)=>setAlasan(e.target.value)} placeholder={jenis==='lupa_absen' ? 'Contoh: Lupa absen datang karena HP lowbat' : 'Contoh: Lupa absen pulang — rapat di lapangan'} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20"></textarea>
+                            <textarea id="alasan" rows={2} value={alasan} onChange={(e)=>setAlasan(e.target.value)} placeholder={jenis==='lupa_absen' ? 'Contoh: Lupa absen datang karena HP lowbat' : 'Contoh: Lupa absen pulang — rapat di lapangan'} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#64748B] outline-none focus:bg-white focus:ring-2 focus:ring-[#FCB833]/20"></textarea>
                         </div>
-                        <button type="button" onClick={handleClaim} disabled={!alasan.trim() || !approverId || sisa<=0} title={!alasan.trim() ? 'Isi alasan dulu' : !approverId ? 'Pilih atasan' : sisa<=0 ? 'Sisa Toleransi 0 — reset 1 bulan depan' : ''} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]">Gunakan 1 toleransi — Kirim ke {selectedApprover ? selectedApprover.nama : 'atasan'}</button>
+                        <button type="button" onClick={handleClaim} disabled={!alasan.trim() || !approverId || sisa<=0} title={!alasan.trim() ? 'Isi alasan dulu' : !approverId ? 'Pilih atasan' : sisa<=0 ? 'Sisa Toleransi 0 — reset 1 bulan depan' : ''} className="w-full rounded-xl py-3 text-sm font-semibold bg-[#FCB833] text-[#0F172A] disabled:bg-[#F1F5F9] disabled:text-[#64748B]">Gunakan 1 toleransi — Kirim ke {selectedApprover ? selectedApprover.nama : 'atasan'}</button>
                     </div>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="px-5 py-4 flex items-center justify-between">
                         <h3 className="font-medium text-sm text-[#0F172A]">Riwayat Toleransi saya</h3>
-                        <span className="text-xs text-[#94A3B8]">Bulan ini • {claims0.length}</span>
+                        <span className="text-xs text-[#64748B]">Bulan ini • {claims0.length}</span>
                     </div>
                     <div className="divide-y divide-[#F1F5F9]">
-                        {claims0.length===0 ? <p className="text-sm text-[#94A3B8] text-center py-6">Belum ada Toleransi — ajukan saat lupa absen datang / pulang</p> : claims0.map((c)=>(
+                        {claims0.length===0 ? <p className="text-sm text-[#64748B] text-center py-6">Belum ada Toleransi — ajukan saat lupa absen datang / pulang</p> : claims0.map((c)=>(
                             <div key={c.id} className="px-5 py-3.5 flex items-start justify-between gap-3">
                                 <div>
                                     <p className="text-sm font-medium text-[#0F172A]">{loveJenisLabel(c.jenis)} • {c.tgl} • {c.jam} {c.approver_scope ? `• ${c.approver_scope}` : ''}</p>
                                     <p className="text-xs text-[#64748B] mt-0.5">{c.alasan} {c.note ? `• ${c.note}` : ''}</p>
-                                    <p className="text-xs text-[#94A3B8]">Atasan: {c.approver_nama || '—'} {c.approver_nip ? `• ${c.approver_nip}` : ''} {c.approver_scope ? `• ${c.approver_scope}` : ''}</p>
+                                    <p className="text-xs text-[#64748B]">Atasan: {c.approver_nama || '—'} {c.approver_nip ? `• ${c.approver_nip}` : ''} {c.approver_scope ? `• ${c.approver_scope}` : ''}</p>
                                 </div>
                                 <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${c.status==='approved' ? 'bg-[#ECFDF5] text-[#065F46]' : c.status==='pending' ? 'bg-[#FFFBEB] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{c.status}</span>
                             </div>

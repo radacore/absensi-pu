@@ -48,7 +48,7 @@ export default function AdminLogin() {
                                 value={form.email}
                                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                                 placeholder={isWilayah ? 'admin.gowa@bbws-pj.go.id' : 'pusat@bbws-pj.go.id'}
-                                className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
+                                className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
                             />
                         </div>
                         <div>
@@ -60,7 +60,7 @@ export default function AdminLogin() {
                                     value={form.password}
                                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                                     placeholder="Masukkan kata sandi"
-                                    className="w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] pr-14 placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
+                                    className="w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] pr-14 placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
                                 />
                                 <button type="button" onClick={() => setShow(!show)} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs font-medium px-3 py-1.5 rounded-lg bg-white shadow-sm text-[#334155]">{show ? 'Sembunyi' : 'Lihat'}</button>
                             </div>

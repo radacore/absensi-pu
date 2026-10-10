@@ -88,7 +88,7 @@ export default function LoveAdmin(){
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Klaim Toleransi — ${ownRegion}` : `Klaim Toleransi — kuota ${loveMax}/bulan`}</h1>
                         <p className="text-sm text-[#64748B]">Hanya <span className="font-medium text-[#0F172A]">lupa absen datang / lupa absen pulang bulan sama</span> • Persetujuan 1 level Admin • 1 toleransi = 1 pengajuan • max {loveMax}/bulan</p>
-                        <p className="text-xs text-[#94A3B8] mt-1">1 karyawan = 1 titik • Reset tgl 1 pukul 00:00 WITA</p>
+                        <p className="text-xs text-[#64748B] mt-1">1 karyawan = 1 titik • Reset tgl 1 pukul 00:00 WITA</p>
                     </div>
                     <span className="shrink-0 bg-[#FFF7E6] border border-[#FCB833]/30 text-[#92400E] text-xs font-medium px-3 py-1.5 rounded-full">{counts.pending} pending • {counts.approved} approved bulan ini • max {loveMax}</span>
                 </div>
@@ -120,9 +120,9 @@ export default function LoveAdmin(){
                         <option value="approved">Approved</option>
                         <option value="rejected">Rejected</option>
                     </select>
-                    <input value={approverQ} onChange={(e)=>setApproverQ(e.target.value)} placeholder="Cari atasan nama/NIP..." className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10 min-w-[160px]" />
-                    <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Cari karyawan / kantor..." className="flex-1 min-w-[160px] rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#94A3B8] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
-                    <span className="text-xs text-[#94A3B8]">{filtered.length} hasil</span>
+                    <input value={approverQ} onChange={(e)=>setApproverQ(e.target.value)} placeholder="Cari atasan nama/NIP..." className="rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#64748B] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10 min-w-[160px]" />
+                    <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Cari karyawan / kantor..." className="flex-1 min-w-[160px] rounded-xl bg-[#F8FAFC] border-0 px-3 py-2 text-sm placeholder:text-[#64748B] outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                    <span className="text-xs text-[#64748B]">{filtered.length} hasil</span>
                 </div>
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="overflow-x-auto">
@@ -136,7 +136,7 @@ export default function LoveAdmin(){
                                             <td className="px-4 py-3"><p className="font-medium text-[#0F172A]">{c.nama}</p><p className="text-xs text-[#64748B]">{c.wilayah} • {c.kantor}</p></td>
                                             <td className="px-4 py-3 text-xs">{hit ? <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className="px-2 py-1 rounded-full font-medium bg-[#EFF6FF] text-[#1E3A8A] hover:opacity-80">{hit.site.nama_lokasi}</Link> : <span className="bg-[#F1F5F9] text-[#64748B] px-2 py-1 rounded-full">—</span>}</td>
                                             <td className="px-4 py-3 text-xs"><span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mr-1 ${c.jenis==='lupa_absen' ? 'bg-[#EFF6FF] text-[#1E3A8A]' : c.jenis==='lupa_pulang' ? 'bg-[#F5F3FF] text-[#6D28D9]' : 'bg-[#FFF7E6] text-[#92400E]'}`}>{loveJenisLabel(c.jenis)}</span><span className="text-[#0F172A]">{c.tgl || '—'} • {c.jam}</span></td>
-                                            <td className="px-4 py-3 text-xs"><p className="font-medium text-[#0F172A]">{c.approver_nama || '—'}</p><p className="text-xs text-[#64748B] font-mono">{c.approver_nip || ''}</p><p className="text-xs text-[#94A3B8]">{c.approver_scope || ''}</p></td>
+                                            <td className="px-4 py-3 text-xs"><p className="font-medium text-[#0F172A]">{c.approver_nama || '—'}</p><p className="text-xs text-[#64748B] font-mono">{c.approver_nip || ''}</p><p className="text-xs text-[#64748B]">{c.approver_scope || ''}</p></td>
                                             <td className="px-4 py-3 text-xs text-[#334155] max-w-[200px] truncate" title={c.alasan}>{c.alasan}</td>
                                             <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-1 rounded-full ${c.status==='pending' ? 'bg-[#FFF7E6] text-[#92400E]' : c.status==='approved' ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{c.status}{c.note ? ` • ${c.note}` : ''}</span></td>
                                             <td className="px-4 py-3 text-right">
@@ -164,7 +164,7 @@ export default function LoveAdmin(){
                             </tbody>
                         </table>
                     </div>
-                    {filtered.length===0 && <p className="text-center text-sm text-[#94A3B8] py-8">Tidak ada claim untuk filter ini</p>}
+                    {filtered.length===0 && <p className="text-center text-sm text-[#64748B] py-8">Tidak ada claim untuk filter ini</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B]">{isWilayah ? `Admin Wilayah: review & approve hanya ${ownRegion}` : 'Super Admin lihat semua • Admin Wilayah own region saja'}</div>
                 </div>
             </div>

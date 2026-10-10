@@ -107,13 +107,13 @@ export default function Profil(){
                     </div>
                     <h2 className="font-semibold text-[16px] text-[#0F172A] mt-3">{me0.nama}</h2>
                     <p className="text-sm text-[#64748B]">{me0.jabatan} • {me0.unit}</p>
-                    <p className="text-xs text-[#94A3B8] mt-1">{me0.status} • {me0.gol} • NIK {String(me0.nik||'').slice(-4)} • NIP {String(me0.nip||'').slice(0,4) || '—'}</p>
+                    <p className="text-xs text-[#64748B] mt-1">{me0.status} • {me0.gol} • NIK {String(me0.nik||'').slice(-4)} • NIP {String(me0.nip||'').slice(0,4) || '—'}</p>
                     <span className="inline-block mt-3 text-xs font-medium bg-[#F1F5F9] text-[#334155] px-3 py-1 rounded-full">{me0.region}</span>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
                     <h3 className="font-medium text-sm text-[#0F172A]">Data pribadi</h3>
-                    <p className="text-xs text-[#94A3B8]">NIK, NIP, golongan, dan unit tidak dapat diubah mandiri</p>
+                    <p className="text-xs text-[#64748B]">NIK, NIP, golongan, dan unit tidak dapat diubah mandiri</p>
                     <div className="space-y-3">
                         <div>
                             <label htmlFor="phone" className="text-xs font-medium text-[#334155]">Nomor ponsel</label>
@@ -146,7 +146,7 @@ export default function Profil(){
                         <div>
                             <label htmlFor="newPwd" className="text-xs font-medium text-[#334155]">Kata sandi baru</label>
                             <input id="newPwd" type="password" value={pwd.password} onChange={(e)=>setPwd({...pwd, password:e.target.value})} placeholder="Min. 8 karakter, huruf besar+kecil+angka" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
-                            <p className="text-xs text-[#94A3B8] mt-1">Wajib mengandung huruf besar, huruf kecil, dan angka. Tidak boleh sama dengan NIK.</p>
+                            <p className="text-xs text-[#64748B] mt-1">Wajib mengandung huruf besar, huruf kecil, dan angka. Tidak boleh sama dengan NIK.</p>
                         </div>
                         <div>
                             <label htmlFor="confirmPwd" className="text-xs font-medium text-[#334155]">Konfirmasi baru</label>

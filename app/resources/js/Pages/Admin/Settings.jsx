@@ -51,23 +51,23 @@ export default function Settings() {
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="masuk" className="text-xs font-medium text-[#334155]">Jam masuk {readOnly && <span className="text-[#94A3B8]">— read-only</span>}</label>
-                            <input id="masuk" type="time" value={jamMasuk} onChange={(e) => !readOnly && setJamMasuk(e.target.value)} disabled={readOnly} className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${readOnly ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`} />
+                            <label htmlFor="masuk" className="text-xs font-medium text-[#334155]">Jam masuk {readOnly && <span className="text-[#64748B]">— read-only</span>}</label>
+                            <input id="masuk" type="time" value={jamMasuk} onChange={(e) => !readOnly && setJamMasuk(e.target.value)} disabled={readOnly} className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${readOnly ? 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`} />
                         </div>
                         <div>
-                            <label htmlFor="pulang" className="text-xs font-medium text-[#334155]">Jam pulang {readOnly && <span className="text-[#94A3B8]">— read-only</span>}</label>
-                            <input id="pulang" type="time" value={jamPulang} onChange={(e) => !readOnly && setJamPulang(e.target.value)} disabled={readOnly} className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${readOnly ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`} />
+                            <label htmlFor="pulang" className="text-xs font-medium text-[#334155]">Jam pulang {readOnly && <span className="text-[#64748B]">— read-only</span>}</label>
+                            <input id="pulang" type="time" value={jamPulang} onChange={(e) => !readOnly && setJamPulang(e.target.value)} disabled={readOnly} className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${readOnly ? 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`} />
                         </div>
                         <div>
-                            <label htmlFor="tol" className="text-xs font-medium text-[#334155]">Kelonggaran (menit) {readOnly && <span className="text-[#94A3B8]">— read-only</span>}</label>
-                            <input id="tol" type="number" min="0" max="60" value={toleransi} onChange={(e) => !readOnly && setToleransi(Number(e.target.value))} disabled={readOnly} className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${readOnly ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`} />
+                            <label htmlFor="tol" className="text-xs font-medium text-[#334155]">Kelonggaran (menit) {readOnly && <span className="text-[#64748B]">— read-only</span>}</label>
+                            <input id="tol" type="number" min="0" max="60" value={toleransi} onChange={(e) => !readOnly && setToleransi(Number(e.target.value))} disabled={readOnly} className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${readOnly ? 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`} />
                         </div>
                         <div>
                             <label className="text-xs font-medium text-[#334155]">Hari kerja</label>
                             <div className="mt-1.5 bg-[#F8FAFC] rounded-xl px-3 py-2.5 text-sm text-[#334155]">{hariKerjaLabel}</div>
                         </div>
                     </div>
-                    <p className="text-xs text-[#94A3B8]">Timezone Asia/Makassar • Tepat waktu ≤ jam_masuk + kelonggaran → on_time</p>
+                    <p className="text-xs text-[#64748B]">Timezone Asia/Makassar • Tepat waktu ≤ jam_masuk + kelonggaran → on_time</p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
@@ -78,7 +78,7 @@ export default function Settings() {
                         Toleransi — Fleksibel per Bulan
                     </h3>
                     <div>
-                        <label htmlFor="love" className="text-xs font-medium text-[#334155]">Total Toleransi / bulan (1–10) {readOnly && <span className="text-[#94A3B8]">— read-only</span>}</label>
+                        <label htmlFor="love" className="text-xs font-medium text-[#334155]">Total Toleransi / bulan (1–10) {readOnly && <span className="text-[#64748B]">— read-only</span>}</label>
                         <div className="mt-1.5 flex items-center gap-3">
                             <input id="love" type="range" min="1" max="10" value={loveMax} onChange={(e) => !readOnly && setLoveMax(Number(e.target.value))} disabled={readOnly} className={`flex-1 accent-[#FCB833] ${readOnly ? 'opacity-40 cursor-not-allowed' : ''}`} />
                             <span className="w-10 h-10 rounded-xl bg-[#FCB833] text-[#0F172A] flex items-center justify-center font-semibold">{loveMax}</span>
@@ -87,7 +87,7 @@ export default function Settings() {
                             {Array.from({ length: 10 }, (_, i) => (<span key={i} className={`flex-1 h-2 rounded-full ${i < loveMax ? 'bg-[#FCB833]' : 'bg-[#F1F5F9]'}`}></span>))}
                         </div>
                     </div>
-                    <p className="text-xs text-[#94A3B8]">Berlaku bulan depan • Reset 1st 00:00 WITA • Saat ini {loveMax} Toleransi untuk semua karyawan</p>
+                    <p className="text-xs text-[#64748B]">Berlaku bulan depan • Reset 1st 00:00 WITA • Saat ini {loveMax} Toleransi untuk semua karyawan</p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
@@ -130,14 +130,14 @@ export default function Settings() {
                         </label>
                     </div>
 
-                    <p className="text-xs text-[#94A3B8]">
+                    <p className="text-xs text-[#64748B]">
                         Hari non-kerja = di luar hari kerja ({hariKerjaLabel}) atau terdaftar di menu Hari Libur.
                         {!absenLiburAktif && ' Saat nonaktif, absen di luar hari kerja dicatat seperti hari kerja biasa.'}
                     </p>
                 </div>
 
-                <button type="button" onClick={handleSave} disabled={readOnly} className={`w-full rounded-xl py-3 text-sm font-semibold transition ${readOnly ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white hover:bg-[#1E3A8A]'}`}>{readOnly ? 'Read-only — hanya Super Admin bisa simpan' : 'Simpan pengaturan'}</button>
-                {readOnly && <p className="text-xs text-center text-[#94A3B8]">Wilayah lihat saja — perubahan hanya di /super-admin/settings oleh Super Admin</p>}
+                <button type="button" onClick={handleSave} disabled={readOnly} className={`w-full rounded-xl py-3 text-sm font-semibold transition ${readOnly ? 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed' : 'bg-[#0F172A] text-white hover:bg-[#1E3A8A]'}`}>{readOnly ? 'Read-only — hanya Super Admin bisa simpan' : 'Simpan pengaturan'}</button>
+                {readOnly && <p className="text-xs text-center text-[#64748B]">Wilayah lihat saja — perubahan hanya di /super-admin/settings oleh Super Admin</p>}
             </div>
         </AdminLayout>
     );

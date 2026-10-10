@@ -47,10 +47,10 @@ export default function Pengumuman(){
                     {['Semua','Pusat','Wilayah'].map((t)=>(
                         <button key={t} type="button" onClick={()=>setTab(t)} className={`text-xs font-medium px-3 py-1.5 rounded-full ${tab===t ? 'bg-[#0F172A] text-white' : 'bg-white text-[#64748B] shadow-sm'}`}>{t}</button>
                     ))}
-                    <span className="ml-auto text-xs text-[#94A3B8] self-center">{visible.length} pengumuman</span>
+                    <span className="ml-auto text-xs text-[#64748B] self-center">{visible.length} pengumuman</span>
                 </div>
                 {visible.length===0 ? (
-                    <p className="text-sm text-[#94A3B8] bg-white rounded-2xl p-6 text-center">Belum ada pengumuman{me ? ` untuk ${me.region}` : ''}</p>
+                    <p className="text-sm text-[#64748B] bg-white rounded-2xl p-6 text-center">Belum ada pengumuman{me ? ` untuk ${me.region}` : ''}</p>
                 ) : (
                     <div className="space-y-3">
                         {visible.map((p)=>{
@@ -61,7 +61,7 @@ export default function Pengumuman(){
                                         <h3 className="font-medium text-sm leading-snug text-[#0F172A]">{p.pin ? '📌 ' : ''}{p.judul}</h3>
                                         {unread && <span className="mt-1 w-2 h-2 rounded-full bg-[#1E3A8A] shrink-0"></span>}
                                     </div>
-                                    <p className="text-xs text-[#94A3B8] mt-1">{p.scope==='Global' ? `Pusat • ${p.tgl}` : `${p.region} • ${p.tgl}`} {p.pin ? '• Disematkan' : ''} {unread ? '• Belum dibaca' : '• Sudah dibaca'}</p>
+                                    <p className="text-xs text-[#64748B] mt-1">{p.scope==='Global' ? `Pusat • ${p.tgl}` : `${p.region} • ${p.tgl}`} {p.pin ? '• Disematkan' : ''} {unread ? '• Belum dibaca' : '• Sudah dibaca'}</p>
                                     <p className="text-sm text-[#475569] leading-relaxed mt-3">{p.konten}</p>
                                     <div className="mt-3 flex gap-2">
                                         <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${p.scope==='Global' ? 'bg-[#0F172A] text-white' : 'bg-[#F1F5F9] text-[#334155]'}`}>{p.scope==='Global' ? 'Kantor Pusat' : p.region}</span>

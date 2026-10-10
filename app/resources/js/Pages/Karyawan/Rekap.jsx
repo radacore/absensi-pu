@@ -46,7 +46,7 @@ export default function Rekap() {
 
     const offset = firstDow === 0 ? 6 : firstDow - 1;
     const workDays = days.filter((x) => x.status !== 'libur' && x.status !== 'future').length || 1;
-    const pct = Math.min(99, Math.max(60, Math.round((hadir / workDays) * 100)));
+    const pct = Math.min(99, Math.round((hadir / workDays) * 100));
 
     if (!assigned) {
         return (
@@ -114,15 +114,15 @@ export default function Rekap() {
                     </div>
                     <div className="grid grid-cols-7 gap-1.5 text-center">
                         {['Sn', 'Sl', 'Rb', 'Km', 'Jm', 'Sb', 'Mg'].map((h) => (
-                            <span key={h} className="text-xs font-medium text-[#94A3B8] py-1">{h}</span>
+                            <span key={h} className="text-xs font-medium text-[#64748B] py-1">{h}</span>
                         ))}
                         {Array.from({ length: offset }).map((_, i) => <span key={`off-${i}`} className="py-2"></span>)}
                         {days.map((d) => (
                             <span key={d.d} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium mx-auto
-                                ${d.status === 'hadir' ? 'bg-[#FCB833] text-[#0F172A]' : d.status === 'terlambat' ? 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]' : d.status === 'cuti' ? 'bg-[#ECFDF5] text-[#065F46]' : d.status === 'future' ? 'text-[#CBD5E1]' : 'bg-[#F8FAFC] text-[#94A3B8]'}`}>{d.d}</span>
+                                ${d.status === 'hadir' ? 'bg-[#FCB833] text-[#0F172A]' : d.status === 'terlambat' ? 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]' : d.status === 'cuti' ? 'bg-[#ECFDF5] text-[#065F46]' : d.status === 'future' ? 'text-[#CBD5E1]' : 'bg-[#F8FAFC] text-[#64748B]'}`}>{d.d}</span>
                         ))}
                     </div>
-                    <p className="text-xs text-[#94A3B8] mt-4">Jam {settings.jamMasuk}–{settings.jamPulang} WITA • Kelonggaran {settings.toleransi}m • Di luar {assigned.radius} m titik {assigned.nama_lokasi} tidak tercatat</p>
+                    <p className="text-xs text-[#64748B] mt-4">Jam {settings.jamMasuk}–{settings.jamPulang} WITA • Kelonggaran {settings.toleransi}m • Di luar {assigned.radius} m titik {assigned.nama_lokasi} tidak tercatat</p>
                 </div>
             </div>
         </KaryawanLayout>
