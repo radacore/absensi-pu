@@ -4,6 +4,8 @@
 **Lingkungan:** MariaDB 12.2.2 (`absensi_sim`), PHP 8.4.18, Laravel 13.26.1, object storage Neva Objects (S3-compatible)
 **Pertanyaan yang dijawab:** *"Coba kamu simulasi menggunakan semua fiturnya, apakah sudah aman tidak ada bug?"*
 
+> **Catatan (11 Okt 2026):** laporan ini adalah catatan historis per 20 Sep 2026; angka di dalamnya sengaja tidak diubah. Jumlah terkini: **197 tes (192 lulus, 5 di-skip, 1250 assertions)** di SQLite in-memory, **25 berkas migrasi + 7 seeder**, **20 tabel**. Lihat [`README.md` § Testing](../README.md#testing) untuk angka terbaru.
+
 ## Jawaban singkat
 
 **Fitur berjalan dengan baik. Awalnya ditemukan 6 celah keamanan — keenamnya sudah diperbaiki dan diverifikasi. Tiga temuan kebijakan juga sudah diputuskan dan dikerjakan.**

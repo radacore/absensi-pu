@@ -2,9 +2,9 @@
 
 Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pusat di **Makassar** + kantor wilayah se-Sulawesi Selatan — dengan portal HR multi-tenant dan **PWA Karyawan** (login email, absensi GPS + selfie dengan radius kantor, *love system*, cuti berjenjang, rekap bulanan, pengumuman, dan pengajuan **perjalanan dinas** dengan unggah dokumen).
 
-> **Status dokumen ini:** seluruh versi, jumlah tabel, jumlah route, dan perilaku penyimpanan di bawah **sudah diverifikasi langsung dari kode dan dari basis data yang berjalan** pada 20 Sep 2026.
+> **Status dokumen ini:** seluruh versi, jumlah tabel, jumlah route, dan perilaku penyimpanan di bawah **sudah diverifikasi langsung dari kode dan dari basis data yang berjalan**. Angka-angka di bagian [Basis Data](#basis-data-mysql--mariadb) berasal dari verifikasi 20 Sep 2026; jumlah berkas migrasi/seeder/tabel/tes di bawah sudah dihitung ulang pada 11 Okt 2026.
 >
-> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): 19 migrasi + 6 seeder berjalan bersih, 21 tabel terbentuk, 188 route, **183 tes lulus di MySQL**, dan simulasi HTTP nyata **65/65 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
+> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **25 berkas migrasi + 7 seeder**, **20 tabel**, **188 route**, dan **197 tes (192 lulus, 5 di-skip)**. Simulasi HTTP nyata **65/65 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
 >
 > Laporan simulasi end-to-end lengkap (6 celah keamanan yang ditemukan & diperbaiki, plus 13 temuan tambahan): **[`docs/laporan-simulasi.md`](docs/laporan-simulasi.md)**.
 
@@ -54,7 +54,7 @@ Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pus
 **Yang TIDAK dipakai** (jangan dipasang di VPS): Redis, Memcached, Sanctum, Prisma, Sentry, Telescope, Debugbar, Horizon.
 Session, cache, dan queue semuanya memakai driver **`database`** — jadi **MySQL wajib hidup** sebelum aplikasi bisa melayani request. Tanpa MySQL, bahkan halaman login akan gagal (`SQLSTATE[HY000] [2002]`).
 
-**Skala aplikasi:** 188 route, 21 tabel (terverifikasi di MySQL).
+**Skala aplikasi:** 188 route, 20 tabel (terverifikasi di MySQL).
 
 ---
 
@@ -62,12 +62,15 @@ Session, cache, dan queue semuanya memakai driver **`database`** — jadi **MySQ
 
 Seluruh berkas unggahan disimpan di **object storage S3-compatible (Neva Objects)**, bukan di disk server. Ini penting untuk VPS: **disk server tidak perlu besar** dan tidak perlu backup berkas terpisah.
 
-Aplikasi hanya punya **dua jalur unggah**:
+Aplikasi hanya punya **tiga jalur unggah**:
 
 | Jenis | Disk | Visibility | Cara diakses |
 | :--- | :--- | :--- | :--- |
 | Foto profil karyawan | `UPLOAD_PUBLIC_DISK` | `public` | URL S3 langsung |
 | Dokumen surat tugas (perjalanan dinas) | `UPLOAD_PRIVATE_DISK` | `private` | Lewat route ber-otorisasi saja |
+| Swafoto absen masuk/pulang | `UPLOAD_PRIVATE_DISK` | `private` | `GET /absensi/{attendance}/selfie/{jenis}` — hanya pemilik absensi & admin wilayahnya |
+
+> **Catatan:** kolom `attendances.selfie_url` dan `selfie_pulang_url` menyimpan **path** objek di disk privat (bukan URL), walau namanya masih berakhiran `_url`. URL-nya dibentuk saat render lewat `Attendance::selfieRouteUrl()`. Bila `UPLOAD_PRIVATE_DISK` dan `UPLOAD_PUBLIC_DISK` diarahkan ke disk yang sama (mis. keduanya `s3`), pemisahan publik/privat hilang dan **privasi swafoto hanya bergantung pada otorisasi route** — jadi jangan hapus pemeriksaan di `AttendanceSelfieController`.
 
 Pemetaan disk diatur di `app/config/filesystems.php`:
 
@@ -275,6 +278,10 @@ APP_ENV=production
 APP_DEBUG=false
 APP_KEY=                      # diisi oleh: php artisan key:generate
 APP_URL=https://absensi.example.go.id
+APP_TIMEZONE=Asia/Makassar    # WITA — jam absen & rekap dihitung di zona ini
+
+# Cookie sesi hanya dikirim lewat HTTPS. Setelah TLS aktif, WAJIB diisi true.
+SESSION_SECURE_COOKIE=true
 
 # --- Basis data (MySQL 8.4 / MariaDB) ---
 DB_CONNECTION=mysql
@@ -338,7 +345,18 @@ server {
         fastcgi_hide_header X-Powered-By;
     }
 
-    # Aset hasil build Vite punya hash di namanya -> aman di-cache lama
+    # Aset hasil build Vite punya hash di namanya -> aman di-cache lama.
+    #
+    # Kecuali service worker: berkasnya TIDAK boleh di-cache lama (kalau
+    # tidak, pembaruan versi tidak pernah terdeteksi) dan harus dikirim
+    # dengan header Service-Worker-Allowed supaya boleh mengontrol scope "/".
+    # Tanpa header itu, scope SW terbatas pada /build/ sehingga prompt
+    # "Install aplikasi" tidak pernah muncul.
+    location = /build/sw.js {
+        add_header Service-Worker-Allowed "/" always;
+        add_header Cache-Control "no-cache" always;
+    }
+
     location /build/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
@@ -410,11 +428,11 @@ Aplikasi **sudah berjalan penuh di MySQL/MariaDB**. Ini bukan lagi target — st
 | :--- | :--- | :--- |
 | Driver yang dipakai Laravel | `php artisan about --only=drivers` | `Database ............ mysql` |
 | Info server & basis data | `php artisan db:show` | **MariaDB 12.2.2**, koneksi `mysql`, DB `absensi_pu`, host `127.0.0.1:3306` |
-| Jumlah tabel | `SHOW TABLES` | **21 tabel** (`BASE TABLE`) |
+| Jumlah tabel | `SHOW TABLES` | **20 tabel** (`BASE TABLE`) |
 | Storage engine | `php artisan db:table employees` | **InnoDB**, kolasi `utf8mb4_unicode_ci` |
-| Skema dari nol | `php artisan migrate:fresh --seed` | **19 migrasi + 6 seeder sukses** |
+| Skema dari nol | `php artisan migrate:fresh --seed` | 25 berkas migrasi + 7 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
 | Data ikut masuk | query `JOIN` | `employees` × `regions` mengembalikan relasi yang benar |
-| Tes di MySQL | `php artisan test` (DB `absensi_pu_test`) | **76 passed, 3 skipped, 767 assertions** |
+| Tes (SQLite in-memory, 11 Okt 2026) | `php artisan test` | **194 tes: 189 lulus, 5 di-skip, 1228 assertions** — jalankan ulang di `absensi_pu_test` untuk angka MySQL |
 | Smoke test HTTP | `php artisan serve` + `curl` | `/`, `/karyawan/login`, `/admin/login`, `/super-admin/login` → **200** |
 
 Konfigurasi `.env` yang aktif:
@@ -495,7 +513,7 @@ DB_DATABASE=absensi_pu_test DB_USERNAME=absensi_pu DB_PASSWORD=absensi_dev_pass 
   php artisan test
 ```
 
-Bila MySQL tidak tersedia, tes tetap bisa dijalankan hermetis lewat SQLite in-memory (perilaku bawaan `phpunit.xml`) — hasilnya identik: 76 lulus.
+Bila MySQL tidak tersedia, tes tetap bisa dijalankan hermetis lewat SQLite in-memory (perilaku bawaan `phpunit.xml`) — hanya tes yang memang khusus MySQL yang di-skip (5 tes).
 
 
 ---
@@ -521,20 +539,23 @@ S3_INTEGRATION=1 php artisan test --filter=S3DinasIntegrationTest
 php artisan test --filter=KebijakanBaruTest
 ```
 
-Hasil terakhir yang terverifikasi (20 Sep 2026):
+Hasil terakhir yang terverifikasi (SQLite in-memory, 11 Okt 2026):
 
 ```
-php artisan test                                    => 181 passed, 5 skipped (1216 assertions)  [SQLite in-memory, 16 s]
-php artisan test (DB absensi_pu_test)               => 183 passed, 3 skipped (1219 assertions)  [MySQL/MariaDB, 24 s]
+php artisan test                                    => 192 passed, 5 skipped (1250 assertions)  [SQLite in-memory, ~15 s]
+php artisan test (DB absensi_pu_test)               => jalankan sendiri untuk angka MySQL (lihat catatan)
 php artisan test --filter=KebijakanBaruTest         => 29 passed (132 assertions)
-S3_INTEGRATION=1 php artisan test --filter=S3...    => 3 passed (17 assertions)
+php artisan test --filter=ErrorPageTest             => 3 passed (22 assertions)
+php artisan test --filter=AttendanceSelfieTest      => 9 passed (15 assertions)
+S3_INTEGRATION=1 php artisan test --filter=S3...    => 3 passed (17 assertions)   [20 Sep 2026]
 bash scripts/simulasi-http.sh                       => SELESAI — 65 lulus, 0 gagal
-npm run build                                       => sukses (PWA precache 19 entri)
+npm run build                                       => sukses (PWA precache 52 entri, halaman ter-split per route)
 ```
 
-**Suite yang sama lulus di kedua mesin basis data.** Jumlah yang di-skip berbeda karena dua tes memang menguji perilaku khusus MySQL dan **melewati diri sendiri** (bukan gagal) bila driver bukan MySQL:
+**Suite yang sama lulus di kedua mesin basis data.** Lima tes di-skip pada SQLite karena memang menguji perilaku khusus MySQL atau butuh jaringan, dan **melewati diri sendiri** (bukan gagal):
 
-- `test_prasyarat_simulasi_berjalan_di_mysql` — membaca `information_schema` untuk menghitung tabel.
+- `FullSimulationTest` — `test_prasyarat_simulasi_berjalan_di_mysql` (membaca `information_schema`) dan uji duplikat tanggal libur.
+- `S3DinasIntegrationTest` — tiga tes yang butuh bucket S3 sungguhan (`S3_INTEGRATION=1`).
 - `test_super_admin_mengelola_hari_libur` — mengandalkan `Rule::unique` pada kolom `date`. SQLite menyimpan `date` sebagai `"Y-m-d 00:00:00"`, sehingga perbandingan `Rule::unique` tidak cocok dan duplikat baru ditolak oleh *unique index* di level basis data. Di MySQL (kolom `DATE` asli) aturan validasi bekerja seperti seharusnya.
 
 Uji unit **memalsukan disk** yang sedang dikonfigurasi, jadi hasilnya tidak bergantung pada apakah `UPLOAD_PRIVATE_DISK` diisi `local` atau `s3`. Uji integrasi S3 **dilewati secara bawaan** agar CI tidak butuh jaringan dan tidak menulis ke bucket sungguhan.
@@ -548,6 +569,10 @@ Berkas uji yang relevan:
 | `tests/Feature/S3DinasIntegrationTest.php` | Alur sungguhan ke bucket S3 (opt-in) |
 | `tests/Feature/FullSimulationTest.php` | Seluruh alur + penjaga regresi 6 celah keamanan (`--group=regresi-keamanan`) |
 | `tests/Feature/KebijakanBaruTest.php` | Gerbang absen hari libur, penautan klaim toleransi ke absensi, approver cuti = admin |
+| `tests/Feature/AttendanceSelfieTest.php` | Swafoto absen disimpan sebagai *path* di disk privat + hanya bisa dibuka lewat route ber-otorisasi |
+| `tests/Feature/ErrorPageTest.php` | 403/404 dirender lewat Inertia (bukan halaman Blade mentah); permintaan JSON tetap menerima JSON |
+
+**CI:** `.github/workflows/ci.yml` menjalankan `php artisan test` pada PHP 8.3 & 8.4 (SQLite in-memory) sekaligus `npm run build` untuk menangkap JSX yang rusak — `vite build` adalah satu-satunya pemeriksa JS di proyek ini karena tidak ada ESLint.
 
 **Simulasi HTTP sungguhan** — `app/scripts/simulasi-http.sh` (65 skenario) menembak `php artisan serve` lewat HTTP, jadi middleware, CSRF, sesi, Inertia, MySQL, dan **bucket S3 sungguhan** semuanya ikut teruji. Cara menjalankan ada di komentar kepala skrip. Lihat [`docs/laporan-simulasi.md`](docs/laporan-simulasi.md).
 
@@ -602,7 +627,7 @@ Berkas uji yang relevan:
 > php artisan test --filter=KebijakanBaruTest
 > ```
 >
-> Hasil terakhir: **183 lulus / 0 gagal** (suite lengkap di MySQL) dan **65/65** pada simulasi HTTP.
+> Hasil terakhir (11 Okt 2026, SQLite in-memory): **192 lulus / 0 gagal / 5 di-skip** pada suite lengkap, **76 lulus / 2 di-skip** pada `FullSimulationTest`, dan **65/65** pada simulasi HTTP.
 
 Sudah aman dan terverifikasi: nama berkas dibuat server (anti path traversal), tidak ada header yang bisa disuntik (anti CRLF), berkas PHP yang disamarkan `.pdf` ditolak (pemeriksaan isi, bukan ekstensi), objek privat tidak bisa diakses anonim (`403`), dan `X-Content-Type-Options: nosniff`.
 
@@ -648,13 +673,15 @@ sul proyek/                      # akar repo (git root)
 │   │   ├── Models/
 │   │   └── Support/             # AdminPresenter, Audit, StreamsDokumen (trait unduh S3)
 │   ├── config/filesystems.php   # blok 'uploads' + disk s3
-│   ├── database/migrations/     # 21 tabel
+│   ├── database/migrations/     # 25 berkas → 20 tabel
 │   ├── resources/js/Pages/      # Karyawan/ dan Admin/
 │   ├── routes/web.php           # 188 route (tidak ada routes/api.php)
 │   ├── tests/Feature/           # termasuk S3DinasIntegrationTest (opt-in)
 │   ├── vite.config.js           # Tailwind v4 + React + PWA
 │   └── .env.example
+├── .github/workflows/ci.yml     # tes + build aset
 ├── docs/activity-diagrams/
+├── docs/laporan-simulasi.md
 └── prd-profilkorp/              # ⚠️ dokumen PRD aplikasi LAIN — jangan dijadikan acuan
 ```
 
