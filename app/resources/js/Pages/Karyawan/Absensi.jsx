@@ -42,6 +42,7 @@ export default function Absensi() {
     const [selfieFile, setSelfieFile] = useState(null);
     const [selfiePreview, setSelfiePreview] = useState(null);
     const [mode, setMode] = useState('masuk'); // 'masuk' | 'pulang'
+    const [catatanPulang, setCatatanPulang] = useState('');
     const videoRef = useRef(null);
 
     useEffect(() => { if (me.foto) setPhotoPreview(me.foto); }, [me.foto]);
@@ -62,6 +63,7 @@ export default function Absensi() {
         setCamError(null);
         if (selfiePreview) URL.revokeObjectURL(selfiePreview);
         setSelfieFile(null); setSelfiePreview(null);
+        setCatatanPulang('');
     };
 
     const openRow = useMemo(
@@ -159,7 +161,13 @@ export default function Absensi() {
         if (jarak == null) { toast.error(geoLoading ? 'Menunggu GPS...' : 'Aktifkan GPS lalu tekan kirim lagi'); return; }
         if (!inRadius) { toast.error(`${jarak} m / ${assigned.radius} m — di luar radius`); return; }
         if (!selfieFile) { toast.error('Ambil foto selfie dulu — wajib untuk absen pulang'); return; }
-        router.post('/karyawan/absensi/clock-out', { lat: myPos.lat, lng: myPos.lng, selfie_pulang: selfieFile }, {
+        if (!catatanPulang.trim()) { toast.error('Isi catatan pekerjaan dulu — wajib saat absen pulang'); return; }
+        router.post('/karyawan/absensi/clock-out', {
+            lat: myPos.lat,
+            lng: myPos.lng,
+            selfie_pulang: selfieFile,
+            catatan_pulang: catatanPulang.trim(),
+        }, {
             preserveScroll: true,
             onSuccess: () => { resetCapture(); setMode('masuk'); },
         });
@@ -242,14 +250,31 @@ export default function Absensi() {
                                     <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{jarak} m / {assigned.radius} m • {inRadius ? 'Dalam radius' : 'Di luar radius'}</p>
                                 )}
                                 {geoError && <p className="text-xs text-[#92400E] mt-1">{geoError}</p>}
+                                {mode === 'pulang' && (
+                                    <div className="mt-4 text-left">
+                                        <label htmlFor="catatan-pulang" className="block text-xs font-medium text-[#334155]">
+                                            Catatan pekerjaan hari ini <span className="text-[#991B1B]">*</span>
+                                        </label>
+                                        <textarea
+                                            id="catatan-pulang"
+                                            rows={3}
+                                            maxLength={500}
+                                            value={catatanPulang}
+                                            onChange={(e) => setCatatanPulang(e.target.value)}
+                                            placeholder="Contoh: menyelesaikan laporan harian, pengecekan jaringan di titik 201"
+                                            className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#64748B] outline-none focus:bg-white focus:ring-2 focus:ring-[#0D9488]/20"
+                                        />
+                                        <p className="mt-1 text-right text-[11px] text-[#64748B]">{catatanPulang.length}/500</p>
+                                    </div>
+                                )}
                                 <div className="flex gap-2 justify-center mt-4">
                                     {mode === 'pulang' ? (
                                         <button
                                             type="button"
                                             onClick={handlePulang}
-                                            disabled={jarak == null || !inRadius || !selfieFile || !openRow}
-                                            title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : ''}
-                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && openRow ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
+                                            disabled={jarak == null || !inRadius || !selfieFile || !openRow || !catatanPulang.trim()}
+                                            title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : !catatanPulang.trim() ? 'Isi catatan pekerjaan dulu' : ''}
+                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && openRow && catatanPulang.trim() ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
                                         >
                                             Absen Pulang
                                         </button>

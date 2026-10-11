@@ -354,6 +354,7 @@ function KartuHari({ h, detail }) {
                         <p><strong>Lokasi:</strong> {detail.pulang.lokasi}</p>
                         <p className="text-[#64748B] mt-1"><strong>Radius:</strong> {detail.pulang.radius} m dari titik</p>
                         <p className="text-[#64748B]"><strong>Unit Kerja:</strong> {detail.pulang.unit_kerja}</p>
+                        <p className="mt-1 break-words"><strong>Catatan pekerjaan:</strong> {detail.pulang.catatan || '—'}</p>
                     </div>
                 )}
             </div>

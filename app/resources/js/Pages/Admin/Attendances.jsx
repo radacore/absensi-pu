@@ -49,10 +49,10 @@ export default function Attendances() {
 
     const handleExport = () => {
         if (filtered.length === 0) { toast.error('Tidak ada data untuk diekspor'); return; }
-        const header = ['Nama', 'Email', 'Wilayah', 'Titik', 'Tgl', 'Datang', 'Pulang', 'Status', 'Jarak(m)'];
+        const header = ['Nama', 'Email', 'Wilayah', 'Titik', 'Tgl', 'Datang', 'Pulang', 'Status', 'Jarak(m)', 'Catatan'];
         const rows = filtered.map((r) => {
             const hit = siteById(r.office_location_id, regionsData);
-            return [r.nama, r.email, r.wilayah, hit?.site.nama_lokasi ?? '', r.tgl, r.datang, r.pulang, r.status, String(r.jarak)];
+            return [r.nama, r.email, r.wilayah, hit?.site.nama_lokasi ?? '', r.tgl, r.datang, r.pulang, r.status, String(r.jarak), r.catatan_pulang ?? ''];
         });
         const csv = [header, ...rows].map((a) => a.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -195,6 +195,12 @@ export default function Attendances() {
                                         <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Koordinat absen</p><p className="font-mono text-xs text-[#0F172A]">{Number(detail.lat).toFixed(4)}, {Number(detail.lng).toFixed(4)}</p></div>
                                         <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Jarak ke titik assigned</p><p className={`font-medium ${hit && inRadius ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{detail.jarak} m {hit ? `/${hit.site.radius}m • ${inRadius ? 'Dalam' : 'Di luar'}` : ''}</p></div>
                                     </div>
+                                    {detail.catatan_pulang && (
+                                        <div className="bg-[#F8FAFC] rounded-xl p-3">
+                                            <p className="text-xs text-[#64748B]">Catatan pekerjaan saat pulang</p>
+                                            <p className="text-sm text-[#0F172A] mt-1 whitespace-pre-wrap break-words">{detail.catatan_pulang}</p>
+                                        </div>
+                                    )}
                                     {hit && (
                                         <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className="flex items-center justify-between bg-[#EFF6FF] rounded-xl p-3 hover:bg-[#DBEAFE]">
                                             <span><p className="text-sm font-medium text-[#1E3A8A]">{hit.site.nama_lokasi}</p><p className="text-xs text-[#64748B]">{hit.region.name} • {hit.site.lat.toFixed(4)}, {hit.site.lng.toFixed(4)} • {hit.site.radius}m</p></span>
