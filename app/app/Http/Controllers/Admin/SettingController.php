@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceSetting;
+use App\Support\CutiKuota;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -22,10 +23,11 @@ class SettingController extends Controller
                 'jamPulang' => substr((string) $s->jam_pulang, 0, 5),
                 'toleransi' => (int) $s->toleransi_late_menit,
                 'loveMax' => (int) $s->love_max,
+                'cutiTahunanMax' => CutiKuota::max($s),
                 'absenLiburAktif' => (bool) $s->absen_libur_aktif,
                 'absenLiburMode' => $s->absen_libur_mode ?: 'tolak',
                 'hariKerja' => $s->hari_kerja ?? ['1', '2', '3', '4', '5'],
-            ] : ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15, 'loveMax' => 4, 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak', 'hariKerja' => ['1', '2', '3', '4', '5']],
+            ] : ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15, 'loveMax' => 4, 'cutiTahunanMax' => AttendanceSetting::CUTI_TAHUNAN_DEFAULT, 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak', 'hariKerja' => ['1', '2', '3', '4', '5']],
             'readOnly' => $isWilayah,
         ]);
     }
@@ -40,6 +42,8 @@ class SettingController extends Controller
             'jamPulang' => ['required', 'date_format:H:i'],
             'toleransi' => ['required', 'integer', 'min:0', 'max:60'],
             'loveMax' => ['required', 'integer', 'min:1', 'max:10'],
+            // Kuota cuti tahunan — opsional supaya pemanggil lama tetap valid.
+            'cutiTahunanMax' => ['sometimes', 'integer', 'min:1', 'max:60'],
             // Gerbang hari libur — opsional supaya pemanggil lama tetap valid.
             'absenLiburAktif' => ['sometimes', 'boolean'],
             'absenLiburMode' => ['sometimes', 'in:tolak,catat'],
@@ -54,6 +58,9 @@ class SettingController extends Controller
         $s->jam_pulang = $data['jamPulang'].':00';
         $s->toleransi_late_menit = $data['toleransi'];
         $s->love_max = $data['loveMax'];
+        if (array_key_exists('cutiTahunanMax', $data)) {
+            $s->cuti_tahunan_max = (int) $data['cutiTahunanMax'];
+        }
         if (array_key_exists('absenLiburAktif', $data)) {
             $s->absen_libur_aktif = (bool) $data['absenLiburAktif'];
         }

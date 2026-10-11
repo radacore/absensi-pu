@@ -16,6 +16,8 @@ class AttendanceSettingSeeder extends Seeder
                 'jam_pulang' => '16:00',
                 'toleransi_late_menit' => 15,
                 'love_max' => 4,
+                // Kuota cuti tahunan (hari kerja/tahun). Dibaca CutiKuota.
+                'cuti_tahunan_max' => 12,
                 // Default NONAKTIF → perilaku lama dipertahankan. Super Admin
                 // dapat mengaktifkan gerbang hari libur dari /super-admin/settings.
                 'absen_libur_aktif' => false,

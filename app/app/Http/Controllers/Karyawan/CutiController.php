@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
+use App\Models\AttendanceSetting;
+use App\Models\Holiday;
 use App\Models\Leave;
 use App\Support\AdminPresenter;
+use App\Support\CutiKuota;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -37,7 +40,31 @@ class CutiController extends Controller
             'list' => $myList,
             // Approver cuti = akun admin saja (admin wilayah + Kantor Pusat).
             'approvers' => AdminPresenter::leaveApproversFor($me->region_id, $me->site_id),
+            // Kuota cuti tahunan + hari kerja/libur supaya UI bisa memperkirakan
+            // jumlah hari kerja sebelum dikirim. Server tetap penentu akhir
+            // lewat validasi di store().
+            'kuota' => $this->kuotaPayload($me->id),
         ]);
+    }
+
+    /** Kuota tahun ini + hari kerja & libur (tahun ini dan berikutnya). */
+    private function kuotaPayload(int $employeeId): array
+    {
+        $settings = AttendanceSetting::first();
+        $tahun = (int) Carbon::now('Asia/Makassar')->year;
+
+        $libur = Holiday::query()
+            ->whereBetween('tanggal', ["{$tahun}-01-01", ($tahun + 1).'-12-31'])
+            ->pluck('tanggal')
+            ->map(fn ($t) => Carbon::parse($t)->format('Y-m-d'))
+            ->values()
+            ->all();
+
+        return CutiKuota::ringkasan($employeeId, $tahun, $settings) + [
+            'jenisBerkuota' => CutiKuota::JENIS_BERKUOTA,
+            'hariKerja' => array_map('strval', $settings?->hariKerjaList() ?? AttendanceSetting::HARI_KERJA_DEFAULT),
+            'libur' => $libur,
+        ];
     }
 
     public function store(Request $request)
@@ -61,6 +88,15 @@ class CutiController extends Controller
                     'approver_id' => 'Approver harus akun admin di wilayah Anda.',
                 ]);
             }
+        }
+
+        // Kuota cuti tahunan (CutiKuota): hanya jenis "Tahunan" yang dibatasi.
+        // Pakai ValidationException supaya 422-nya konsisten dengan validasi lain.
+        $pelanggaran = CutiKuota::pelanggaran($me->id, $data['jenis'], $data['mulai'], $data['selesai']);
+        if ($pelanggaran !== []) {
+            throw ValidationException::withMessages([
+                'selesai' => CutiKuota::pesanPelanggaran($pelanggaran),
+            ]);
         }
 
         Leave::create([

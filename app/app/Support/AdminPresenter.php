@@ -104,7 +104,7 @@ class AdminPresenter
     {
         $s = AttendanceSetting::first();
         if (! $s) {
-            return ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15, 'loveMax' => 4, 'hariKerja' => ['1', '2', '3', '4', '5'], 'timezone' => 'Asia/Makassar', 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak'];
+            return ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15, 'loveMax' => 4, 'cutiTahunanMax' => AttendanceSetting::CUTI_TAHUNAN_DEFAULT, 'hariKerja' => ['1', '2', '3', '4', '5'], 'timezone' => 'Asia/Makassar', 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak'];
         }
 
         return [
@@ -112,6 +112,7 @@ class AdminPresenter
             'jamPulang' => substr((string) $s->jam_pulang, 0, 5),
             'toleransi' => (int) $s->toleransi_late_menit,
             'loveMax' => (int) $s->love_max,
+            'cutiTahunanMax' => CutiKuota::max($s),
             'hariKerja' => $s->hari_kerja ?? ['1', '2', '3', '4', '5'],
             'timezone' => $s->timezone,
             'absenLiburAktif' => (bool) $s->absen_libur_aktif,

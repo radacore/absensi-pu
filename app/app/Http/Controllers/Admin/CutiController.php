@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Leave;
 use App\Support\AdminPresenter;
 use App\Support\Audit;
+use App\Support\CutiKuota;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -66,6 +68,11 @@ class CutiController extends Controller
             'regions' => AdminPresenter::regionsFor($scope),
             'item' => AdminPresenter::leavesFor(null) ? collect(AdminPresenter::leavesFor(null))->firstWhere('id', $leave->id) : null,
             'list' => AdminPresenter::leavesFor($scope),
+            // Ringkasan kuota tahunan karyawan pada tahun cuti diajukan, agar
+            // approver tahu sisa jatah saat memutuskan.
+            'kuota' => $leave->employee
+                ? CutiKuota::ringkasan((int) $leave->employee_id, (int) Carbon::parse($leave->mulai)->year)
+                : null,
         ]);
     }
 
