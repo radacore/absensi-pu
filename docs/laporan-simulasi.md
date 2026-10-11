@@ -4,7 +4,7 @@
 **Lingkungan:** MariaDB 12.2.2 (`absensi_sim`), PHP 8.4.18, Laravel 13.26.1, object storage Neva Objects (S3-compatible)
 **Pertanyaan yang dijawab:** *"Coba kamu simulasi menggunakan semua fiturnya, apakah sudah aman tidak ada bug?"*
 
-> **Catatan (11 Okt 2026):** laporan ini adalah catatan historis per 20 Sep 2026; angka di dalamnya sengaja tidak diubah. Jumlah terkini: **197 tes (192 lulus, 5 di-skip, 1250 assertions)** di SQLite in-memory, **25 berkas migrasi + 7 seeder**, **20 tabel**. Lihat [`README.md` § Testing](../README.md#testing) untuk angka terbaru.
+> **Catatan (11 Okt 2026):** laporan ini adalah catatan historis per 20 Sep 2026; angka di dalamnya sengaja tidak diubah. Jumlah terkini: **219 tes (214 lulus, 5 di-skip, 1352 assertions)** di SQLite in-memory, **27 berkas migrasi + 7 seeder**, **20 tabel**, dan **68/68** pada simulasi HTTP. Lihat [`README.md` § Testing](../README.md#testing) untuk angka terbaru.
 
 ## Jawaban singkat
 
@@ -408,6 +408,10 @@ bash scripts/simulasi-http.sh                   => SELESAI — 65 lulus, 0 gagal
 - **Cuti 3 level masih bisa di-approve 3× oleh orang yang sama.** Gerbang `ensureApprover()` kini memastikan approver-nya **akun admin** dan menghormati approver yang ditunjuk, tetapi belum memaksa *perbedaan orang antar level* — perilaku lama ini dipertahankan karena tes lama (`Fase3Test`) memang mengandalkan satu admin menyelesaikan tiga level. Bila ingin ditegakkan, tambahkan pemeriksaan `approved_by` level sebelumnya dan perbarui tes tersebut.
 
 > **Diperbarui 11 Okt 2026 — C9 (kuota cuti) sudah ditutup.** Sebelumnya aplikasi tidak punya kuota cuti sama sekali: `kuota`/`loveQuota` di kode hanya merujuk klaim toleransi. Kini ada `attendance_settings.cuti_tahunan_max` (default 12 hari kerja) yang ditegakkan `App\Support\CutiKuota` pada `Karyawan\CutiController::store`, dihitung dalam hari kerja (akhir pekan per `hari_kerja` + `holidays` dikecualikan), dipotong oleh `Menunggu` **dan** `Disetujui`, divalidasi per tahun untuk pengajuan lintas tahun, dan dapat diubah Super Admin dari `/super-admin/settings`. Lihat [README §4](README.md#4-kuota-cuti-tahunan-hari-kerja) dan `tests/Feature/CutiKuotaTest.php` (16 tes).
+
+> **Diperbarui 11 Okt 2026 — buku catatan pekerjaan saat absen pulang.** Kolom baru `attendances.catatan_pulang` (varchar 500, nullable) diisi karyawan **wajib** saat `POST /karyawan/absensi/clock-out` (minimal 1 karakter, maksimal 500; spasi saja ditolak). Nilai hanya ditulis sekali — tidak ada jalur edit untuk karyawan. Tampil di detail absensi admin, kolom terakhir ekspor CSV, dan blok **Absen Pulang** pada rekap cetak perorangan. Karena validasi berjalan sebelum pemeriksaan `work_date`/radius, pemanggil `clock-out` lama kini menerima `422` bila tidak mengirim catatan. Lihat [README §5](README.md#5-buku-catatan-pekerjaan-saat-absen-pulang) dan `tests/Feature/AttendanceCatatanTest.php` (6 tes).
+
+> **Perbaikan portabilitas skrip simulasi (11 Okt 2026).** Pemeriksaan *"GET / mengarah ke /karyawan/login"* memakai `sed 's|^https\?://...|'`; `\?` adalah ekstensi BRE milik GNU sed dan **tidak dikenali sed BSD (macOS)**, sehingga pemeriksaan itu selalu gagal di luar Linux. Kini memakai parameter expansion bash yang portabel. Setelah perbaikan: **68 lulus, 0 gagal**.
 
 ---
 

@@ -4,7 +4,7 @@ Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pus
 
 > **Status dokumen ini:** seluruh versi, jumlah tabel, jumlah route, dan perilaku penyimpanan di bawah **sudah diverifikasi langsung dari kode dan dari basis data yang berjalan**. Angka-angka di bagian [Basis Data](#basis-data-mysql--mariadb) berasal dari verifikasi 20 Sep 2026; jumlah berkas migrasi/seeder/tabel/tes di bawah sudah dihitung ulang pada 11 Okt 2026.
 >
-> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **26 berkas migrasi + 7 seeder**, **20 tabel**, **188 route**, dan **213 tes (208 lulus, 5 di-skip)**. Simulasi HTTP nyata **65/65 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
+> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **27 berkas migrasi + 7 seeder**, **20 tabel**, **188 route**, dan **219 tes (214 lulus, 5 di-skip)**. Simulasi HTTP nyata **68/68 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
 >
 > Laporan simulasi end-to-end lengkap (6 celah keamanan yang ditemukan & diperbaiki, plus 13 temuan tambahan): **[`docs/laporan-simulasi.md`](docs/laporan-simulasi.md)**.
 
@@ -163,6 +163,21 @@ Kolom baru `attendance_settings.cuti_tahunan_max` (default **12**, rentang 1–6
 - `/admin/cuti/{id}` menampilkan ringkasan kuota karyawan pada tahun cuti itu diajukan, agar approver tahu sisa jatah saat memutuskan.
 - Pembatalan pengajuan oleh pemilik otomatis mengembalikan kuota (baris `Menunggu` hilang dari hitungan).
 - Nilai `cuti_tahunan_max` bersifat **opsional** pada payload `PUT /settings`: pemanggil lama yang tidak mengirimkannya tidak menimpa nilai tersimpan.
+
+### 5. Buku catatan pekerjaan saat absen pulang
+
+Kolom baru `attendances.catatan_pulang` (varchar 500, **nullable di level basis data**). Diisi karyawan **hanya saat absen pulang** — absen masuk tidak berubah.
+
+| Aspek | Aturan |
+| :--- | :--- |
+| Wajib? | **Ya**, minimal **1 karakter**. `422` pada field `catatan_pulang` bila kosong. |
+| Spasi saja | Ditolak. Aturan `required` Laravel menganggap string yang hanya berisi spasi sebagai kosong. |
+| Batas panjang | Maksimal **500 karakter** (mengikuti lebar kolom). |
+| Bisa diedit? | **Tidak.** Tidak ada route update untuk karyawan; nilai hanya ditulis sekali saat `POST /karyawan/absensi/clock-out`. |
+| Kolom nullable | Baris absensi lama (dan absen yang tidak lewat jalur baru) tetap valid tanpa catatan. |
+
+- Karena validasi berjalan **sebelum** pemeriksaan `work_date`/radius, pemanggil `clock-out` lama yang tidak mengirim `catatan_pulang` akan menerima `422` — perilaku yang disengaja.
+- Tampil di **detail absensi admin** (`/super-admin/attendances`, `/admin/attendances`), kolom terakhir **ekspor CSV**, dan blok **Absen Pulang** pada **rekap cetak perorangan** (`/admin/employees/{id}/rekap`). Riwayat milik karyawan sendiri tidak menampilkannya.
 
 ---
 
@@ -447,9 +462,9 @@ Aplikasi **sudah berjalan penuh di MySQL/MariaDB**. Ini bukan lagi target — st
 | Info server & basis data | `php artisan db:show` | **MariaDB 12.2.2**, koneksi `mysql`, DB `absensi_pu`, host `127.0.0.1:3306` |
 | Jumlah tabel | `SHOW TABLES` | **20 tabel** (`BASE TABLE`) |
 | Storage engine | `php artisan db:table employees` | **InnoDB**, kolasi `utf8mb4_unicode_ci` |
-| Skema dari nol | `php artisan migrate:fresh --seed` | 26 berkas migrasi + 7 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
+| Skema dari nol | `php artisan migrate:fresh --seed` | 27 berkas migrasi + 7 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
 | Data ikut masuk | query `JOIN` | `employees` × `regions` mengembalikan relasi yang benar |
-| Tes (SQLite in-memory, 11 Okt 2026) | `php artisan test` | **213 tes: 208 lulus, 5 di-skip, 1316 assertions** — jalankan ulang di `absensi_pu_test` untuk angka MySQL |
+| Tes (SQLite in-memory, 11 Okt 2026) | `php artisan test` | **219 tes: 214 lulus, 5 di-skip, 1352 assertions** — jalankan ulang di `absensi_pu_test` untuk angka MySQL |
 | Smoke test HTTP | `php artisan serve` + `curl` | `/`, `/karyawan/login`, `/admin/login`, `/super-admin/login` → **200** |
 
 Konfigurasi `.env` yang aktif:
@@ -559,14 +574,15 @@ php artisan test --filter=KebijakanBaruTest
 Hasil terakhir yang terverifikasi (SQLite in-memory, 11 Okt 2026):
 
 ```
-php artisan test                                    => 208 passed, 5 skipped (1316 assertions)  [SQLite in-memory, ~23 s]
+php artisan test                                    => 214 passed, 5 skipped (1352 assertions)  [SQLite in-memory, ~23 s]
 php artisan test (DB absensi_pu_test)               => jalankan sendiri untuk angka MySQL (lihat catatan)
 php artisan test --filter=KebijakanBaruTest         => 29 passed (132 assertions)
 php artisan test --filter=CutiKuotaTest             => 16 passed (66 assertions)
+php artisan test --filter=AttendanceCatatanTest     => 6 passed (36 assertions)
 php artisan test --filter=ErrorPageTest             => 3 passed (22 assertions)
 php artisan test --filter=AttendanceSelfieTest      => 9 passed (15 assertions)
 S3_INTEGRATION=1 php artisan test --filter=S3...    => 3 passed (17 assertions)   [20 Sep 2026]
-bash scripts/simulasi-http.sh                       => SELESAI — 65 lulus, 0 gagal
+bash scripts/simulasi-http.sh                       => SELESAI — 68 lulus, 0 gagal
 npm run build                                       => sukses (PWA precache 52 entri, halaman ter-split per route)
 ```
 
@@ -588,6 +604,7 @@ Berkas uji yang relevan:
 | `tests/Feature/FullSimulationTest.php` | Seluruh alur + penjaga regresi 6 celah keamanan (`--group=regresi-keamanan`) |
 | `tests/Feature/KebijakanBaruTest.php` | Gerbang absen hari libur, penautan klaim toleransi ke absensi, approver cuti = admin |
 | `tests/Feature/CutiKuotaTest.php` | Kuota cuti tahunan: hitung hari kerja (akhir pekan + libur nasional dikecualikan), batas `Menunggu`/`Disetujui`, lintas tahun, pengaturan Super Admin |
+| `tests/Feature/AttendanceCatatanTest.php` | Buku catatan pekerjaan saat absen pulang: wajib, spasi saja ditolak, batas 500 karakter, tampil di daftar admin & rekap perorangan |
 | `tests/Feature/AttendanceSelfieTest.php` | Swafoto absen disimpan sebagai *path* di disk privat + hanya bisa dibuka lewat route ber-otorisasi |
 | `tests/Feature/ErrorPageTest.php` | 403/404 dirender lewat Inertia (bukan halaman Blade mentah); permintaan JSON tetap menerima JSON |
 
@@ -636,7 +653,7 @@ Berkas uji yang relevan:
 > Reproduksi:
 > ```bash
 > cd app
-> # 1) Simulasi HTTP nyata (65 skenario, termasuk unggah ke S3 sungguhan)
+> # 1) Simulasi HTTP nyata (68 skenario, termasuk unggah ke S3 sungguhan)
 > bash scripts/simulasi-http.sh
 > # 2) Simulasi otomatis (78 tes)
 > php artisan test --filter=FullSimulationTest
@@ -646,7 +663,7 @@ Berkas uji yang relevan:
 > php artisan test --filter=KebijakanBaruTest
 > ```
 >
-> Hasil terakhir (11 Okt 2026, SQLite in-memory): **192 lulus / 0 gagal / 5 di-skip** pada suite lengkap, **76 lulus / 2 di-skip** pada `FullSimulationTest`, dan **65/65** pada simulasi HTTP.
+> Hasil terakhir (11 Okt 2026, SQLite in-memory): **214 lulus / 0 gagal / 5 di-skip** pada suite lengkap, **76 lulus / 2 di-skip** pada `FullSimulationTest`, dan **68/68** pada simulasi HTTP.
 
 Sudah aman dan terverifikasi: nama berkas dibuat server (anti path traversal), tidak ada header yang bisa disuntik (anti CRLF), berkas PHP yang disamarkan `.pdf` ditolak (pemeriksaan isi, bukan ekstensi), objek privat tidak bisa diakses anonim (`403`), dan `X-Content-Type-Options: nosniff`.
 
