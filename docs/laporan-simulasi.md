@@ -407,6 +407,8 @@ bash scripts/simulasi-http.sh                   => SELESAI — 65 lulus, 0 gagal
 - **BUG non-fungsional lain** yang belum diminta: pemindaian antivirus, kuota penyimpanan per akun, 9 variabel `.env` yatim, dan **rotasi kredensial S3** (kredensial pernah tertulis di ruang obrolan).
 - **Cuti 3 level masih bisa di-approve 3× oleh orang yang sama.** Gerbang `ensureApprover()` kini memastikan approver-nya **akun admin** dan menghormati approver yang ditunjuk, tetapi belum memaksa *perbedaan orang antar level* — perilaku lama ini dipertahankan karena tes lama (`Fase3Test`) memang mengandalkan satu admin menyelesaikan tiga level. Bila ingin ditegakkan, tambahkan pemeriksaan `approved_by` level sebelumnya dan perbarui tes tersebut.
 
+> **Diperbarui 11 Okt 2026 — C9 (kuota cuti) sudah ditutup.** Sebelumnya aplikasi tidak punya kuota cuti sama sekali: `kuota`/`loveQuota` di kode hanya merujuk klaim toleransi. Kini ada `attendance_settings.cuti_tahunan_max` (default 12 hari kerja) yang ditegakkan `App\Support\CutiKuota` pada `Karyawan\CutiController::store`, dihitung dalam hari kerja (akhir pekan per `hari_kerja` + `holidays` dikecualikan), dipotong oleh `Menunggu` **dan** `Disetujui`, divalidasi per tahun untuk pengajuan lintas tahun, dan dapat diubah Super Admin dari `/super-admin/settings`. Lihat [README §4](README.md#4-kuota-cuti-tahunan-hari-kerja) dan `tests/Feature/CutiKuotaTest.php` (16 tes).
+
 ---
 
 ## 7. Catatan metodologi

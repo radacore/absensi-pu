@@ -4,7 +4,7 @@ Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pus
 
 > **Status dokumen ini:** seluruh versi, jumlah tabel, jumlah route, dan perilaku penyimpanan di bawah **sudah diverifikasi langsung dari kode dan dari basis data yang berjalan**. Angka-angka di bagian [Basis Data](#basis-data-mysql--mariadb) berasal dari verifikasi 20 Sep 2026; jumlah berkas migrasi/seeder/tabel/tes di bawah sudah dihitung ulang pada 11 Okt 2026.
 >
-> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **25 berkas migrasi + 7 seeder**, **20 tabel**, **188 route**, dan **197 tes (192 lulus, 5 di-skip)**. Simulasi HTTP nyata **65/65 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
+> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **26 berkas migrasi + 7 seeder**, **20 tabel**, **188 route**, dan **213 tes (208 lulus, 5 di-skip)**. Simulasi HTTP nyata **65/65 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
 >
 > Laporan simulasi end-to-end lengkap (6 celah keamanan yang ditemukan & diperbaiki, plus 13 temuan tambahan): **[`docs/laporan-simulasi.md`](docs/laporan-simulasi.md)**.
 
@@ -111,7 +111,7 @@ Ukuran berkas untuk header `Content-Length` diambil dari kolom `dokumen_size` di
 
 ## Kebijakan Absensi & Persetujuan
 
-Tiga aturan yang sebelumnya belum diputuskan kini sudah ditetapkan dan dikerjakan (20 Sep 2026). Detail lengkap + tesnya ada di [`docs/laporan-simulasi.md` §6b](docs/laporan-simulasi.md).
+Empat aturan yang sebelumnya belum diputuskan kini sudah ditetapkan dan dikerjakan (20 Sep 2026, kuota cuti 11 Okt 2026). Detail lengkap + tesnya ada di [`docs/laporan-simulasi.md` §6b](docs/laporan-simulasi.md).
 
 ### 1. Absen di akhir pekan / hari libur — diatur Super Admin
 
@@ -146,6 +146,23 @@ Menyetujui klaim di `/admin/love` (atau `/super-admin/love`) kini benar-benar me
 - `leaves.approved_by` mencatat admin yang menekan approve terakhir, sebagai jejak audit per level.
 
 > **Catatan:** rantai 3 level masih dapat diselesaikan oleh satu admin yang sama (perilaku lama, dipertahankan agar kompatibel). Bila ingin setiap level wajib orang berbeda, tambahkan pemeriksaan `approved_by` level sebelumnya di `ensureApprover()`.
+
+### 4. Kuota cuti tahunan (hari kerja)
+
+Kolom baru `attendance_settings.cuti_tahunan_max` (default **12**, rentang 1–60). Diatur dari **`/super-admin/settings`** (Admin Wilayah hanya baca). Ditegakkan `App\Support\CutiKuota`.
+
+| Aspek | Aturan |
+| :--- | :--- |
+| Jenis yang dibatasi | Hanya **`Tahunan`**. `Sakit`, `Besar`, dan `Melahirkan` tidak dibatasi kuota tahunan. |
+| Satuan | **Hari kerja**, bukan hari kalender. Akhir pekan mengikuti `hari_kerja`; tanggal di tabel `holidays` (termasuk cuti bersama) dikecualikan. |
+| Status yang memotong | `Menunggu` **dan** `Disetujui` — sama seperti kuota toleransi, supaya pengajuan tidak bisa di-spam. `Ditolak` tidak memotong. |
+| Periode | Tahun kalender. Pengajuan lintas tahun (mis. 30 Des → 4 Jan) dipecah per tahun dan divalidasi terhadap kuota tahun masing-masing. |
+| Pelanggaran | `422` pada field `selesai`, mis. *"Sisa kuota cuti tahunan 2026 hanya 2 hari kerja, sedangkan pengajuan ini 3 hari kerja."* |
+
+- Halaman `/karyawan/cuti` menampilkan **sisa kuota** tahun berjalan dan pratinjau "pengajuan ini N hari kerja" (klien menghitung dengan `hari_kerja` + daftar libur yang dikirim server; server tetap penentu akhir).
+- `/admin/cuti/{id}` menampilkan ringkasan kuota karyawan pada tahun cuti itu diajukan, agar approver tahu sisa jatah saat memutuskan.
+- Pembatalan pengajuan oleh pemilik otomatis mengembalikan kuota (baris `Menunggu` hilang dari hitungan).
+- Nilai `cuti_tahunan_max` bersifat **opsional** pada payload `PUT /settings`: pemanggil lama yang tidak mengirimkannya tidak menimpa nilai tersimpan.
 
 ---
 
@@ -430,9 +447,9 @@ Aplikasi **sudah berjalan penuh di MySQL/MariaDB**. Ini bukan lagi target — st
 | Info server & basis data | `php artisan db:show` | **MariaDB 12.2.2**, koneksi `mysql`, DB `absensi_pu`, host `127.0.0.1:3306` |
 | Jumlah tabel | `SHOW TABLES` | **20 tabel** (`BASE TABLE`) |
 | Storage engine | `php artisan db:table employees` | **InnoDB**, kolasi `utf8mb4_unicode_ci` |
-| Skema dari nol | `php artisan migrate:fresh --seed` | 25 berkas migrasi + 7 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
+| Skema dari nol | `php artisan migrate:fresh --seed` | 26 berkas migrasi + 7 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
 | Data ikut masuk | query `JOIN` | `employees` × `regions` mengembalikan relasi yang benar |
-| Tes (SQLite in-memory, 11 Okt 2026) | `php artisan test` | **194 tes: 189 lulus, 5 di-skip, 1228 assertions** — jalankan ulang di `absensi_pu_test` untuk angka MySQL |
+| Tes (SQLite in-memory, 11 Okt 2026) | `php artisan test` | **213 tes: 208 lulus, 5 di-skip, 1316 assertions** — jalankan ulang di `absensi_pu_test` untuk angka MySQL |
 | Smoke test HTTP | `php artisan serve` + `curl` | `/`, `/karyawan/login`, `/admin/login`, `/super-admin/login` → **200** |
 
 Konfigurasi `.env` yang aktif:
@@ -535,16 +552,17 @@ DB_DATABASE=absensi_pu_test DB_USERNAME=absensi_pu DB_PASSWORD=absensi_dev_pass 
 # Uji integrasi S3 sungguhan (menulis & menghapus objek di bucket)
 S3_INTEGRATION=1 php artisan test --filter=S3DinasIntegrationTest
 
-# Hanya tiga kebijakan yang diputuskan 20 Sep 2026
+# Hanya empat kebijakan yang diputuskan 20 Sep 2026 + kuota cuti (11 Okt 2026)
 php artisan test --filter=KebijakanBaruTest
 ```
 
 Hasil terakhir yang terverifikasi (SQLite in-memory, 11 Okt 2026):
 
 ```
-php artisan test                                    => 192 passed, 5 skipped (1250 assertions)  [SQLite in-memory, ~15 s]
+php artisan test                                    => 208 passed, 5 skipped (1316 assertions)  [SQLite in-memory, ~23 s]
 php artisan test (DB absensi_pu_test)               => jalankan sendiri untuk angka MySQL (lihat catatan)
 php artisan test --filter=KebijakanBaruTest         => 29 passed (132 assertions)
+php artisan test --filter=CutiKuotaTest             => 16 passed (66 assertions)
 php artisan test --filter=ErrorPageTest             => 3 passed (22 assertions)
 php artisan test --filter=AttendanceSelfieTest      => 9 passed (15 assertions)
 S3_INTEGRATION=1 php artisan test --filter=S3...    => 3 passed (17 assertions)   [20 Sep 2026]
@@ -569,6 +587,7 @@ Berkas uji yang relevan:
 | `tests/Feature/S3DinasIntegrationTest.php` | Alur sungguhan ke bucket S3 (opt-in) |
 | `tests/Feature/FullSimulationTest.php` | Seluruh alur + penjaga regresi 6 celah keamanan (`--group=regresi-keamanan`) |
 | `tests/Feature/KebijakanBaruTest.php` | Gerbang absen hari libur, penautan klaim toleransi ke absensi, approver cuti = admin |
+| `tests/Feature/CutiKuotaTest.php` | Kuota cuti tahunan: hitung hari kerja (akhir pekan + libur nasional dikecualikan), batas `Menunggu`/`Disetujui`, lintas tahun, pengaturan Super Admin |
 | `tests/Feature/AttendanceSelfieTest.php` | Swafoto absen disimpan sebagai *path* di disk privat + hanya bisa dibuka lewat route ber-otorisasi |
 | `tests/Feature/ErrorPageTest.php` | 403/404 dirender lewat Inertia (bukan halaman Blade mentah); permintaan JSON tetap menerima JSON |
 
