@@ -83,11 +83,11 @@ class AttendanceFase2Test extends TestCase
         $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-in', ['lat'=> $site->lat, 'lng'=> $site->lng, 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200)])->assertSessionHasErrors('work_date');
 
         // clock-out inside radius → success
-        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-out', ['lat'=> $site->lat, 'lng'=> $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200)])->assertSessionHas('success');
+        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-out', ['lat'=> $site->lat, 'lng'=> $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200), 'catatan_pulang' => 'Menyelesaikan pekerjaan lapangan'])->assertSessionHas('success');
         $this->assertNotNull(Attendance::where('employee_id',$emp->id)->whereDate('work_date',$today)->first()->clock_out_at);
 
         // second clock-out → error
-        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-out', ['lat'=> $site->lat, 'lng'=> $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200)])->assertSessionHasErrors('work_date');
+        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-out', ['lat'=> $site->lat, 'lng'=> $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200), 'catatan_pulang' => 'Menyelesaikan pekerjaan lapangan'])->assertSessionHasErrors('work_date');
     }
 
     public function test_karyawan_rekap_and_absensi_index_have_assigned(): void

@@ -319,7 +319,7 @@ class FullSimulationTest extends TestCase
 
         $this->actingAs($me, 'employee')
             ->from('/karyawan/absensi')
-            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200)])
+            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200), 'catatan_pulang' => 'Menyelesaikan pekerjaan lapangan'])
             ->assertRedirect('/karyawan/absensi')
             ->assertSessionHasNoErrors();
 
@@ -377,7 +377,7 @@ class FullSimulationTest extends TestCase
 
         $this->actingAs($me, 'employee')
             ->from('/karyawan/absensi')
-            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200)])
+            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200), 'catatan_pulang' => 'Menyelesaikan pekerjaan lapangan'])
             ->assertSessionHasErrors('work_date');
     }
 
@@ -401,7 +401,7 @@ class FullSimulationTest extends TestCase
 
         $this->actingAs($me, 'employee')
             ->from('/karyawan/absensi')
-            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200)])
+            ->post('/karyawan/absensi/clock-out', ['lat' => $site->lat, 'lng' => $site->lng, 'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200), 'catatan_pulang' => 'Menyelesaikan pekerjaan lapangan'])
             ->assertSessionHasErrors('work_date');
     }
 

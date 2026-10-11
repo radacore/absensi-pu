@@ -171,9 +171,17 @@ check "tidak ada baris ganda" 1 "$rows"
 
 code=$(req POST /karyawan/absensi/clock-out \
   -F "lat=$SITE_LAT" -F "lng=$SITE_LNG" -F "selfie_pulang=@$JPG;type=image/jpeg")
+# Catatan pekerjaan wajib saat pulang → tanpa catatan harus ditolak (422).
+check "POST clock-out tanpa catatan ditolak" 422 "$code"
+
+code=$(req POST /karyawan/absensi/clock-out \
+  -F "lat=$SITE_LAT" -F "lng=$SITE_LNG" -F "selfie_pulang=@$JPG;type=image/jpeg" \
+  -F "catatan_pulang=Menyelesaikan laporan harian dan pengecekan jaringan")
 check "POST clock-out" 302 "$code"
 pulang=$(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = 1 AND work_date = '$HARI_INI' AND clock_out_at IS NOT NULL;")
 check "jam pulang tercatat" 1 "$pulang"
+catatan=$(sql "SELECT COUNT(*) FROM $DB.attendances WHERE employee_id = 1 AND work_date = '$HARI_INI' AND catatan_pulang IS NOT NULL;")
+check "catatan pulang tersimpan" 1 "$catatan"
 
 # ------------------------------------------------------------------
 echo
