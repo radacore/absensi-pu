@@ -4,12 +4,37 @@ import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
+const HARI_KERJA_DEFAULT = ['1', '2', '3', '4', '5'];
+
+/**
+ * Hitung hari kerja pada rentang tanggal — cermin dari App\Support\CutiKuota.
+ * Dipakai hanya untuk pratinjau di klien; server tetap penentu akhir.
+ * `hariKerja` memakai nomor ISO (1 = Senin … 7 = Minggu).
+ */
+function hitungHariKerja(mulai, selesai, hariKerja, libur) {
+    if (!mulai || !selesai || mulai > selesai) return 0;
+    const setHari = new Set((hariKerja?.length ? hariKerja : HARI_KERJA_DEFAULT).map(String));
+    const setLibur = new Set(libur ?? []);
+    let total = 0;
+    const d = new Date(`${mulai}T00:00:00`);
+    const akhir = new Date(`${selesai}T00:00:00`);
+    while (d <= akhir) {
+        const iso = d.getDay() === 0 ? 7 : d.getDay();
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (setHari.has(String(iso)) && !setLibur.has(key)) total += 1;
+        d.setDate(d.getDate() + 1);
+    }
+    return total;
+}
+
 export default function Cuti() {
     const { props } = usePage();
     const me = props.me ?? { nama: '—', region: '' };
     const assigned = props.assigned ?? null;
     const list = props.list ?? [];
     const approvers = props.approvers ?? [];
+    const kuota = props.kuota ?? null;
+    const jenisBerkuota = kuota?.jenisBerkuota ?? ['Tahunan'];
     const confirm = useConfirm();
 
     const [showForm, setShowForm] = useState(false);
@@ -19,10 +44,18 @@ export default function Cuti() {
     const [alasan, setAlasan] = useState('');
     const [approverId, setApproverId] = useState('');
 
+    const dibatasiKuota = jenisBerkuota.includes(jenis);
+    const hariKerjaDiminta = dibatasiKuota ? hitungHariKerja(mulai, selesai, kuota?.hariKerja, kuota?.libur) : 0;
+    const sisaKuota = kuota?.sisa ?? null;
+
     const handleSubmit = () => {
         if (!mulai || !selesai) { toast.error('Tanggal mulai & selesai wajib'); return; }
         if (mulai > selesai) { toast.error('Tanggal mulai tidak boleh setelah selesai'); return; }
         if (!alasan.trim()) { toast.error('Alasan wajib diisi'); return; }
+        if (dibatasiKuota && sisaKuota !== null && hariKerjaDiminta > sisaKuota) {
+            toast.error(`Sisa cuti tahunan ${sisaKuota} hari kerja, pengajuan ini ${hariKerjaDiminta} hari kerja`);
+            return;
+        }
         router.post('/karyawan/cuti', { jenis, mulai, selesai, alasan: alasan.trim(), approver_id: approverId || null }, {
             preserveScroll: true,
             onSuccess: () => { setJenis('Tahunan'); setMulai(''); setSelesai(''); setAlasan(''); setApproverId(''); setShowForm(false); },
@@ -53,6 +86,14 @@ export default function Cuti() {
                     <div>
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Cuti</h2>
                         <p className="text-sm text-[#64748B]">Berjenjang 3 tahap • {assigned.site.nama_lokasi} • {assigned.site.radius}m</p>
+                        {kuota && (
+                            <p className="text-xs text-[#64748B] mt-1">
+                                Sisa cuti tahunan {kuota.tahun}:
+                                <span className={`ml-1 font-semibold ${kuota.sisa > 0 ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{kuota.sisa} hari kerja</span>
+                                <span className="text-[#64748B]"> / {kuota.max}</span>
+                                {kuota.terpakai > 0 && <span> • terpakai {kuota.terpakai} hari kerja (termasuk yang Menunggu)</span>}
+                            </p>
+                        )}
                     </div>
                     <button type="button" onClick={() => setShowForm(!showForm)} className="shrink-0 whitespace-nowrap bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">{showForm ? 'Tutup' : 'Ajukan cuti'}</button>
                 </div>
@@ -73,6 +114,14 @@ export default function Cuti() {
                                 <input id="selesai" type="date" value={selesai} onChange={(e)=>setSelesai(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
                             </div>
                         </div>
+                        {dibatasiKuota && mulai && selesai && mulai <= selesai && (
+                            <p className={`text-xs rounded-xl px-3 py-2 ${sisaKuota !== null && hariKerjaDiminta > sisaKuota ? 'bg-[#FEF2F2] text-[#991B1B]' : 'bg-[#F8FAFC] text-[#475569]'}`}>
+                                Pengajuan ini <span className="font-semibold">{hariKerjaDiminta} hari kerja</span>
+                                {sisaKuota !== null && <> • sisa kuota {sisaKuota} hari kerja</>}
+                                {hariKerjaDiminta === 0 && <> • tidak ada hari kerja pada rentang ini (akhir pekan/libur nasional)</>}
+                                {sisaKuota !== null && hariKerjaDiminta > sisaKuota && <> • melebihi sisa kuota</>}
+                            </p>
+                        )}
                         <div>
                             <label htmlFor="alasan" className="text-xs font-medium text-[#334155]">Alasan</label>
                             <textarea id="alasan" rows={2} value={alasan} onChange={(e)=>setAlasan(e.target.value)} placeholder="Tuliskan alasan cuti" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#64748B] outline-none"></textarea>

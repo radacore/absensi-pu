@@ -56,6 +56,12 @@ export default function CutiDetail(){
                             <p className="text-sm text-[#64748B]">{data.wilayah} • {data.jenis} • {data.tgl}</p>
                             <p className="text-xs text-[#64748B]">{data.email} • titik {data.office_location_id}</p>
                             <span className={`inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${data.status==='Disetujui' ? 'bg-[#ECFDF5] text-[#065F46]' : data.status==='Menunggu' ? 'bg-[#FFF7E6] text-[#92400E]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{data.status} • Level {data.level}/3</span>
+                            {props.kuota && (
+                                <p className="text-xs text-[#64748B] mt-1.5">
+                                    Kuota cuti tahunan {props.kuota.tahun}: terpakai <span className="font-medium text-[#334155]">{props.kuota.terpakai}</span> dari {props.kuota.max} hari kerja •
+                                    <span className={`ml-1 font-semibold ${props.kuota.sisa > 0 ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>sisa {props.kuota.sisa} hari kerja</span>
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div className="mt-6 grid lg:grid-cols-2 gap-6">

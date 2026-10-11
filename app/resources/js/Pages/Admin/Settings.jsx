@@ -11,26 +11,29 @@ export default function Settings() {
     const { url, props } = usePage();
     const base = getBase(url);
     const hariKerjaLabel = (props.settings?.hariKerja ?? ['1', '2', '3', '4', '5']).map((d) => HARI[String(d)] ?? d).join(', ');
-    const init = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, absenLiburAktif: false, absenLiburMode: 'tolak' };
+    const init = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, cutiTahunanMax: 12, absenLiburAktif: false, absenLiburMode: 'tolak' };
     const readOnly = !!props.readOnly;
     const [jamMasuk, setJamMasuk] = useState(init.jamMasuk);
     const [jamPulang, setJamPulang] = useState(init.jamPulang);
     const [toleransi, setToleransi] = useState(init.toleransi);
     const [loveMax, setLoveMax] = useState(init.loveMax);
+    const [cutiTahunanMax, setCutiTahunanMax] = useState(init.cutiTahunanMax ?? 12);
     const [absenLiburAktif, setAbsenLiburAktif] = useState(!!init.absenLiburAktif);
     const [absenLiburMode, setAbsenLiburMode] = useState(init.absenLiburMode ?? 'tolak');
 
     useEffect(() => {
         setJamMasuk(init.jamMasuk); setJamPulang(init.jamPulang); setToleransi(init.toleransi); setLoveMax(init.loveMax);
+        setCutiTahunanMax(init.cutiTahunanMax ?? 12);
         setAbsenLiburAktif(!!init.absenLiburAktif); setAbsenLiburMode(init.absenLiburMode ?? 'tolak');
-    }, [init.jamMasuk, init.jamPulang, init.toleransi, init.loveMax, init.absenLiburAktif, init.absenLiburMode]);
+    }, [init.jamMasuk, init.jamPulang, init.toleransi, init.loveMax, init.cutiTahunanMax, init.absenLiburAktif, init.absenLiburMode]);
 
     const handleSave = () => {
         if (readOnly) return;
         if (jamMasuk >= jamPulang) { toast.error('Jam masuk harus lebih awal dari jam pulang'); return; }
         if (toleransi < 0 || toleransi > 60) { toast.error('Kelonggaran harus antara 0–60 menit'); return; }
         if (loveMax < 1 || loveMax > 10) { toast.error('Kuota toleransi harus antara 1–10 per bulan'); return; }
-        router.put(`${base}/settings`, { jamMasuk, jamPulang, toleransi, loveMax, absenLiburAktif, absenLiburMode }, { preserveScroll: true });
+        if (cutiTahunanMax < 1 || cutiTahunanMax > 60) { toast.error('Kuota cuti tahunan harus antara 1–60 hari kerja'); return; }
+        router.put(`${base}/settings`, { jamMasuk, jamPulang, toleransi, loveMax, cutiTahunanMax, absenLiburAktif, absenLiburMode }, { preserveScroll: true });
     };
 
     return (
@@ -88,6 +91,27 @@ export default function Settings() {
                         </div>
                     </div>
                     <p className="text-xs text-[#64748B]">Berlaku bulan depan • Reset 1st 00:00 WITA • Saat ini {loveMax} Toleransi untuk semua karyawan</p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
+                    <h3 className="font-medium text-sm text-[#0F172A] flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-xl bg-[#ECFDF5] flex items-center justify-center">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#065F46" strokeWidth="1.7"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4" /><path d="M16 3v4" /><path d="M3 10h18" /><path d="M8 14h3" /><path d="M13 14h3" /><path d="M8 17.5h3" /></svg>
+                        </span>
+                        Kuota Cuti Tahunan
+                    </h3>
+                    <div>
+                        <label htmlFor="cuti" className="text-xs font-medium text-[#334155]">Jatah cuti tahunan (1–60 hari kerja) {readOnly && <span className="text-[#64748B]">— read-only</span>}</label>
+                        <div className="mt-1.5 flex items-center gap-3">
+                            <input id="cuti" type="range" min="1" max="60" value={cutiTahunanMax} onChange={(e) => !readOnly && setCutiTahunanMax(Number(e.target.value))} disabled={readOnly} className={`flex-1 accent-[#0D9488] ${readOnly ? 'opacity-40 cursor-not-allowed' : ''}`} />
+                            <span className="w-12 h-10 rounded-xl bg-[#0D9488] text-white flex items-center justify-center font-semibold">{cutiTahunanMax}</span>
+                        </div>
+                    </div>
+                    <p className="text-xs text-[#64748B]">
+                        Dihitung dalam <span className="font-medium text-[#334155]">hari kerja</span> per tahun kalender: akhir pekan ({hariKerjaLabel}) dan hari libur nasional tidak dihitung.
+                        Hanya jenis <span className="font-medium text-[#334155]">Tahunan</span> yang memotong kuota — Sakit, Besar, dan Melahirkan tidak dibatasi.
+                        Pengajuan berstatus <span className="font-medium text-[#334155]">Menunggu</span> sudah memotong kuota; yang Ditolak tidak.
+                    </p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">
