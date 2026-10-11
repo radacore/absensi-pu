@@ -157,6 +157,7 @@ class AdminPresenter
                 'foto' => $emp?->foto_url ?: self::DEFAULT_AVATAR,
                 'selfie' => $a->selfieRouteUrl('masuk') ?: ($emp?->foto_url ?: self::DEFAULT_AVATAR),
                 'selfie_pulang' => $a->selfieRouteUrl('pulang'),
+                'catatan_pulang' => $a->catatan_pulang ?? '',
             ];
         })->values()->all();
     }

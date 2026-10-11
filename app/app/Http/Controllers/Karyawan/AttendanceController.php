@@ -184,6 +184,9 @@ class AttendanceController extends Controller
             'lng' => ['required', 'numeric', 'between:-180,180'],
             // Kebijakan: swafoto live dari kamera wajib juga saat pulang.
             'selfie_pulang' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+            // Buku catatan pekerjaan: wajib, minimal 1 karakter (spasi saja
+            // sudah dinormalkan jadi string kosong oleh middleware TrimStrings).
+            'catatan_pulang' => ['required', 'string', 'min:1', 'max:500'],
         ]);
 
         $today = now('Asia/Makassar')->toDateString();
@@ -208,6 +211,7 @@ class AttendanceController extends Controller
             'lat_out' => $data['lat'],
             'lng_out' => $data['lng'],
             'selfie_pulang_url' => $pulangPath,
+            'catatan_pulang' => $data['catatan_pulang'],
         ]);
 
         return back()->with('success', 'Absen pulang tercatat');

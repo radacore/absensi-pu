@@ -370,6 +370,7 @@ class RekapPresenter
                 'nama_lokasi_aktif' => $siteName,
                 'koordinat_lokasi_aktif' => sprintf('%.6f, %.6f', $siteLat, $siteLng),
                 'unit_kerja' => $unitKerja,
+                'catatan' => $att->catatan_pulang,
             ];
         }
 

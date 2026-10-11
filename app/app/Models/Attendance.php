@@ -26,6 +26,8 @@ class Attendance extends Model
         // (bukan URL publik). URL-nya dibentuk lewat selfieRouteUrl().
         'selfie_url',
         'selfie_pulang_url',
+        // Buku catatan pekerjaan yang diisi karyawan saat absen pulang.
+        'catatan_pulang',
         'site_id',
         'region_id',
         'tolerance_claim_id',
