@@ -114,7 +114,9 @@ echo "[1] Halaman publik & login"
 code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -c "$JAR" "$BASE/")
 check "GET / dialihkan ke login karyawan" 302 "$code"
 redir=$(curl -s -o /dev/null -w '%{redirect_url}' --noproxy '*' "$BASE/")
-redir_path=$(printf '%s' "$redir" | sed 's|^https\?://[^/]*||')
+# Pemotongan skema+host pakai parameter expansion, bukan `sed 's|^https\?://...|'`:
+# `\?` tidak dikenali sed BSD (macOS) sehingga pemeriksaan ini selalu gagal di sana.
+redir_path="${redir#*://}"; redir_path="/${redir_path#*/}"
 check "GET / mengarah ke /karyawan/login" "/karyawan/login" "$redir_path"
 code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -b "$JAR" -c "$JAR" "$BASE/karyawan/login")
 check "GET /karyawan/login" 200 "$code"
