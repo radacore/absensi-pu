@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Lembar Konfirmasi Kebutuhan — Shift, Libur Bergeser, WFA/WFO, Catatan Absen Pulang, Pindah Lokasi</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 14mm 15mm; }
+
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  html { font-size: 10.5pt; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+    color: #1E293B;
+    line-height: 1.55;
+    font-size: 10.5pt;
+  }
+
+  /* ── Kop / Judul ───────────────────────────────────────── */
+  .kop {
+    border-top: 4px solid #0F172A;
+    padding-top: 14px;
+    margin-bottom: 18px;
+  }
+  .kop .eyebrow {
+    font-size: 8pt;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #64748B;
+    font-weight: 700;
+  }
+  .kop h1 {
+    font-size: 19pt;
+    line-height: 1.2;
+    margin: 6px 0 4px;
+    letter-spacing: -0.015em;
+    color: #0F172A;
+  }
+  .kop .sub {
+    font-size: 11pt;
+    color: #475569;
+    margin: 0;
+  }
+
+  /* ── Tabel meta ────────────────────────────────────────── */
+  table.meta {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 22px;
+    font-size: 9.5pt;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+  }
+  table.meta td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #E2E8F0;
+    vertical-align: top;
+  }
+  table.meta tr:last-child td { border-bottom: 0; }
+  table.meta td.k {
+    width: 132px;
+    color: #64748B;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ── Blok peringatan / sorotan ─────────────────────────── */
+  .sorot {
+    border: 1px solid #CBD5E1;
+    border-left: 4px solid #0D9488;
+    background: #F0FDFA;
+    padding: 12px 16px;
+    margin: 0 0 24px;
+  }
+  .sorot .judul {
+    font-weight: 700;
+    font-size: 9.5pt;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #0F766E;
+    margin-bottom: 6px;
+  }
+  .sorot ol { margin: 0; padding-left: 20px; }
+  .sorot li { margin-bottom: 3px; }
+
+  /* ── Bagian ────────────────────────────────────────────── */
+  h2.bagian {
+    font-size: 12.5pt;
+    color: #0F172A;
+    margin: 26px 0 4px;
+    padding-left: 11px;
+    border-left: 4px solid #0F172A;
+    line-height: 1.3;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  h2.bagian .no {
+    color: #64748B;
+    font-weight: 700;
+    margin-right: 4px;
+  }
+  p.pengantar-bagian {
+    margin: 0 0 12px;
+    padding-left: 15px;
+    color: #475569;
+    font-size: 9.8pt;
+    font-style: italic;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* ── Butir pertanyaan ──────────────────────────────────── */
+  .butir {
+    margin: 0 0 13px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .butir .tanya {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .butir .kode {
+    flex: 0 0 auto;
+    font-weight: 700;
+    color: #0F172A;
+    font-variant-numeric: tabular-nums;
+    min-width: 22px;
+  }
+  .butir .teks { flex: 1 1 auto; }
+  .butir .opsi {
+    margin: 3px 0 0 30px;
+    color: #475569;
+    font-size: 9.5pt;
+  }
+  .butir .kenapa {
+    margin: 3px 0 0 30px;
+    color: #64748B;
+    font-size: 9pt;
+  }
+  .butir .kenapa::before { content: "Konteks: "; font-weight: 600; color: #94A3B8; }
+
+  .jawab {
+    margin: 6px 0 0 30px;
+    border-bottom: 1px dotted #94A3B8;
+    height: 15px;
+  }
+  .jawab.dua { height: 30px; border-bottom: 0; background: repeating-linear-gradient(to bottom, transparent 0 14px, #CBD5E1 14px 15px); }
+
+  /* ── Tabel kondisi saat ini ───────────────────────────── */
+  table.kondisi {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    margin: 8px 0 6px;
+  }
+  table.kondisi th {
+    text-align: left;
+    background: #0F172A;
+    color: #fff;
+    padding: 6px 10px;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+  }
+  table.kondisi td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #E2E8F0;
+    vertical-align: top;
+  }
+  table.kondisi tr:nth-child(even) td { background: #F8FAFC; }
+  table.kondisi td.hal { font-weight: 600; color: #0F172A; white-space: nowrap; }
+
+  /* ── Penutup ───────────────────────────────────────────── */
+  .penutup {
+    margin-top: 26px;
+    border-top: 1px solid #E2E8F0;
+    padding-top: 14px;
+    font-size: 9.8pt;
+    color: #334155;
+  }
+  .ttd { margin-top: 26px; font-size: 9.5pt; }
+  .ttd .kolom { display: inline-block; width: 46%; vertical-align: top; }
+  .ttd .garis { margin-top: 52px; border-top: 1px solid #94A3B8; padding-top: 4px; color: #475569; }
+
+  .catatan-kaki {
+    margin-top: 22px;
+    padding-top: 10px;
+    border-top: 1px dashed #CBD5E1;
+    font-size: 8.5pt;
+    color: #94A3B8;
+  }
+  .pindah-halaman { break-before: page; page-break-before: always; }
+</style>
+</head>
+<body>
+
+<div class="kop">
+  <div class="eyebrow">Lembar Konfirmasi Kebutuhan Sistem</div>
+  <h1>Penyesuaian Absensi: Karyawan Shift, Hari Libur Bergeser, WFA/WFO, Catatan Absen Pulang, dan Pindah Lokasi</h1>
+  <p class="sub">Mohon penjelasan Bapak/Ibu atas beberapa hal berikut sebelum kami mulai merancang. Satu di antaranya — catatan pekerjaan saat absen pulang — sudah kami kerjakan dan hanya perlu dikoreksi bila belum sesuai.</p>
+</div>
+
+<table class="meta">
+  <tr><td class="k">Kepada</td><td>Penanggung Jawab / Pengguna Sistem Absensi<br><span style="color:#94A3B8">(nama: ……………………………………………………)</span></td></tr>
+  <tr><td class="k">Dari</td><td>Rahmat Dani S<br><span style="color:#94A3B8">Tim Pengembang Aplikasi Absensi</span></td></tr>
+  <tr><td class="k">Perihal</td><td>Permintaan penjelasan atas masukan — penanganan karyawan shift, pengaturan hari libur yang dapat digeser, pilihan WFA/WFO, karyawan yang berpindah lokasi kerja, serta masukan untuk penyempurnaan catatan pekerjaan saat absen pulang</td></tr>
+  <tr><td class="k">Tanggal</td><td>……………… ……………………… 2026</td></tr>
+</table>
+
+<div class="sorot">
+  <div class="judul">Hal-hal yang paling menentukan</div>
+  <p style="margin:0 0 6px">Dari seluruh pertanyaan di bawah, ada empat yang paling menentukan bentuk akhir sistem. Jika waktunya terbatas, mohon utamakan keempatnya lebih dahulu:</p>
+  <ol>
+    <li><strong>Shift berlaku untuk siapa</strong> — per orang, per regu, atau per unit kerja (pertanyaan A2).</li>
+    <li><strong>Shift malam yang melewati tengah malam</strong> dihitung satu hari atau dua hari (pertanyaan A3).</li>
+    <li><strong>WFA itu bebas dari mana saja, atau masih wajib di wilayah tertentu</strong> — dan siapa yang memilih (pertanyaan C1 dan C2).</li>
+    <li><strong>Lokasi kerja yang boleh dipakai seorang karyawan apakah harus dalam satu wilayah</strong> yang sama, atau boleh lintas wilayah (pertanyaan E3).</li>
+  </ol>
+  <p style="margin:6px 0 0">Untuk <strong>catatan pekerjaan absen pulang</strong>, fiturnya sudah berjalan — kami cukup menunggu koreksi bila arahnya belum sesuai (Bagian D).</p>
+</div>
+
+<h2 class="bagian">1. Sedikit Konteks</h2>
+
+<p>Terima kasih atas masukan yang sudah Bapak/Ibu sampaikan. Empat hal tersebut — <strong>karyawan shift</strong>, <strong>hari libur yang bisa jatuh di hari lain</strong>, <strong>pilihan WFA atau WFO</strong>, dan <strong>karyawan yang berpindah lokasi kerja</strong> — sudah kami pelajari dan memang perlu ditindaklanjuti. Kami juga menyertakan satu hal yang <strong>sudah kami kerjakan</strong>, yaitu catatan pekerjaan saat absen pulang, untuk memastikan arahnya sudah sesuai.</p>
+
+<p>Yang perlu kami sampaikan lebih dahulu: saat ini sistem bekerja dengan <strong>satu aturan yang berlaku sama untuk semua orang</strong>. Jam masuk dan jam pulang seragam, hari kerja seragam (Senin–Jumat), dan absen hanya bisa dilakukan di dalam radius lokasi kantor yang sudah ditentukan. Masukan-masukan Bapak/Ibu menuntut aturan yang <strong>bisa berbeda antar orang atau antar regu</strong>. Hal itu bisa kami kerjakan, hanya saja bentuknya perlu kami pastikan dulu agar tidak salah arah.</p>
+
+<p>Karena itu kami mohon bantuan Bapak/Ibu untuk menjawab pertanyaan di bawah. <strong>Tidak perlu jawaban teknis</strong> — cukup gambaran kebiasaan dan kebijakan yang berlaku di lapangan. Bila ada yang belum pasti, silakan tulis “belum diputuskan” atau usulan Bapak/Ibu. Jika ada pertanyaan yang menurut Bapak/Ibu belum perlu dijawab sekarang, boleh dikosongkan.</p>
+
+<p style="margin-bottom:6px"><strong>Sebagai gambaran, kondisi sistem saat ini adalah sebagai berikut:</strong></p>
+
+<table class="kondisi">
+  <thead>
+    <tr><th style="width:150px">Hal</th><th>Kondisi saat ini</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="hal">Jam kerja</td><td>Satu jam masuk dan jam pulang untuk semua orang (contoh: 07.30–16.00). Belum ada pembagian shift.</td></tr>
+    <tr><td class="hal">Hari kerja</td><td>Senin–Jumat untuk semua orang, seragam. Belum bisa dibedakan per orang atau per regu.</td></tr>
+    <tr><td class="hal">Hari libur</td><td>Baru berupa daftar libur nasional. Belum ada pengaturan libur mingguan yang bisa digeser ke hari lain.</td></tr>
+    <tr><td class="hal">Lokasi kerja</td><td>Satu karyawan hanya bisa ditetapkan pada <strong>satu</strong> titik lokasi kerja. Belum bisa beberapa lokasi sekaligus.</td></tr>
+    <tr><td class="hal">Cara absen</td><td>Wajib berada di dalam radius lokasi yang ditentukan, ditambah swafoto dari kamera.</td></tr>
+    <tr><td class="hal">Absen pulang</td><td>Sudah wajib mengisi catatan pekerjaan hari itu (baru saja kami tambahkan).</td></tr>
+    <tr><td class="hal">Karyawan shift</td><td>Belum tertangani sama sekali.</td></tr>
+    <tr><td class="hal">WFA / WFO</td><td>Belum ada. Saat ini absen wajib di kantor, tidak ada pilihan bekerja dari luar.</td></tr>
+    <tr><td class="hal">Perjalanan dinas</td><td>Sudah ada, tetapi merupakan pengajuan tersendiri dengan unggah dokumen dan persetujuan — bukan pilihan cara absen. Jadi WFA dan dinas adalah dua hal berbeda.</td></tr>
+    <tr><td class="hal">Aturan absensi per wilayah</td><td>Jam masuk, jam pulang, kelonggaran, dan hari kerja hanya ada <strong>satu</strong> untuk seluruh aplikasi, dan hanya Super Admin yang bisa mengubahnya — belum bisa diatur berbeda untuk masing-masing wilayah. <em>Wilayah sendiri sudah ada</em>, lengkap dengan admin dan daftar lokasi kerjanya.</td></tr>
+  </tbody>
+</table>
+
+<p style="font-size:9.5pt;color:#475569;margin-top:8px">Perlu kami tambahkan bahwa “hari kerja” yang berlaku saat ini juga dipakai untuk menghitung jatah cuti tahunan dan menyusun laporan bulanan. Artinya, begitu hari kerja dibuat berbeda per orang, kedua hal itu otomatis ikut menyesuaikan. Karena itulah kami perlu tahu sedetail mungkin kebijakannya.</p>
+
+<h2 class="bagian"><span class="no">2.</span> Bagian A — Karyawan Shift</h2>
+<p class="pengantar-bagian">Inti dari bagian ini: kami perlu tahu shift dibagi seperti apa, berlaku untuk siapa, dan bagaimana shift malam yang melewati tengah malam diperlakukan.</p>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">A1</span><span class="teks">Bagaimana pola shift yang berlaku di lapangan?</span></div>
+  <div class="opsi">Pilihan: 2 shift (pagi &amp; malam) · 3 shift (pagi, siang, malam) · jam kerja bebas per orang · lainnya. Mohon sebutkan contoh jamnya, misalnya “pagi 07.00–15.00, malam 22.00–07.00”.</div>
+  <div class="kenapa">menentukan berapa banyak jenis shift yang perlu disiapkan di sistem.</div>
+  <div class="jawab"></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">A2</span><span class="teks">Shift ditetapkan untuk siapa?</span></div>
+  <div class="opsi">Per orang · per regu/kelompok · per unit kerja (misalnya Bidang Jalan) · per lokasi kerja · lainnya.</div>
+  <div class="kenapa">ini menentukan apakah jadwal shift disusun satu per satu untuk setiap karyawan, atau cukup ditetapkan sekali untuk satu regu.</div>
+  <div class="jawab"></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">A3</span><span class="teks">Shift malam yang melewati tengah malam dihitung sebagai berapa hari?</span></div>
+  <div class="opsi">Contoh: masuk pukul 22.00 dan pulang pukul 07.00 keesokan harinya. Apakah tetap dihitung <strong>satu hari kerja</strong> (mengikuti tanggal saat masuk), atau dipecah menjadi <strong>dua tanggal</strong>? Mohon dipilih salah satu.</div>
+  <div class="kenapa">sistem menyimpan satu catatan absensi per orang per hari. Bila shift lintas malam harus dipecah, cara penyimpanannya berbeda.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">A4</span><span class="teks">Batas kelonggaran keterlambatan apakah berbeda untuk setiap shift?</span></div>
+  <div class="opsi">Satu angka untuk semua (seperti sekarang) · berbeda per shift · tidak ada kelonggaran.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">A5</span><span class="teks">Jam pulang shift dipakai untuk menandai “pulang lebih cepat”?</span></div>
+  <div class="opsi">Bila ya, apakah karyawan <strong>dilarang</strong> absen pulang sebelum waktunya, atau <strong>tetap boleh</strong> dan hanya dicatat sebagai keterangan di laporan?</div>
+  <div class="kenapa">saat ini sistem tidak melarang pulang cepat, hanya melaporkannya.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">A6</span><span class="teks">Siapa yang menyusun jadwal shift, dan seberapa jauh jadwal itu disiapkan ke depan?</span></div>
+  <div class="opsi">Super Admin · Admin Wilayah · atasan langsung. Jangka waktu: harian · mingguan · bulanan.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">A7</span><span class="teks">Apakah karyawan perlu bisa melihat jadwal shift-nya sendiri di aplikasi?</span></div>
+  <div class="opsi">Ya, supaya tahu shift hari ini · Tidak perlu.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">A8</span><span class="teks">Apakah ada lembur yang perlu dicatat atau dihitung tersendiri?</span></div>
+  <div class="jawab"></div>
+</div>
+
+<h2 class="bagian"><span class="no">3.</span> Bagian B — Hari Libur yang Bisa Jatuh di Hari Lain</h2>
+<p class="pengantar-bagian">Inti dari bagian ini: kami perlu tahu hari libur mingguan siapa yang bergeser, dan apakah pergeseran itu berpengaruh pada perhitungan cuti.</p>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">B1</span><span class="teks">Libur mingguan yang bergeser itu ditetapkan untuk siapa?</span></div>
+  <div class="opsi">Per orang · per regu/shift · per unit kerja · lainnya.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">B2</span><span class="teks">Mohon diberikan contoh nyatanya.</span></div>
+  <div class="opsi">Misalnya: “regu shift malam libur hari Selasa dan Rabu, sementara kantor tetap libur Sabtu–Minggu”. Apakah kondisinya memang seperti ini? Bila berbeda, mohon dituliskan contohnya.</div>
+  <div class="jawab"></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">B3</span><span class="teks">Apakah Senin–Jumat tetap menjadi aturan umum, dengan pengecualian untuk orang atau regu tertentu?</span></div>
+  <div class="opsi">Ya, tetap ada aturan umum lalu ada pengecualian · Tidak, sepenuhnya diatur per orang.</div>
+  <div class="kenapa">pilihan ini menentukan seberapa sederhana halaman pengaturannya.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">B4</span><span class="teks">Bagaimana perlakuan terhadap libur nasional bagi karyawan shift?</span></div>
+  <div class="opsi">Tetap libur untuk semua · regu shift tetap masuk seperti biasa · tergantung kesepakatan.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">B5</span><span class="teks">Mohon konfirmasi: pada hari libur mingguan karyawan tersebut, absen tidak diwajibkan dan tidak dihitung sebagai alpa, bukan?</span></div>
+  <div class="opsi">Ya, tidak diwajibkan dan tidak dihitung alpa · Tidak, tetap wajib absen.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">B6</span><span class="teks">Apakah hari libur yang bergeser itu tetap dihitung sebagai hari kerja untuk keperluan jatah cuti tahunan?</span></div>
+  <div class="opsi">Tidak dihitung (hanya hari kerja efektif yang dihitung) · tetap dihitung · lain lagi, mohon dijelaskan.</div>
+  <div class="kenapa">jatah cuti tahunan dihitung berdasarkan jumlah hari kerja dalam satu tahun, sehingga jawaban ini langsung memengaruhi angka jatah cuti.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">B7</span><span class="teks">Apakah daftar hari kerja juga perlu bisa diubah sendiri oleh Super Admin lewat aplikasi?</span></div>
+  <div class="opsi">Perlu · tidak perlu, biarkan seperti sekarang.</div>
+  <div class="kenapa">saat ini daftar hari kerja hanya bisa diubah lewat database, belum tersedia di halaman pengaturan.</div>
+  <div class="jawab"></div>
+</div>
+
+<h2 class="bagian pindah-halaman"><span class="no">4.</span> Bagian C — Pilihan WFA / WFO</h2>
+<p class="pengantar-bagian">Inti dari bagian ini: kami perlu tahu arti WFA bagi instansi, dan apakah radius lokasi masih berlaku saat karyawan bekerja dari luar kantor.</p>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">C1</span><span class="teks">Apa arti WFA di sini: benar-benar bebas dari mana saja, atau masih wajib berada di wilayah tertentu?</span></div>
+  <div class="opsi">Bebas dari mana saja · tetap wajib di wilayah tertentu (misalnya masih di dalam kota atau provinsi) · lainnya.</div>
+  <div class="kenapa">saat ini sistem menolak absen bila karyawan berada di luar radius lokasi kantor. Bila WFA berarti bebas, aturan itu harus dikecualikan.</div>
+  <div class="jawab"></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">C2</span><span class="teks">WFA dipilih oleh karyawan setiap hari, atau ditetapkan oleh admin?</span></div>
+  <div class="opsi">Dipilih karyawan saat akan absen · ditetapkan admin melalui jadwal atau penugasan · keduanya bisa.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">C3</span><span class="teks">Saat WFA, apakah lokasi dan swafoto tetap diwajibkan?</span></div>
+  <div class="opsi">Lokasi tetap direkam · lokasi tidak perlu · swafoto tetap wajib · swafoto tidak perlu.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">C4</span><span class="teks">Apakah WFA memerlukan persetujuan atasan, atau boleh langsung tanpa persetujuan?</span></div>
+  <div class="opsi">Perlu persetujuan · tanpa persetujuan, cukup dicatat · perlu persetujuan hanya untuk hari tertentu.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">C5</span><span class="teks">Apakah ada batas jumlah hari WFA, misalnya maksimal sekian hari per bulan?</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">C6</span><span class="teks">Mohon konfirmasi: WFO tetap berarti absen wajib di dalam radius lokasi kantor seperti sekarang, bukan?</span></div>
+  <div class="opsi">Ya, seperti sekarang · tidak, ada perubahan.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">C7</span><span class="teks">Apakah status WFA/WFO perlu muncul di laporan bulanan dan berkas ekspor (Excel/CSV)?</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">C8</span><span class="teks">Bagaimana WFA digabungkan dengan shift?</span></div>
+  <div class="opsi">Misalnya: apakah karyawan shift malam boleh WFA? Bila boleh, apakah tetap mengikuti jam shift-nya?</div>
+  <div class="jawab"></div>
+</div>
+
+<h2 class="bagian"><span class="no">5.</span> Bagian D — Catatan Pekerjaan saat Absen Pulang</h2>
+<p class="pengantar-bagian">Fitur ini <strong>sudah kami tambahkan dan sudah berjalan</strong>. Bagian ini bukan permintaan baru, melainkan mohon koreksi bila arahnya belum sesuai dengan yang diinginkan.</p>
+
+<p style="margin:0 0 12px;padding-left:15px;font-size:9.8pt;color:#475569">Saat ini, setiap karyawan <strong>wajib mengisi catatan pekerjaan</strong> ketika absen pulang. Catatan bersifat bebas (bukan pilihan menu), minimal 1 karakter dan maksimal 500 karakter, serta <strong>tidak dapat diubah lagi</strong> setelah absen pulang tersimpan. Catatan itu sudah tampil di detail absensi admin, berkas ekspor, dan rekap perorangan.</p>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D1</span><span class="teks">Apakah catatan pekerjaan saat absen pulang sudah sesuai dengan yang Bapak/Ibu inginkan?</span></div>
+  <div class="opsi">Sudah sesuai · perlu disesuaikan (mohon dijelaskan pada butir berikutnya).</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D2</span><span class="teks">Apakah cukup satu kolom catatan bebas, atau perlu dipisah menjadi beberapa bagian?</span></div>
+  <div class="opsi">Satu kolom bebas (seperti sekarang) · dipisah per kegiatan/pekerjaan · lainnya.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D3</span><span class="teks">Apakah jenis pekerjaan perlu dipilih dari daftar menu, bukan diketik bebas?</span></div>
+  <div class="opsi">Diketik bebas (seperti sekarang) · dipilih dari daftar yang kami siapkan · gabungan keduanya.</div>
+  <div class="kenapa">bila dipilih dari daftar, catatan pekerjaan bisa direkap otomatis per jenis pekerjaan.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D4</span><span class="teks">Apakah perlu lampiran pendukung, misalnya foto atau dokumen hasil pekerjaan?</span></div>
+  <div class="opsi">Tidak perlu · perlu foto · perlu dokumen · keduanya.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D5</span><span class="teks">Apakah catatan perlu bisa diperbaiki setelah absen pulang tersimpan?</span></div>
+  <div class="opsi">Tidak boleh diubah (seperti sekarang) · boleh diubah karyawan dalam batas waktu tertentu · hanya admin yang boleh mengoreksi.</div>
+  <div class="kenapa">saat ini catatan yang sudah tersimpan tidak dapat diubah, supaya isinya tetap dapat dipercaya sebagai catatan asli.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D6</span><span class="teks">Apakah panjang catatan 500 karakter sudah cukup, atau perlu lebih banyak?</span></div>
+  <div class="opsi">Cukup · perlu lebih panjang (mohon sebutkan perkiraannya) · lebih pendek.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D7</span><span class="teks">Apakah atasan perlu bisa memberi komentar atau tindak lanjut atas catatan tersebut?</span></div>
+  <div class="opsi">Tidak perlu · perlu komentar · perlu penilaian/tanda persetujuan.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D8</span><span class="teks">Apakah catatan pekerjaan perlu tampil di laporan bulanan juga, bukan hanya di detail absensi dan rekap perorangan?</span></div>
+  <div class="jawab"></div>
+</div>
+
+<h2 class="bagian"><span class="no">6.</span> Bagian E — Karyawan Berpindah Lokasi Kerja</h2>
+<p class="pengantar-bagian">Inti dari bagian ini: seorang karyawan perlu bisa ditetapkan pada <strong>beberapa lokasi sekaligus</strong>, lalu absen datang di satu lokasi dan absen pulang di lokasi lain — namun tetap hanya di lokasi yang sudah ditetapkan untuknya.</p>
+
+<p style="margin:0 0 12px;padding-left:15px;font-size:9.8pt;color:#475569">Saat ini sistem hanya mengenal <strong>satu lokasi kerja untuk satu karyawan</strong>. Lokasi itu pula yang dipakai untuk menilai apakah karyawan berada dalam radius yang benar saat absen datang maupun absen pulang. Bila karyawan berpindah-pindah lokasi, aturan ini perlu diubah menjadi “beberapa lokasi yang diperbolehkan”.</p>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">E1</span><span class="teks">Berapa banyak lokasi kerja yang perlu bisa ditetapkan untuk satu karyawan?</span></div>
+  <div class="opsi">5 lokasi · lebih dari 5 (mohon sebutkan jumlahnya) · tidak dibatasi.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">E2</span><span class="teks">Bagaimana karyawan berpindah antar lokasi: bebas setiap hari, atau mengikuti jadwal/penugasan?</span></div>
+  <div class="opsi">Bebas, terserah karyawan · mengikuti jadwal yang ditetapkan admin · keduanya bisa.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">E3</span><span class="teks">Apakah beberapa lokasi itu harus berada dalam satu wilayah yang sama, atau boleh berbeda wilayah?</span></div>
+  <div class="opsi">Harus satu wilayah · boleh lintas wilayah.</div>
+  <div class="kenapa">data absensi dan hak akses Admin Wilayah dipisah per wilayah. Bila satu karyawan berpindah lintas wilayah, perlu aturan tambahan mengenai siapa yang berwenang melihat dan menyetujui.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">E4</span><span class="teks">Bila karyawan absen datang di lokasi A dan absen pulang di lokasi B, bagaimana catatan absensinya?</span></div>
+  <div class="opsi">Tetap dihitung satu kehadiran penuh pada hari itu · ditandai bahwa ia berpindah lokasi · mohon dijelaskan bila ada aturan lain.</div>
+  <div class="kenapa">sistem menyimpan satu catatan absensi per karyawan per hari, jadi perpindahan lokasi tidak menambah baris — hanya perlu dicatat lokasinya.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">E5</span><span class="teks">Apakah lokasi tempat absen perlu tercatat dan tampil di laporan — absen datang di mana, absen pulang di mana?</span></div>
+  <div class="opsi">Perlu, tampilkan keduanya · cukup lokasi saat datang saja · tidak perlu ditampilkan.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">E6</span><span class="teks">Bila karyawan absen di lokasi yang <em>tidak</em> termasuk dalam daftar lokasinya, apa yang harus terjadi?</span></div>
+  <div class="opsi">Ditolak, tidak boleh absen · tetap dicatat tetapi diberi keterangan · lainnya.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">E7</span><span class="teks">Apakah pemberian beberapa lokasi berlaku untuk semua karyawan, atau hanya petugas lapangan tertentu?</span></div>
+  <div class="opsi">Semua karyawan · hanya petugas lapangan/tertentu · ditentukan per karyawan oleh admin.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">E8</span><span class="teks">Apakah setiap lokasi tetap punya radius sendiri yang berbeda-beda?</span></div>
+  <div class="opsi">Ya, mengikuti radius masing-masing lokasi (seperti sekarang) · satu radius seragam untuk semua lokasi.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">E9</span><span class="teks">Siapa yang boleh mengatur daftar lokasi setiap karyawan?</span></div>
+  <div class="opsi">Super Admin · Admin Wilayah · keduanya.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">E10</span><span class="teks">Apakah perpindahan lokasi berpengaruh pada atasan yang menyetujui cuti atau izin karyawan tersebut?</span></div>
+  <div class="opsi">Tidak berpengaruh · berpengaruh, mohon dijelaskan.</div>
+  <div class="kenapa">saat ini atasan penyetuju ditentukan dari wilayah dan lokasi kerja karyawan. Bila lokasinya berpindah-pindah, perlu dipastikan siapa yang berwenang menyetujui.</div>
+  <div class="jawab"></div>
+</div>
+
+<h2 class="bagian"><span class="no">7.</span> Bagian F — Konfirmasi Umum</h2>
+<p class="pengantar-bagian">Bagian ini memastikan cakupan pengerjaan dan perkiraan jumlah pengguna.</p>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">F1</span><span class="teks">Pengaturan absensi — jam masuk, jam pulang, hari kerja, toleransi keterlambatan, daftar shift, dan aturan WFA — apakah berlaku sama untuk seluruh wilayah, atau boleh berbeda antar wilayah?</span></div>
+  <div class="opsi">Sama untuk semua wilayah (seperti sekarang) · boleh berbeda per wilayah · belum diputuskan.</div>
+  <div class="kenapa">saat ini pengaturan absensi hanya ada <strong>satu</strong> dan berlaku untuk semua wilayah, padahal setiap wilayah sudah punya admin dan daftar lokasi kerjanya sendiri. Bila nanti ada shift atau WFA, kami perlu tahu apakah aturannya cukup satu untuk semua, atau harus bisa diatur terpisah untuk masing-masing wilayah.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">F2</span><span class="teks">Laporan atau berkas mana yang wajib menampilkan informasi shift dan status WFA/WFO?</span></div>
+  <div class="opsi">Laporan absensi bulanan · berkas ekspor Excel/CSV · rekap cetak per orang · lainnya.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">F3</span><span class="teks">Apakah perhitungan kedisiplinan (terlambat, pulang lebih cepat, alpa) perlu menyesuaikan rumusnya?</span></div>
+  <div class="opsi">Misalnya: apakah “terlambat” dihitung dari jam shift yang berlaku hari itu, bukan dari jam kantor?</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">F4</span><span class="teks">Perkiraan jumlah karyawan dan regu yang memakai shift?</span></div>
+  <div class="opsi">Misalnya: 3 regu, masing-masing 8 orang. Angka ini kami pakai untuk menentukan bentuk halaman penjadwalan.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="penutup">
+  <p style="margin-top:0"><strong>Cara mengisi.</strong> Bapak/Ibu dapat mengisi langsung pada berkas ini, menuliskan jawaban pada baris yang tersedia, atau membalas lewat surel/WhatsApp dengan menyebutkan kode pertanyaannya (misalnya “A2: per regu”). Bila ada hal yang belum diputuskan, cukup ditulis “belum diputuskan” — kami akan menyesuaikan rancangan setelahnya.</p>
+  <p style="margin-bottom:0">Setelah jawaban ini kami terima, kami akan menyusun rancangan teknis dan mengirimkannya kembali untuk diperiksa sebelum pengerjaan dimulai. Terima kasih atas waktu dan kerja samanya.</p>
+</div>
+
+<div class="ttd">
+  <div class="kolom">
+    <div>Hormat kami,<br><strong>Rahmat Dani S</strong><br><span style="color:#64748B">Tim Pengembang Aplikasi Absensi</span></div>
+    <div class="garis">Nama &amp; tanda tangan</div>
+  </div>
+  <div class="kolom" style="float:right">
+    <div>Diterima dan diisi oleh,</div>
+    <div class="garis">Nama, jabatan &amp; tanda tangan</div>
+  </div>
+</div>
+
+<div class="catatan-kaki">
+  Dokumen ini disusun berdasarkan masukan pengguna: penanganan karyawan shift, pengaturan hari libur yang dapat jatuh di hari lain, pilihan WFA/WFO, karyawan yang berpindah lokasi kerja, serta penyempurnaan catatan pekerjaan saat absen pulang. Pertanyaan disusun mengacu pada kondisi sistem absensi yang berlaku saat ini.
+</div>
+
+</body>
+</html>

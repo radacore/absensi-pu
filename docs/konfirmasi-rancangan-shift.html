@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Lembar Konfirmasi Rancangan — Penanganan Karyawan Shift</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 14mm 15mm; }
+
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  html { font-size: 10.5pt; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+    color: #1E293B;
+    line-height: 1.55;
+    font-size: 10.5pt;
+  }
+
+  /* ── Kop / Judul ───────────────────────────────────────── */
+  .kop {
+    border-top: 4px solid #0F172A;
+    padding-top: 14px;
+    margin-bottom: 18px;
+  }
+  .kop .eyebrow {
+    font-size: 8pt;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #64748B;
+    font-weight: 700;
+  }
+  .kop h1 {
+    font-size: 19pt;
+    line-height: 1.2;
+    margin: 6px 0 4px;
+    letter-spacing: -0.015em;
+    color: #0F172A;
+  }
+  .kop .sub {
+    font-size: 11pt;
+    color: #475569;
+    margin: 0;
+  }
+
+  /* ── Tabel meta ────────────────────────────────────────── */
+  table.meta {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 22px;
+    font-size: 9.5pt;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+  }
+  table.meta td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #E2E8F0;
+    vertical-align: top;
+  }
+  table.meta tr:last-child td { border-bottom: 0; }
+  table.meta td.k {
+    width: 132px;
+    color: #64748B;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ── Blok peringatan / sorotan ─────────────────────────── */
+  .sorot {
+    border: 1px solid #CBD5E1;
+    border-left: 4px solid #0D9488;
+    background: #F0FDFA;
+    padding: 12px 16px;
+    margin: 0 0 24px;
+  }
+  .sorot .judul {
+    font-weight: 700;
+    font-size: 9.5pt;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #0F766E;
+    margin-bottom: 6px;
+  }
+  .sorot ol { margin: 0; padding-left: 20px; }
+  .sorot li { margin-bottom: 3px; }
+
+  /* ── Bagian ────────────────────────────────────────────── */
+  h2.bagian {
+    font-size: 12.5pt;
+    color: #0F172A;
+    margin: 26px 0 4px;
+    padding-left: 11px;
+    border-left: 4px solid #0F172A;
+    line-height: 1.3;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  h2.bagian .no {
+    color: #64748B;
+    font-weight: 700;
+    margin-right: 4px;
+  }
+  p.pengantar-bagian {
+    margin: 0 0 12px;
+    padding-left: 15px;
+    color: #475569;
+    font-size: 9.8pt;
+    font-style: italic;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* ── Butir pertanyaan ──────────────────────────────────── */
+  .butir {
+    margin: 0 0 13px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .butir .tanya {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .butir .kode {
+    flex: 0 0 auto;
+    font-weight: 700;
+    color: #0F172A;
+    font-variant-numeric: tabular-nums;
+    min-width: 22px;
+  }
+  .butir .teks { flex: 1 1 auto; }
+  .butir .opsi {
+    margin: 3px 0 0 30px;
+    color: #475569;
+    font-size: 9.5pt;
+  }
+  .butir .kenapa {
+    margin: 3px 0 0 30px;
+    color: #64748B;
+    font-size: 9pt;
+  }
+  .butir .kenapa::before { content: "Konteks: "; font-weight: 600; color: #94A3B8; }
+
+  .jawab {
+    margin: 6px 0 0 30px;
+    border-bottom: 1px dotted #94A3B8;
+    height: 15px;
+  }
+  .jawab.dua { height: 30px; border-bottom: 0; background: repeating-linear-gradient(to bottom, transparent 0 14px, #CBD5E1 14px 15px); }
+
+  /* ── Tabel kondisi saat ini ───────────────────────────── */
+  table.kondisi {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    margin: 8px 0 6px;
+  }
+  table.kondisi th {
+    text-align: left;
+    background: #0F172A;
+    color: #fff;
+    padding: 6px 10px;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+  }
+  table.kondisi td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #E2E8F0;
+    vertical-align: top;
+  }
+  table.kondisi tr:nth-child(even) td { background: #F8FAFC; }
+  table.kondisi td.hal { font-weight: 600; color: #0F172A; white-space: nowrap; }
+
+  /* ── Penutup ───────────────────────────────────────────── */
+  .penutup {
+    margin-top: 26px;
+    border-top: 1px solid #E2E8F0;
+    padding-top: 14px;
+    font-size: 9.8pt;
+    color: #334155;
+  }
+  .ttd { margin-top: 26px; font-size: 9.5pt; }
+  .ttd .kolom { display: inline-block; width: 46%; vertical-align: top; }
+  .ttd .garis { margin-top: 52px; border-top: 1px solid #94A3B8; padding-top: 4px; color: #475569; }
+
+  .catatan-kaki {
+    margin-top: 22px;
+    padding-top: 10px;
+    border-top: 1px dashed #CBD5E1;
+    font-size: 8.5pt;
+    color: #94A3B8;
+  }
+  .pindah-halaman { break-before: page; page-break-before: always; }
+</style>
+</head>
+<body>
+
+<div class="kop">
+  <div class="eyebrow">Lembar Konfirmasi Rancangan Sistem</div>
+  <h1>Penanganan Karyawan Shift — Mohon Dikonfirmasi</h1>
+  <p class="sub">Berdasarkan penjelasan Bapak/Ibu sebelumnya, kami sudah menyusun rancangan aturan shift. Mohon diperiksa: tandai butir yang belum sesuai, dan jawab beberapa hal yang masih perlu diputuskan.</p>
+</div>
+
+<table class="meta">
+  <tr><td class="k">Kepada</td><td>Penanggung Jawab / Pengguna Sistem Absensi<br><span style="color:#94A3B8">(nama: ……………………………………………………)</span></td></tr>
+  <tr><td class="k">Dari</td><td>Rahmat Dani S<br><span style="color:#94A3B8">Tim Pengembang Aplikasi Absensi</span></td></tr>
+  <tr><td class="k">Perihal</td><td>Konfirmasi rancangan aturan karyawan shift, pembagian rotasi jadwal, dan hal-hal yang masih perlu diputuskan</td></tr>
+  <tr><td class="k">Tanggal</td><td>……………… ……………………… 2026</td></tr>
+</table>
+
+<div class="sorot">
+  <div class="judul">Hal-hal yang paling menentukan</div>
+  <p style="margin:0 0 6px">Dari seluruh butir di bawah, ada tiga yang paling menentukan. Jika waktunya terbatas, mohon utamakan ketiganya lebih dahulu:</p>
+  <ol>
+    <li><strong>Jumlah pegawai jaga di setiap lokasi</strong> — apakah cukup untuk menutup 24 jam (butir P1). Ini pertanyaan kepegawaian, bukan teknis.</li>
+    <li><strong>Apakah ada pengecualian untuk larangan pulang lebih cepat</strong> — misalnya bila ada izin pulang awal atau pekerjaan di luar kantor (butir P2).</li>
+    <li><strong>Siklus pola 2 shift</strong> yang kami usulkan, yaitu pagi → malam → libur (butir K8).</li>
+  </ol>
+</div>
+
+<h2 class="bagian">1. Sedikit Konteks</h2>
+
+<p>Terima kasih atas penjelasan Bapak/Ibu mengenai shift. Dari jawaban itu, kami memahami satu hal pokok yang membuat semuanya menjadi jelas: <strong>panjang setiap shift ditentukan oleh berapa shift dalam sehari</strong>, bukan angka yang ditentukan terpisah. Karena satu hari berisi 24 jam, hasilnya sebagai berikut.</p>
+
+<table class="kondisi">
+  <thead>
+    <tr><th style="width:130px">Pola shift</th><th>Panjang tiap shift</th><th>Contoh pembagian jam</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="hal">2 shift</td><td>12 jam</td><td>07.00–19.00 dan 19.00–07.00</td></tr>
+    <tr><td class="hal">3 shift</td><td>8 jam</td><td>07.00–15.00, 15.00–23.00, dan 23.00–07.00</td></tr>
+  </tbody>
+</table>
+
+<p>Jadi keterangan “hanya hitungan 12 jam” yang Bapak/Ibu sampaikan sebelumnya kami pahami sebagai <strong>contoh pada pola 2 shift</strong> — bukan angka yang berlaku untuk semua pola. Bila pola berubah menjadi 3 shift, panjangnya otomatis menjadi 8 jam.</p>
+
+<p>Dua hal lain yang juga kami pahami dari penjelasan Bapak/Ibu: <strong>shift malam yang melewati tengah malam tetap dihitung satu hari</strong> (mengikuti tanggal saat masuk, bukan dipecah dua hari), dan <strong>jam kerja di luar shift dihitung sebagai lembur tersendiri</strong>.</p>
+
+<p>Karena rancangan ini menyentuh jam kerja, jatah cuti, dan laporan bulanan sekaligus, kami mohon Bapak/Ibu memeriksa butir-butir di bawah sebelum kami mulai mengerjakan.</p>
+
+<h2 class="bagian"><span class="no">2.</span> Aturan yang Kami Pahami — Mohon Dikonfirmasi</h2>
+<p class="pengantar-bagian">Butir di bawah ini adalah pemahaman kami atas kebijakan Bapak/Ibu. Bila sudah sesuai, boleh dikosongkan. Bila ada yang belum tepat, mohon tuliskan koreksinya pada garis di bawah butir tersebut.</p>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K1</span><span class="teks">Panjang setiap shift mengikuti jumlah shift: <strong>2 shift → masing-masing 12 jam</strong>, <strong>3 shift → masing-masing 8 jam</strong>. Tidak ada panjang shift yang diisi terpisah.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K2</span><span class="teks">Admin cukup mengisi <strong>jam mulai shift pertama</strong>. Jam mulai shift berikutnya dihitung otomatis, sehingga tidak ada jam yang tumpang tindih atau kosong.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K3</span><span class="teks">Hanya tersedia dua pilihan pola: <strong>2 shift</strong> dan <strong>3 shift</strong>. Tidak ada pola lain.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K4</span><span class="teks">Penanda “karyawan shift” bisa ditetapkan <strong>per orang</strong>, <strong>per lokasi kerja</strong>, atau <strong>per wilayah</strong>. Bila ditetapkan di beberapa tingkat sekaligus, yang paling khusus yang berlaku. Dengan begitu, satu kantor bisa berisi campuran karyawan shift dan bukan shift.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K5</span><span class="teks">Pola shift juga bisa ditetapkan <strong>untuk seluruh aplikasi</strong>, <strong>per wilayah</strong>, atau <strong>per lokasi kerja</strong> — dengan aturan yang sama: yang paling khusus yang berlaku. Jadi satu lokasi boleh memiliki pola berbeda dari kantor pusat.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K6</span><span class="teks">Pola rotasi dibuat <strong>sekali saja</strong>, lalu berputar sendiri secara otomatis. Admin tidak perlu menyusun ulang jadwal setiap minggu.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K7</span><span class="teks">Untuk <strong>pola 3 shift</strong>, rotasi berjalan dalam <strong>4 minggu</strong>: pagi → siang → malam → libur, lalu kembali ke pagi.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K8</span><span class="teks">Untuk <strong>pola 2 shift</strong>, kami usulkan rotasi <strong>3 minggu</strong>: pagi → malam → libur, lalu kembali ke pagi. <em>Butir ini murni usulan kami</em> — mohon dikoreksi bila arahnya belum sesuai.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K9</span><span class="teks">Jadwal shift dibuat otomatis dari pola rotasi, lalu <strong>Admin Wilayah boleh menyesuaikannya</strong> untuk tanggal tertentu — misalnya tukar shift atau izin. Penyesuaian itu tetap tercatat.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K10</span><span class="teks">Shift malam yang melewati tengah malam <strong>tetap dihitung satu hari</strong>, mengikuti tanggal saat masuk. Contoh: masuk pukul 23.00 dan pulang pukul 07.00 keesokan harinya tetap dihitung sebagai satu hari kerja.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K11</span><span class="teks">Karyawan <strong>bisa melihat jadwal shift-nya sendiri</strong> di aplikasi, sehingga tahu hari ini bertugas pada shift yang mana.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">K12</span><span class="teks">Karyawan shift <strong>tidak dapat memilih bekerja dari luar kantor (WFA)</strong>, dan tetap masuk sesuai jadwal meskipun hari itu hari libur nasional — karena shift tetap berjalan.</span></div>
+  <div class="jawab"></div>
+</div>
+
+<h2 class="bagian"><span class="no">3.</span> Yang Masih Perlu Diputuskan</h2>
+<p class="pengantar-bagian">Butir-butir ini belum bisa kami putuskan sendiri karena menyangkut kebijakan kepegawaian. Mohon bantuan Bapak/Ibu.</p>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">P1</span><span class="teks">Apakah jumlah pegawai jaga di setiap lokasi cukup untuk menutup 24 jam?</span></div>
+  <div class="opsi">Agar satu lokasi selalu terisi sepanjang hari, dibutuhkan: <strong>pola 3 shift → 4 regu</strong> (tiga bekerja, satu libur), <strong>pola 2 shift → 3 regu</strong> (dua bekerja, satu libur). Satu regu harus libur setelah giliran malam, karena shift malam baru berakhir pagi hari sementara shift pagi sudah mulai pada jam yang sama.</div>
+  <div class="kenapa">bila jumlah pegawai jaga di satu lokasi kurang dari angka tersebut, jadwalnya tidak akan pernah menutup 24 jam penuh.</div>
+  <div class="jawab"></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">P2</span><span class="teks">Bila karyawan shift dilarang absen pulang sebelum waktunya, apakah ada pengecualiannya?</span></div>
+  <div class="opsi">Misalnya: izin pulang lebih awal yang disetujui atasan · pekerjaan di luar kantor yang sudah ditugaskan · sakit · lainnya. Mohon sebutkan pengecualian yang Bapak/Ibu kehendaki, atau tulis “tidak ada pengecualian”.</div>
+  <div class="kenapa">tanpa jalur pengecualian, aturan ini bisa mengunci karyawan yang sebenarnya sah untuk pulang lebih awal.</div>
+  <div class="jawab dua"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">P3</span><span class="teks">Bagaimana jatah cuti tahunan dihitung untuk karyawan shift?</span></div>
+  <div class="opsi">Apakah minggu libur dalam rotasi tetap dihitung sebagai hari kerja untuk keperluan cuti, atau tidak dihitung? Mohon dipilih salah satu.</div>
+  <div class="jawab"></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">P4</span><span class="teks">Bila karyawan shift tetap masuk pada hari libur nasional, absennya dicatat sebagai apa?</span></div>
+  <div class="opsi">Absen biasa · absen libur · lembur · lainnya. Mohon dipilih salah satu.</div>
+  <div class="jawab"></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">P5</span><span class="teks">Siapa yang menyetujui pengajuan karyawan shift — misalnya izin, tukar shift, atau cuti?</span></div>
+  <div class="opsi">Admin Wilayah · atasan langsung · Super Admin. <em>Pertanyaan ini juga masih menggantung dari lembar sebelumnya (butir E10), jadi jawabannya sekaligus menutup keduanya.</em></div>
+  <div class="jawab"></div>
+  <div class="jawab"></div>
+</div>
+
+<div class="penutup">
+  <p style="margin-top:0"><strong>Cara mengisi.</strong> Bapak/Ibu dapat mengisi langsung pada berkas ini, menuliskan jawaban pada garis yang tersedia, atau membalas lewat surel/WhatsApp dengan menyebutkan kode butirnya (misalnya “K8: sesuai” atau “P1: regu jaga hanya 3 orang”). Bila ada yang belum diputuskan, cukup ditulis “belum diputuskan” — kami akan menyesuaikan rancangan setelahnya.</p>
+  <p style="margin-bottom:0">Setelah konfirmasi ini kami terima, kami mulai mengerjakan bagian yang sudah pasti, sambil menunggu keputusan atas butir P1–P5. Terima kasih atas waktu dan kerja samanya.</p>
+</div>
+
+<div class="ttd">
+  <div class="kolom">
+    <div>Hormat kami,<br><strong>Rahmat Dani S</strong><br><span style="color:#64748B">Tim Pengembang Aplikasi Absensi</span></div>
+    <div class="garis">Nama &amp; tanda tangan</div>
+  </div>
+  <div class="kolom" style="float:right">
+    <div>Diterima dan diisi oleh,</div>
+    <div class="garis">Nama, jabatan &amp; tanda tangan</div>
+  </div>
+</div>
+
+<div class="catatan-kaki">
+  Dokumen ini merupakan tindak lanjut dari Lembar Konfirmasi Kebutuhan sebelumnya, khusus bagian karyawan shift. Isinya adalah pemahaman kami atas penjelasan Bapak/Ibu mengenai pola shift, rotasi jadwal, dan karyawan shift yang melewati tengah malam — mohon dikoreksi bila ada yang belum tepat.
+</div>
+
+</body>
+</html>
