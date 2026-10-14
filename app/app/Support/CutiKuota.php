@@ -3,8 +3,10 @@
 namespace App\Support;
 
 use App\Models\AttendanceSetting;
+use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Leave;
+use App\Models\ShiftSchedule;
 use Illuminate\Support\Carbon;
 
 /**
@@ -21,6 +23,10 @@ use Illuminate\Support\Carbon;
  *    "Disetujui" tentu memotong, "Ditolak" tidak memotong.
  *  - Periode = tahun kalender. Pengajuan lintas tahun (mis. 30 Des → 2 Jan)
  *    dipecah per tahun dan divalidasi terhadap kuota tahun masing-masing.
+ *  - Pekerja shift (P3) dihitung terhadap JADWAL SHIFT-nya sendiri, bukan
+ *    `hari_kerja` kantor: hari yang tidak dijadwalkan kerja tidak memotong
+ *    cuti. Jatahnya bisa dibedakan lewat setelan `cuti_shift_max`; bawaan 0
+ *    berarti ikut kuota umum supaya perilaku lama tidak berubah.
  *
  * Helper ini sengaja bebas efek samping: controller yang memutuskan apa yang
  * dilakukan saat kuota tidak cukup (melempar 422), bukan helper.
@@ -42,6 +48,70 @@ class CutiKuota
         $max = (int) ($settings?->cuti_tahunan_max ?? 0);
 
         return $max > 0 ? $max : AttendanceSetting::CUTI_TAHUNAN_DEFAULT;
+    }
+
+    /** Jatah cuti tahunan khusus pekerja shift, 0 = ikut kuota umum. */
+    public static function maxShift(?AttendanceSetting $settings = null): int
+    {
+        $settings ??= AttendanceSetting::first();
+
+        return max(0, (int) ($settings?->cuti_shift_max ?? 0));
+    }
+
+    /**
+     * Kuota tahunan yang berlaku untuk satu karyawan.
+     *
+     * Pekerja shift memakai `cuti_shift_max` bila diisi; selain itu (dan untuk
+     * karyawan biasa) kembali ke kuota umum.
+     */
+    public static function maxUntuk(?Employee $employee, ?AttendanceSetting $settings = null): int
+    {
+        if ($employee?->is_shift) {
+            $khusus = self::maxShift($settings);
+            if ($khusus > 0) {
+                return $khusus;
+            }
+        }
+
+        return self::max($settings);
+    }
+
+    /**
+     * Hari kerja karyawan pada rentang, dipecah per tahun kalender.
+     *
+     * Karyawan biasa memakai `hari_kerja` + hari libur nasional; pekerja shift
+     * memakai hari yang benar-benar dijadwalkan shift (shift_ke terisi).
+     *
+     * @return array<int,int> tahun => jumlah hari
+     */
+    public static function hariKerjaPerTahunUntuk(?Employee $employee, string $mulai, string $selesai, ?AttendanceSetting $settings = null): array
+    {
+        if (! $employee?->is_shift) {
+            return self::hariKerjaPerTahun($mulai, $selesai, $settings);
+        }
+
+        $awal = Carbon::parse($mulai, self::TZ)->startOfDay();
+        $akhir = Carbon::parse($selesai, self::TZ)->startOfDay();
+        if ($akhir->lt($awal)) {
+            return [];
+        }
+
+        $tanggal = ShiftSchedule::query()
+            ->where('employee_id', $employee->id)
+            ->whereNotNull('shift_ke')
+            ->whereDate('tanggal', '>=', $awal->toDateString())
+            ->whereDate('tanggal', '<=', $akhir->toDateString())
+            ->pluck('tanggal');
+
+        $hasil = [];
+        foreach ($tanggal as $t) {
+            $tahun = (int) Carbon::parse($t)->format('Y');
+            $hasil[$tahun] = ($hasil[$tahun] ?? 0) + 1;
+        }
+
+        ksort($hasil);
+
+        return $hasil;
     }
 
     /** Total hari kerja pada rentang tanggal (inklusif kedua ujung). */
@@ -86,17 +156,24 @@ class CutiKuota
         return $hasil;
     }
 
+    /** Hari kerja karyawan pada satu rentang tanggal. */
+    public static function hariKerjaUntuk(?Employee $employee, string $mulai, string $selesai, ?AttendanceSetting $settings = null): int
+    {
+        return array_sum(self::hariKerjaPerTahunUntuk($employee, $mulai, $selesai, $settings));
+    }
+
     /**
      * Hari kerja cuti Tahunan yang sudah memotong kuota pada satu tahun.
      * Cuti yang melewati batas tahun hanya dihitung bagian yang masuk tahun itu.
      */
-    public static function terpakai(int $employeeId, int $year, ?int $kecualiLeaveId = null, ?AttendanceSetting $settings = null): int
+    public static function terpakai(Employee|int $employee, int $year, ?int $kecualiLeaveId = null, ?AttendanceSetting $settings = null): int
     {
+        $karyawan = self::karyawan($employee);
         $awalTahun = Carbon::create($year, 1, 1, 0, 0, 0, self::TZ);
         $akhirTahun = Carbon::create($year, 12, 31, 0, 0, 0, self::TZ);
 
         $leaves = Leave::query()
-            ->where('employee_id', $employeeId)
+            ->where('employee_id', $karyawan?->id ?? (is_int($employee) ? $employee : 0))
             ->whereIn('jenis', self::JENIS_BERKUOTA)
             ->whereIn('status', self::STATUS_MEMOTONG)
             ->when($kecualiLeaveId, fn ($q) => $q->whereKeyNot($kecualiLeaveId))
@@ -108,24 +185,26 @@ class CutiKuota
         foreach ($leaves as $l) {
             $mulai = Carbon::parse($l->mulai, self::TZ)->max($awalTahun);
             $selesai = Carbon::parse($l->selesai, self::TZ)->min($akhirTahun);
-            $total += self::hariKerja($mulai->toDateString(), $selesai->toDateString(), $settings);
+            $total += self::hariKerjaUntuk($karyawan, $mulai->toDateString(), $selesai->toDateString(), $settings);
         }
 
         return $total;
     }
 
     /** Ringkasan kuota satu karyawan untuk satu tahun. */
-    public static function ringkasan(int $employeeId, int $year, ?AttendanceSetting $settings = null): array
+    public static function ringkasan(Employee|int $employee, int $year, ?AttendanceSetting $settings = null): array
     {
         $settings ??= AttendanceSetting::first();
-        $max = self::max($settings);
-        $terpakai = self::terpakai($employeeId, $year, null, $settings);
+        $karyawan = self::karyawan($employee);
+        $max = self::maxUntuk($karyawan, $settings);
+        $terpakai = self::terpakai($karyawan ?? $employee, $year, null, $settings);
 
         return [
             'tahun' => $year,
             'max' => $max,
             'terpakai' => $terpakai,
             'sisa' => max(0, $max - $terpakai),
+            'khususShift' => (bool) ($karyawan?->is_shift && self::maxShift($settings) > 0),
         ];
     }
 
@@ -134,24 +213,35 @@ class CutiKuota
      *
      * @return array<int,array{tahun:int,diminta:int,sisa:int}> daftar pelanggaran per tahun; kosong = lolos
      */
-    public static function pelanggaran(int $employeeId, string $jenis, string $mulai, string $selesai, ?AttendanceSetting $settings = null): array
+    public static function pelanggaran(Employee|int $employee, string $jenis, string $mulai, string $selesai, ?AttendanceSetting $settings = null): array
     {
         if (! in_array($jenis, self::JENIS_BERKUOTA, true)) {
             return [];
         }
 
         $settings ??= AttendanceSetting::first();
-        $max = self::max($settings);
+        $karyawan = self::karyawan($employee);
+        $max = self::maxUntuk($karyawan, $settings);
         $pelanggaran = [];
 
-        foreach (self::hariKerjaPerTahun($mulai, $selesai, $settings) as $tahun => $diminta) {
-            $sisa = max(0, $max - self::terpakai($employeeId, $tahun, null, $settings));
+        foreach (self::hariKerjaPerTahunUntuk($karyawan, $mulai, $selesai, $settings) as $tahun => $diminta) {
+            $sisa = max(0, $max - self::terpakai($karyawan ?? $employee, $tahun, null, $settings));
             if ($diminta > $sisa) {
                 $pelanggaran[] = ['tahun' => $tahun, 'diminta' => $diminta, 'sisa' => $sisa];
             }
         }
 
         return $pelanggaran;
+    }
+
+    /** Terima Employee atau id, kembalikan modelnya (null bila tidak ketemu). */
+    private static function karyawan(Employee|int|null $employee): ?Employee
+    {
+        if ($employee instanceof Employee) {
+            return $employee;
+        }
+
+        return $employee ? Employee::find($employee) : null;
     }
 
     /** Pesan galat siap pakai untuk pelanggaran pertama. */

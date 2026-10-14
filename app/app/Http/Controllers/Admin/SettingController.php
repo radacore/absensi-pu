@@ -24,10 +24,13 @@ class SettingController extends Controller
                 'toleransi' => (int) $s->toleransi_late_menit,
                 'loveMax' => (int) $s->love_max,
                 'cutiTahunanMax' => CutiKuota::max($s),
+                'cakupanPolaShift' => $s->cakupanPola(),
+                'cutiShiftMax' => CutiKuota::maxShift($s),
                 'absenLiburAktif' => (bool) $s->absen_libur_aktif,
                 'absenLiburMode' => $s->absen_libur_mode ?: 'tolak',
                 'hariKerja' => $s->hari_kerja ?? ['1', '2', '3', '4', '5'],
-            ] : ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15, 'loveMax' => 4, 'cutiTahunanMax' => AttendanceSetting::CUTI_TAHUNAN_DEFAULT, 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak', 'hariKerja' => ['1', '2', '3', '4', '5']],
+            ] : ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15, 'loveMax' => 4, 'cutiTahunanMax' => AttendanceSetting::CUTI_TAHUNAN_DEFAULT, 'cakupanPolaShift' => AttendanceSetting::CAKUPAN_POLA_DEFAULT, 'cutiShiftMax' => AttendanceSetting::CUTI_SHIFT_DEFAULT, 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak', 'hariKerja' => ['1', '2', '3', '4', '5']],
+            'cakupanPola' => AttendanceSetting::CAKUPAN_POLA,
             'readOnly' => $isWilayah,
         ]);
     }
@@ -44,6 +47,10 @@ class SettingController extends Controller
             'loveMax' => ['required', 'integer', 'min:1', 'max:10'],
             // Kuota cuti tahunan — opsional supaya pemanggil lama tetap valid.
             'cutiTahunanMax' => ['sometimes', 'integer', 'min:1', 'max:60'],
+            // Cakupan pola shift (K5) — opsional supaya pemanggil lama tetap valid.
+            'cakupanPolaShift' => ['sometimes', 'in:'.implode(',', AttendanceSetting::CAKUPAN_POLA)],
+            // Jatah cuti pekerja shift (P3); 0 = ikut kuota umum.
+            'cutiShiftMax' => ['sometimes', 'integer', 'min:0', 'max:60'],
             // Gerbang hari libur — opsional supaya pemanggil lama tetap valid.
             'absenLiburAktif' => ['sometimes', 'boolean'],
             'absenLiburMode' => ['sometimes', 'in:tolak,catat'],
@@ -63,6 +70,12 @@ class SettingController extends Controller
         $s->love_max = $data['loveMax'];
         if (array_key_exists('cutiTahunanMax', $data)) {
             $s->cuti_tahunan_max = (int) $data['cutiTahunanMax'];
+        }
+        if (array_key_exists('cakupanPolaShift', $data)) {
+            $s->cakupan_pola_shift = $data['cakupanPolaShift'];
+        }
+        if (array_key_exists('cutiShiftMax', $data)) {
+            $s->cuti_shift_max = (int) $data['cutiShiftMax'];
         }
         if (array_key_exists('absenLiburAktif', $data)) {
             $s->absen_libur_aktif = (bool) $data['absenLiburAktif'];

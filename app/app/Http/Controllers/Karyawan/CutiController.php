@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceSetting;
+use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Leave;
+use App\Models\ShiftSchedule;
 use App\Support\AdminPresenter;
 use App\Support\CutiKuota;
 use Illuminate\Http\Request;
@@ -43,12 +45,12 @@ class CutiController extends Controller
             // Kuota cuti tahunan + hari kerja/libur supaya UI bisa memperkirakan
             // jumlah hari kerja sebelum dikirim. Server tetap penentu akhir
             // lewat validasi di store().
-            'kuota' => $this->kuotaPayload($me->id),
+            'kuota' => $this->kuotaPayload($me),
         ]);
     }
 
     /** Kuota tahun ini + hari kerja & libur (tahun ini dan berikutnya). */
-    private function kuotaPayload(int $employeeId): array
+    private function kuotaPayload(Employee $me): array
     {
         $settings = AttendanceSetting::first();
         $tahun = (int) Carbon::now('Asia/Makassar')->year;
@@ -60,10 +62,27 @@ class CutiController extends Controller
             ->values()
             ->all();
 
-        return CutiKuota::ringkasan($employeeId, $tahun, $settings) + [
+        // Pekerja shift (P3): hari cuti dihitung dari jadwal shift sendiri, jadi
+        // UI perlu daftar tanggal yang benar-benar dijadwalkan kerja.
+        $jadwalKerja = [];
+        if ($me->is_shift) {
+            $jadwalKerja = ShiftSchedule::query()
+                ->where('employee_id', $me->id)
+                ->whereNotNull('shift_ke')
+                ->whereDate('tanggal', '>=', "{$tahun}-01-01")
+                ->whereDate('tanggal', '<=', ($tahun + 1).'-12-31')
+                ->pluck('tanggal')
+                ->map(fn ($t) => Carbon::parse($t)->format('Y-m-d'))
+                ->values()
+                ->all();
+        }
+
+        return CutiKuota::ringkasan($me, $tahun, $settings) + [
             'jenisBerkuota' => CutiKuota::JENIS_BERKUOTA,
             'hariKerja' => array_map('strval', $settings?->hariKerjaList() ?? AttendanceSetting::HARI_KERJA_DEFAULT),
             'libur' => $libur,
+            'isShift' => (bool) $me->is_shift,
+            'jadwalKerja' => $jadwalKerja,
         ];
     }
 

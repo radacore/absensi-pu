@@ -1,7 +1,7 @@
 # Desain Fitur Shift — Absensi & HR BBWS Pompengan Jeneberang
 
-**Tanggal:** 14 Oktober 2026
-**Status:** revisi 3 — **sudah diimplementasikan**; migrasi dijalankan, 35 tes shift hijau
+**Tanggal:** 15 Oktober 2026
+**Status:** revisi 4 — **sudah diimplementasikan**; migrasi dijalankan, 47 tes shift hijau
 **Konteks:** melengkapi jawaban kuesioner client (A1–A8, B4/B5, C8, F3) dan hasil konfirmasi rancangan (K1–K12, P1–P5)
 
 > **Catatan:** dokumen ini menjelaskan rancangan. Bagian 0–9 adalah rancangan yang sudah jadi kode; bagian 10–13 mencatat apa yang benar-benar dikerjakan, apa yang masih menggantung, dan cara migrasinya dijalankan. Bagian yang masih menggantung ditandai **`PERLU DIPUTUSKAN`**.
@@ -20,6 +20,14 @@ Revisi 1 mengasumsikan jadwal shift **dibuat otomatis** dari pola rotasi. Jawaba
 | Jumlah shift | 2 dan 3 | **2, 3, dan 4** (K3) |
 | Pulang lebih awal | Dilarang | **Boleh, dengan alasan + persetujuan** (P2) |
 | Absen shift di hari libur nasional | Status khusus | **Absen biasa** (P4) |
+
+Revisi 4 menutup tiga butir yang tadinya menggantung (K5, P1, P3) dengan cara **memindahkannya menjadi setelan**, bukan mengunci satu jawaban. Tujuannya: bila client memutuskan lain, cukup ubah setelan — tidak perlu ubah kode.
+
+| Butir | Revisi 3 | Revisi 4 |
+| :--- | :--- | :--- |
+| **K5** — pola shift ditetapkan di level mana | Tiga level sekaligus, yang paling spesifik menang | **Setelan `cakupan_pola_shift`**: `bertingkat` (bawaan) / `wilayah` / `global`. Pilihan di form Pola Shift ikut menyempit |
+| **P1** — jumlah pegawai jaga per lokasi | Menunggu jawaban client | **Panel "Cakupan 24 jam per lokasi"** di layar Jadwal Shift: menghitung sendiri mana jam yang belum tertutup, per lokasi per hari. Petunjuk saja, tidak menahan penyimpanan |
+| **P3** — jatah cuti pekerja shift | Menunggu jawaban client | **Setelan `cuti_shift_max`** (0 = ikut kuota umum, bawaan) + cuti pekerja shift dihitung dari **jadwal shift-nya sendiri**, bukan `hari_kerja` kantor |
 
 ---
 
@@ -52,7 +60,7 @@ Dua pembacaan lama otomatis batal:
 | 2 | Jam mulai | Admin isi **jam acuan shift 1** saja, sisanya dihitung otomatis | K2 (YA) |
 | 3 | Rentang pola | **2, 3, dan 4 shift** — 4 shift disiapkan sejak awal | K3 |
 | 4 | Penanda pekerja shift | **Per orang** | K4 |
-| 5 | Pola shift ditetapkan di | global / per wilayah / per lokasi — paling spesifik menang | pilihan Anda; **K5 belum dijawab client** |
+| 5 | Pola shift ditetapkan di | **Setelan `cakupan_pola_shift`**: bertingkat (bawaan) / wilayah / global | K5 — dipindah jadi setelan supaya bisa dipersempit tanpa ubah kode |
 | 6 | Cara menyusun jadwal | **Manual oleh Admin Wilayah, tiap minggu. Tidak otomatis.** | K6, K7, K8, K9 |
 | 7 | Karyawan melihat jadwal sendiri | Ya | K11 (YA) |
 | 8 | Shift malam lintas tengah malam | Tetap **satu hari**, mengikuti tanggal masuk | K10 (YA) |
@@ -60,6 +68,9 @@ Dua pembacaan lama otomatis batal:
 | 10 | Pekerja shift masuk saat libur nasional | Ya, dicatat sebagai **absen biasa** | K12, P4 |
 | 11 | Pulang lebih awal | **Boleh, dengan mencantumkan alasan + persetujuan atasan/admin** | P2 |
 | 12 | Yang menyetujui | **Admin Wilayah** | P5 (sekaligus menutup E10) |
+| 13 | Jatah cuti pekerja shift | **Setelan `cuti_shift_max`**; 0 (bawaan) = ikut kuota umum | P3 — dipindah jadi setelan |
+| 14 | Dasar hitung cuti pekerja shift | **Jadwal shift sendiri** — hari yang tidak dijadwalkan tidak memotong cuti | P3 |
+| 15 | Kebutuhan pegawai jaga per lokasi | **Dipantau sistem** lewat panel cakupan 24 jam, bukan diatur | P1 — dijawab di produk |
 
 Turunan dari keputusan 2: jam mulai shift ke-*n* = jam acuan + (*n* − 1) × durasi.
 Contoh jam acuan 07:00 → 3 shift: 07:00, 15:00, 23:00. 4 shift: 07:00, 13:00, 19:00, 01:00.
@@ -74,7 +85,7 @@ Contoh jam acuan 07:00 → 3 shift: 07:00, 15:00, 23:00. 4 shift: 07:00, 13:00, 
 
 Karena jadwal disusun manual dan tidak otomatis, Admin Wilayah harus mengisi jadwal **setiap minggu untuk setiap karyawan shift**. Ini pilihan client, dan sejalan dengan jawaban mereka di A6. Yang perlu diperhatikan: makin banyak karyawan shift di satu wilayah, makin berat pekerjaan rutin ini. Bila nanti terasa berat, opsi "isi cepat dari pola" bisa ditambahkan tanpa mengubah model data.
 
-### 3.2 Kebutuhan jumlah pegawai jaga — `PERLU DIPUTUSKAN` (P1, belum dijawab)
+### 3.2 Kebutuhan jumlah pegawai jaga — dipantau, bukan ditebak (P1)
 
 Agar 24 jam tetap terisi, jumlah pegawai jaga di satu lokasi harus cukup:
 
@@ -84,7 +95,11 @@ Agar 24 jam tetap terisi, jumlah pegawai jaga di satu lokasi harus cukup:
 | 3 shift | 3 orang per hari |
 | 4 shift | 4 orang per hari |
 
-Ditambah cadangan untuk hari libur, sakit, dan cuti. Karena penjadwalan manual, admin bisa menugaskan seadanya — tapi kalau jumlah orangnya kurang, tetap ada jam yang kosong. **Ini pertanyaan kepegawaian, bukan teknis**, dan masih menunggu jawaban client.
+Ditambah cadangan untuk hari libur, sakit, dan cuti. Karena penjadwalan manual, admin bisa menugaskan seadanya — dan kalau jumlah orangnya kurang, tetap ada jam yang kosong.
+
+Daripada menunggu jawaban client soal "berapa orang yang disiapkan", pertanyaan itu dijawab **di dalam produk**: layar Jadwal Shift menampilkan panel **Cakupan 24 jam per lokasi** yang menghitung sendiri, dari jadwal yang sedang disusun, jam mana saja yang belum tertutup shift mana pun. Jadi admin melihat langsung kekurangannya saat menyusun, bukan setelah kejadian.
+
+Sifat panel ini **hanya petunjuk**: ia tidak pernah menahan penyimpanan jadwal, dan tidak menyuruh sistem mengisi apa pun. Keputusan jumlah orang tetap milik client — sistem hanya membuat keadaannya terlihat.
 
 ### 3.3 Tidak ada lagi konsep "regu"
 
@@ -134,8 +149,12 @@ Penamaan tabel mengikuti konvensi yang sudah ada (nama tabel bahasa Inggris jama
 | Tabel | Kolom | Tipe | Keterangan |
 | :--- | :--- | :--- | :--- |
 | `employees` | `is_shift` | boolean, default false | penanda pekerja shift, **per orang** (K4) |
+| `attendance_settings` | `cakupan_pola_shift` | string, default `bertingkat` | seberapa dalam pola shift dicari (K5) |
+| `attendance_settings` | `cuti_shift_max` | unsigned small int, default 0 | jatah cuti pekerja shift; 0 = ikut kuota umum (P3) |
 
-Sesuai K4, penanda hanya di level karyawan. Tidak ada kolom serupa di `sites` atau `regions`.
+Sesuai K4, penanda pekerja shift hanya di level karyawan. Tidak ada kolom serupa di `sites` atau `regions`.
+
+Dua kolom baru di `attendance_settings` sengaja berbentuk **setelan**, bukan konstanta di kode: keduanya mewakili keputusan client (K5, P3) yang masih bisa berubah, dan mengubahnya tidak boleh menuntut perubahan kode.
 
 ### 4.3 Tabel baru untuk pengajuan pulang lebih awal (P2)
 
@@ -156,13 +175,19 @@ Mengikuti pola persetujuan yang sudah ada di aplikasi (`leaves`, `dinas_claims`,
 | `note` | text, nullable | catatan admin |
 | `timestamps` | | |
 
-### 4.4 Aturan resolusi pola shift
+### 4.4 Aturan resolusi pola shift (K5)
 
-Pola yang berlaku untuk seorang karyawan (menunggu kepastian K5):
+Pola yang berlaku untuk seorang karyawan mengikuti setelan `cakupan_pola_shift`:
 
-1. `shift_patterns.site_id` = lokasi karyawan (bila ada)
-2. → `shift_patterns.region_id` = wilayah karyawan (bila ada)
-3. → `shift_patterns` global (`site_id` dan `region_id` kosong)
+| Setelan | Urutan pencarian |
+| :--- | :--- |
+| `bertingkat` (bawaan) | pola lokasi karyawan → pola wilayah karyawan → pola global |
+| `wilayah` | pola wilayah karyawan → pola global (pola lokasi **diabaikan**) |
+| `global` | pola global saja (pola wilayah dan lokasi **diabaikan**) |
+
+Yang paling spesifik selalu menang. Setelan ini juga **menyaring pilihan di form Pola Shift**: saat cakupan dipersempit ke `wilayah`, opsi "Per lokasi" tidak lagi muncul, dan pengajuan dengan cakupan di luar setelan ditolak server. Dengan begitu setelan tidak bisa dilanggar lewat request langsung.
+
+Konsekuensi yang perlu diketahui: bila cakupan dipersempit ke `global`, Admin Wilayah tidak lagi punya cakupan yang bisa dibuat sendiri — pola hanya bisa dibuat Super Admin. Layar Pola Shift menampilkan keterangan ini, bukan tombol yang gagal saat ditekan.
 
 ---
 
@@ -177,6 +202,19 @@ Jadwal **tidak dihitung sistem**. Alurnya:
 5. Boleh diubah kapan saja sebelum atau sesudah tanggalnya, dengan `catatan` untuk perubahan penting.
 
 Sistem **tidak** menyarankan, mengisi otomatis, atau mengingatkan siapa yang harus bertugas. Bila ada jam yang kosong (tidak ada karyawan bertugas), itu keputusan Admin Wilayah — sistem tidak memaksakan.
+
+### 5.1 Panel cakupan 24 jam (P1)
+
+Di bawah grid jadwal, layar menampilkan satu tabel: **baris = lokasi, kolom = 7 hari minggu itu**. Tiap sel menjawab satu pertanyaan — *apakah 24 jam hari itu tertutup shift di lokasi ini?*
+
+Cara menghitungnya:
+
+1. Tiap karyawan shift di lokasi itu diambil blok shiftnya dari jadwal yang sedang disusun: mulai = jam mulai shift ke-*n*, panjang = durasi pola (24 ÷ jumlah shift).
+2. Blok yang melewati tengah malam ikut menutup **hari berikutnya** dalam minggu itu.
+3. Hari pertama minggu juga diperiksa terhadap **shift malam sehari sebelumnya** (Minggu sebelumnya), supaya limpahan 23:00–07:00 tidak dihitung sebagai lubang.
+4. Sisa menit yang tidak tertutup blok mana pun dilaporkan sebagai kekurangan, lengkap dengan rentang jamnya.
+
+Panel ini dihitung di sisi tampilan dari draf yang belum disimpan, jadi admin melihat akibat setiap perubahan sel **sebelum** menekan simpan. Ia tidak pernah memblokir penyimpanan: jadwal yang kurang orang tetap boleh disimpan, karena itu keputusan kepegawaian, bukan galat.
 
 ---
 
@@ -232,7 +270,9 @@ Lembur dihitung **terpisah** dari jam kerja shift: menit kerja di luar blok shif
 - **F3** — keterlambatan dihitung dari jadwal shift yang berlaku untuk hari itu, bukan dari `jam_masuk` global.
 - Rekap menampilkan **shift** tiap baris (mis. "Malam"), supaya jam masuk/pulang yang tidak lazim bisa dimengerti pembaca.
 - Rekap CSV (F2, sudah ada) ikut menyertakan kolom shift.
-- **`PERLU DIPUTUSKAN` (P3, belum dijawab):** bagaimana jatah cuti tahunan dihitung untuk pekerja shift. Karena tidak ada lagi rotasi otomatis, pertanyaannya jadi lebih sederhana — kemungkinan besar cuti tetap dihitung dari hari kerja biasa (`CutiKuota`), sama seperti non-shift.
+- **P3 — cuti pekerja shift** dihitung dari **jadwal shift orang itu sendiri**, bukan dari `hari_kerja` kantor: hari yang tidak dijadwalkan shift tidak memotong cuti. Karyawan non-shift tidak berubah sama sekali (tetap `hari_kerja` + hari libur nasional dikecualikan).
+- Jatah cuti pekerja shift bisa dibedakan lewat setelan `cuti_shift_max`. **Bawaan 0 berarti ikut kuota umum** — jadi tanpa diisi, perilaku lama tetap berlaku dan tidak ada kejutan.
+- Layar Cuti karyawan memakai perhitungan yang sama di sisi tampilan, sehingga angka "hari kerja diminta" yang dilihat karyawan shift sama dengan yang divalidasi server.
 
 ---
 
@@ -252,11 +292,12 @@ Lembur dihitung **terpisah** dari jam kerja shift: menit kerja di luar blok shif
 
 | Layar | Peran | Isi |
 | :--- | :--- | :--- |
-| Pola shift | Super Admin (+ Admin Wilayah bila K5 mengarah ke per wilayah/lokasi) | jumlah shift, jam acuan, cakupan |
-| Jadwal shift | Admin Wilayah | grid karyawan shift × 7 hari, isi manual, navigasi minggu |
+| Pola shift | Super Admin; Admin Wilayah bila setelan cakupan mengizinkan | jumlah shift, jam acuan, cakupan (**hanya yang diizinkan setelan**) |
+| Jadwal shift | Admin Wilayah | grid karyawan shift × 7 hari, isi manual, navigasi minggu, **panel cakupan 24 jam per lokasi** |
 | Pengajuan pulang awal | Admin Wilayah | daftar permohonan `Menunggu`, tombol setuju/tolak |
 | Jadwal saya | Karyawan (K11) | jadwal sendiri bulan berjalan |
 | Absensi | Karyawan | "Shift hari ini: Malam (23:00–07:00)" + tombol ajukan pulang awal |
+| Pengaturan | Super Admin | dua bagian baru: **Cakupan pola shift** dan **Jatah cuti pekerja shift** (di kartu "Shift Kerja") |
 
 Semua layar baru mengikuti pola yang sudah ada: Inertia + React, presenter di `app/Support/`, otorisasi per peran dan per cakupan wilayah seperti rute admin yang sudah jalan.
 
@@ -273,6 +314,7 @@ Semua layar baru mengikuti pola yang sudah ada: Inertia + React, presenter di `a
 | 5 | Pengajuan pulang lebih awal + persetujuan (P2) | ya | **selesai** |
 | 6 | Rekap & laporan: tampilkan shift, keterlambatan dari jadwal (F3) | tidak | **selesai** |
 | 7 | Aturan silang: WFA diblokir untuk pekerja shift (C8), hari libur (P4) | tidak | **sebagian** — WFA tidak ada di aplikasi ini |
+| 8 | K5 + P1 + P3: cakupan pola jadi setelan, panel cakupan 24 jam, cuti pekerja shift | ya | **selesai** |
 
 Fase 7 hanya dikerjakan bagian hari liburnya (P4). Aturan "WFA diblokir untuk pekerja shift" tidak bisa dikerjakan karena fitur WFA tidak pernah ada di aplikasi ini — lihat §11.
 
@@ -284,15 +326,15 @@ K11 ("karyawan bisa lihat jadwal sendiri") dipenuhi lewat dua tempat yang sudah 
 
 | Butir | Isi | Menghambat? |
 | :--- | :--- | :--- |
-| **K5** | Pola shift ditetapkan di level mana (global / wilayah / lokasi) | Sudah dikerjakan dengan menebak: tiga level sekaligus, yang paling spesifik menang. Bila client memutuskan hanya satu level, tinggal dipersempit |
-| **P1** | Jumlah pegawai jaga per lokasi cukup untuk 24 jam? | Tidak menghambat kode, tapi menentukan jadwal bisa jalan |
-| **P3** | Jatah cuti pekerja shift | Tidak; perlu sebelum aturan cuti shift dibuat |
+| **K5** | Pola shift ditetapkan di level mana (global / wilayah / lokasi) | **Tidak lagi.** Dipindah jadi setelan `cakupan_pola_shift`. Bila client memutuskan hanya satu level, tinggal diubah di Pengaturan — tanpa ubah kode |
+| **P1** | Jumlah pegawai jaga per lokasi cukup untuk 24 jam? | **Tidak lagi.** Dijawab di produk: panel cakupan 24 jam menunjukkan jam yang belum tertutup saat jadwal disusun |
+| **P3** | Jatah cuti pekerja shift | **Tidak lagi.** Setelan `cuti_shift_max` (bawaan 0 = ikut kuota umum) + cuti dihitung dari jadwal shift sendiri |
 | **C4** | Alur persetujuan WFA — bisa memakai mekanisme yang sama dengan P2 | Tidak berlaku: fitur WFA tidak ada di aplikasi ini |
 | **C1–C8** | Seluruh rangkaian WFA (absen dari mana saja, label lokasi, dll.) | Tidak berlaku: tidak ada fitur WFA untuk ditempeli |
 | — | Pengecualian pulang cepat untuk non-shift (§6.2) | Sudah dikerjakan: gerbang pulang cepat hanya berlaku untuk pekerja shift |
 | — | Urutan persetujuan pulang awal (§6.3) | Sudah dikerjakan: persetujuan wajib ada sebelum absen pulang |
 
-K5, P1, dan P3 **belum dijawab client**. K5 sudah diisi dengan asumsi yang paling longgar; P1 dan P3 tidak menghambat kode yang sudah jalan.
+K5, P1, dan P3 masih **belum dijawab client secara tertulis**, tapi ketiganya sudah berhenti menghambat: masing-masing kini punya nilai bawaan yang **sama dengan perilaku lama**, dan bisa diubah dari Pengaturan begitu client memutuskan. Bila jawaban client datang, yang berubah hanya nilai setelan — bukan kode.
 
 Soal C1–C8: seluruh rangkaian pertanyaan WFA tidak bisa dijawab lewat kode karena aplikasi ini tidak punya konsep "absen dari luar titik penugasan" sama sekali — tidak ada kolom, tidak ada layar, tidak ada aturan. Menambahkannya berarti membangun modul baru, bukan menyesuaikan yang ada. Karena itu seluruh butir WFA ditandai **tidak berlaku** sampai client memutuskan ingin membangunnya.
 
@@ -304,7 +346,10 @@ Soal C1–C8: seluruh rangkaian pertanyaan WFA tidak bisa dijawab lewat kode kar
 - **`unique(employee_id, work_date)`** tetap dipertahankan; justru inilah alasan shift malam disimpan satu baris (§1).
 - **Zona waktu:** semua perhitungan memakai `now('Asia/Makassar')` seperti kode sekarang. Perbandingan jam shift malam lintas tengah malam harus memakai objek `Carbon` bertanggal, bukan perbandingan string jam.
 - **Beban Admin Wilayah** (§3.1): penjadwalan manual mingguan adalah pilihan client, tapi berpotensi melelahkan bila karyawan shift banyak. Perlu diperhatikan saat uji coba.
-- **Dampak tes:** suite naik dari 226 menjadi **261 tes** (256 lulus, 5 dilewati). `tests/Feature/ShiftKerjaTest.php` berisi 35 tes khusus shift — termasuk penjaga regresi untuk shift malam, karyawan non-shift, dan hari libur nasional.
+- **Dampak tes:** suite naik dari 226 menjadi **273 tes** (268 lulus, 5 dilewati). `tests/Feature/ShiftKerjaTest.php` berisi 47 tes khusus shift — termasuk penjaga regresi untuk shift malam, karyawan non-shift, hari libur nasional, cakupan pola, dan kuota cuti pekerja shift.
+- **Bawaan yang aman:** dua setelan baru (`cakupan_pola_shift` = `bertingkat`, `cuti_shift_max` = 0) keduanya menghasilkan perilaku yang **identik** dengan sebelum revisi 4. Jadi menjalankan migrasi tidak mengubah apa pun sampai Super Admin sengaja mengubahnya.
+- **Perhitungan cakupan 24 jam di sisi tampilan** memakai `mulaiMenit` dan `durasiMenit` yang dikirim server, bukan mengurai ulang label jam. Kalau aturan durasi shift berubah, panel ikut berubah tanpa penyesuaian terpisah.
+- **Cuti pekerja shift vs hari libur nasional:** karena pekerja shift tetap bekerja saat libur nasional (P4), hari libur tidak dikecualikan dari hitungan cuti mereka — yang menentukan hanya ada tidaknya jadwal shift.
 
 ---
 
@@ -319,6 +364,7 @@ Lima migrasi sudah dibuat dan dijalankan (urutan penting):
 | 3 | `2026_10_14_000003_create_shift_schedules_table.php` | jadwal per orang per tanggal (`shift_ke` kosong = libur) |
 | 4 | `2026_10_14_000004_create_early_leave_requests_table.php` | pengajuan pulang lebih awal + persetujuan (P2/P5) |
 | 5 | `2026_10_14_000005_add_shift_ke_to_attendances_table.php` | kolom `shift_ke` di absensi agar shift tercatat saat absen |
+| 6 | `2026_10_15_000001_add_cakupan_shift_dan_cuti_shift_to_attendance_settings_table.php` | setelan `cakupan_pola_shift` (K5) dan `cuti_shift_max` (P3) |
 
 **Berkas kode baru:**
 
@@ -328,8 +374,12 @@ Lima migrasi sudah dibuat dan dijalankan (urutan penting):
 - `app/Http/Controllers/Karyawan/EarlyLeaveController.php`.
 - `app/resources/js/Pages/Admin/PolaShift.jsx`, `JadwalShift.jsx`, `PulangAwal.jsx`.
 - `app/resources/js/Pages/Karyawan/PulangAwal.jsx`.
-- `app/tests/Feature/ShiftKerjaTest.php` (35 tes).
+- `app/tests/Feature/ShiftKerjaTest.php` (47 tes).
 
-**Berkas lama yang disesuaikan:** `Admin/EmployeeController.php` (penanda shift), `Karyawan/AttendanceController.php` (absen mengikuti shift), `Karyawan/DashboardController.php` (jam kerja vs shift), `Support/AdminPresenter.php`, `Models/Employee.php`, `Models/Attendance.php`, `routes/web.php`, serta layar `Admin/Employees.jsx`, `Karyawan/Absensi.jsx`, `Karyawan/Dashboard.jsx`, `Karyawan/Rekap.jsx`, dan kedua layout.
+**Berkas lama yang disesuaikan:** `Admin/EmployeeController.php` (penanda shift), `Karyawan/AttendanceController.php` (absen mengikuti shift), `Karyawan/DashboardController.php` (jam kerja vs shift), `Karyawan/CutiController.php` (cuti pekerja shift), `Support/AdminPresenter.php`, `Support/ShiftResolver.php` (cakupan pola), `Support/CutiKuota.php` (kuota pekerja shift), `Models/AttendanceSetting.php`, `Models/Employee.php`, `Models/Attendance.php`, `Admin/SettingController.php`, `Admin/ShiftPatternController.php` (penyaringan cakupan), `Admin/ShiftScheduleController.php` (data panel cakupan), `routes/web.php`, serta layar `Admin/Employees.jsx`, `Admin/Settings.jsx`, `Admin/PolaShift.jsx`, `Admin/JadwalShift.jsx`, `Karyawan/Absensi.jsx`, `Karyawan/Cuti.jsx`, `Karyawan/Dashboard.jsx`, `Karyawan/Rekap.jsx`, dan kedua layout.
 
-**Aturan penting yang gampang salah:** penghapusan jadwal lama saat menyimpan ulang ("ganti utuh per rentang") **wajib memakai `whereDate`, bukan `whereBetween`** pada kolom tanggal. Kolom `date` di Laravel diserialisasi dengan komponen jam (`Y-m-d 00:00:00`), sehingga `whereBetween` dengan string tanggal polos akan melewatkan hari terakhir rentang dan memicu galat duplikat saat menyimpan ulang.
+**Aturan penting yang gampang salah:**
+
+- Penghapusan jadwal lama saat menyimpan ulang ("ganti utuh per rentang") **wajib memakai `whereDate`, bukan `whereBetween`** pada kolom tanggal. Kolom `date` di Laravel diserialisasi dengan komponen jam (`Y-m-d 00:00:00`), sehingga `whereBetween` dengan string tanggal polos akan melewatkan hari terakhir rentang dan memicu galat duplikat saat menyimpan ulang.
+- Panel cakupan 24 jam butuh **sehari sebelum minggu itu** ikut dikirim ke tampilan. Tanpa itu, shift malam Minggu sebelumnya tampak seperti lubang 00:00–07:00 di hari Senin — kekurangan yang sebenarnya tidak ada.
+- `CutiKuota` menerima **`Employee` atau id**. Pemanggil lama yang mengirim id tetap jalan; untuk pekerja shift, modelnya diambil otomatis supaya aturan jadwal shift ikut berlaku tanpa mengubah pemanggil.

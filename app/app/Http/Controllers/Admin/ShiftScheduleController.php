@@ -41,6 +41,9 @@ class ShiftScheduleController extends Controller
             : $now->copy();
         $senin = $acuan->startOfDay()->startOfWeek(Carbon::MONDAY);
         $hari = collect(range(0, 6))->map(fn ($i) => $senin->copy()->addDays($i)->toDateString())->all();
+        // Sehari sebelum minggu ini ikut dibaca supaya shift malam yang melewati
+        // tengah malam masih terhitung saat memeriksa cakupan 24 jam (P1).
+        $sebelum = $senin->copy()->subDay()->toDateString();
 
         $employees = Employee::with(['region', 'site'])
             ->where('is_shift', true)
@@ -53,7 +56,8 @@ class ShiftScheduleController extends Controller
         $jadwal = [];
         if ($employees->isNotEmpty()) {
             $rows = ShiftSchedule::whereIn('employee_id', $employees->pluck('id')->all())
-                ->whereBetween('tanggal', [$hari[0], $hari[6]])
+                ->whereDate('tanggal', '>=', $sebelum)
+                ->whereDate('tanggal', '<=', $hari[6])
                 ->get();
 
             foreach ($rows as $r) {
@@ -61,7 +65,7 @@ class ShiftScheduleController extends Controller
             }
         }
 
-        $list = $employees->map(function (Employee $e) use ($patterns, $jadwal, $hari) {
+        $list = $employees->map(function (Employee $e) use ($patterns, $jadwal, $hari, $sebelum) {
             $p = $patterns[$e->id] ?? null;
 
             $cells = [];
@@ -73,20 +77,37 @@ class ShiftScheduleController extends Controller
                 $cells[$tgl] = $jadwal[$key] === null ? null : (int) $jadwal[$key];
             }
 
+            $keySebelum = $e->id.'|'.$sebelum;
+            $sebelumKe = array_key_exists($keySebelum, $jadwal) && $jadwal[$keySebelum] !== null
+                ? (int) $jadwal[$keySebelum]
+                : null;
+
             return [
                 'id' => $e->id,
                 'nama' => $e->name,
                 'nik' => $e->nik,
                 'regionNama' => $e->region?->name ?? '',
+                'siteId' => $e->site_id,
                 'siteNama' => $e->site?->nama_lokasi ?? '',
                 'polaNama' => $p?->nama ?? '',
                 'jumlahShift' => $p ? (int) $p->jumlah_shift : 0,
+                'durasiMenit' => $p ? $p->durasiMenit() : 0,
                 'shiftLabels' => $p
                     ? collect(range(1, (int) $p->jumlah_shift))
-                        ->map(fn ($n) => ['ke' => $n, 'label' => $p->labelShift($n), 'mulai' => $p->jamMulaiShift($n)])
+                        ->map(function ($n) use ($p) {
+                            $mulai = $p->jamMulaiShift($n);
+
+                            return [
+                                'ke' => $n,
+                                'label' => $p->labelShift($n),
+                                'mulai' => $mulai,
+                                'mulaiMenit' => ((int) substr($mulai, 0, 2)) * 60 + ((int) substr($mulai, 3, 2)),
+                            ];
+                        })
                         ->all()
                     : [],
                 'cells' => $cells,
+                'sebelum' => $sebelumKe,
             ];
         })->values()->all();
 
@@ -94,6 +115,7 @@ class ShiftScheduleController extends Controller
             'employees' => $list,
             'hari' => $hari,
             'senin' => $hari[0],
+            'sebelum' => $sebelum,
             'mingguLalu' => $senin->copy()->subWeek()->toDateString(),
             'mingguDepan' => $senin->copy()->addWeek()->toDateString(),
             'tanpaPola' => collect($list)->where('jumlahShift', 0)->count(),

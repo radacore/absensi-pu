@@ -27,6 +27,15 @@ function hitungHariKerja(mulai, selesai, hariKerja, libur) {
     return total;
 }
 
+/**
+ * Hitung hari pada rentang untuk pekerja shift — cermin dari
+ * App\Support\CutiKuota: hanya tanggal yang dijadwalkan shift yang dihitung.
+ */
+function hitungHariShift(mulai, selesai, jadwalKerja) {
+    if (!mulai || !selesai || mulai > selesai) return 0;
+    return (jadwalKerja ?? []).filter((t) => t >= mulai && t <= selesai).length;
+}
+
 export default function Cuti() {
     const { props } = usePage();
     const me = props.me ?? { nama: '—', region: '' };
@@ -45,7 +54,12 @@ export default function Cuti() {
     const [approverId, setApproverId] = useState('');
 
     const dibatasiKuota = jenisBerkuota.includes(jenis);
-    const hariKerjaDiminta = dibatasiKuota ? hitungHariKerja(mulai, selesai, kuota?.hariKerja, kuota?.libur) : 0;
+    const isShift = !!kuota?.isShift;
+    const hariKerjaDiminta = dibatasiKuota
+        ? (isShift
+            ? hitungHariShift(mulai, selesai, kuota?.jadwalKerja)
+            : hitungHariKerja(mulai, selesai, kuota?.hariKerja, kuota?.libur))
+        : 0;
     const sisaKuota = kuota?.sisa ?? null;
 
     const handleSubmit = () => {
@@ -92,6 +106,7 @@ export default function Cuti() {
                                 <span className={`ml-1 font-semibold ${kuota.sisa > 0 ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{kuota.sisa} hari kerja</span>
                                 <span className="text-[#64748B]"> / {kuota.max}</span>
                                 {kuota.terpakai > 0 && <span> • terpakai {kuota.terpakai} hari kerja (termasuk yang Menunggu)</span>}
+                                {isShift && <span className="block mt-0.5">Dihitung dari jadwal shift Anda — hari yang tidak dijadwalkan kerja tidak memotong cuti.</span>}
                             </p>
                         )}
                     </div>
@@ -118,7 +133,7 @@ export default function Cuti() {
                             <p className={`text-xs rounded-xl px-3 py-2 ${sisaKuota !== null && hariKerjaDiminta > sisaKuota ? 'bg-[#FEF2F2] text-[#991B1B]' : 'bg-[#F8FAFC] text-[#475569]'}`}>
                                 Pengajuan ini <span className="font-semibold">{hariKerjaDiminta} hari kerja</span>
                                 {sisaKuota !== null && <> • sisa kuota {sisaKuota} hari kerja</>}
-                                {hariKerjaDiminta === 0 && <> • tidak ada hari kerja pada rentang ini (akhir pekan/libur nasional)</>}
+                                {hariKerjaDiminta === 0 && <>{isShift ? ' • tidak ada jadwal shift pada rentang ini' : ' • tidak ada hari kerja pada rentang ini (akhir pekan/libur nasional)'}</>}
                                 {sisaKuota !== null && hariKerjaDiminta > sisaKuota && <> • melebihi sisa kuota</>}
                             </p>
                         )}

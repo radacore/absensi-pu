@@ -7,6 +7,7 @@ use App\Models\Region;
 use App\Models\ShiftPattern;
 use App\Models\Site;
 use App\Support\Audit;
+use App\Support\ShiftResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -26,6 +27,21 @@ class ShiftPatternController extends Controller
         $u = Auth::guard('web')->user();
 
         return $u->role === 'super_admin' ? null : $u->region_id;
+    }
+
+    /**
+     * Cakupan pola yang boleh dibuat, mengikuti setelan `cakupan_pola_shift`.
+     * Kalau client mempersempit cakupan, pilihan di form ikut menyempit.
+     *
+     * @return array<int,string>
+     */
+    private function cakupanDiizinkan(): array
+    {
+        return match (ShiftResolver::cakupan()) {
+            'global' => ['global'],
+            'wilayah' => ['global', 'wilayah'],
+            default => ['global', 'wilayah', 'lokasi'],
+        };
     }
 
     public function index()
@@ -77,6 +93,8 @@ class ShiftPatternController extends Controller
             'patterns' => $patterns,
             'regions' => $regions,
             'isSuperAdmin' => $scope === null,
+            'cakupanPola' => ShiftResolver::cakupan(),
+            'cakupanDiizinkan' => $this->cakupanDiizinkan(),
         ]);
     }
 
@@ -185,7 +203,7 @@ class ShiftPatternController extends Controller
             'nama' => ['required', 'string', 'min:2', 'max:60'],
             'jumlahShift' => ['required', 'integer', 'min:'.ShiftPattern::MIN_SHIFT, 'max:'.ShiftPattern::MAX_SHIFT],
             'jamMulaiShift1' => ['required', 'date_format:H:i'],
-            'cakupan' => ['required', 'in:global,wilayah,lokasi'],
+            'cakupan' => ['required', 'in:'.implode(',', $this->cakupanDiizinkan())],
             'regionId' => ['nullable', 'integer', 'exists:regions,id'],
             'siteId' => ['nullable', 'integer', 'exists:sites,id'],
         ]);

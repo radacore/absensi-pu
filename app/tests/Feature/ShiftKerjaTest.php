@@ -10,6 +10,7 @@ use App\Models\Holiday;
 use App\Models\ShiftPattern;
 use App\Models\ShiftSchedule;
 use App\Models\User;
+use App\Support\CutiKuota;
 use App\Support\ShiftResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -735,5 +736,207 @@ class ShiftKerjaTest extends TestCase
                 ->where('senin', self::SENIN)
                 ->has('hari', 7)
                 ->where('hari.6', '2026-10-18'));
+    }
+
+    // ── K5: cakupan pola shift bisa dipersempit lewat setelan ──
+
+    public function test_cakupan_bertingkat_memakai_pola_paling_spesifik(): void
+    {
+        $e = $this->karyawan(2);
+        $e->forceFill(['is_shift' => true])->save();
+
+        $this->pola(['nama' => 'Global', 'jumlah_shift' => 2]);
+        $wilayah = $this->pola(['nama' => 'Wilayah', 'jumlah_shift' => 3, 'region_id' => 2]);
+        $lokasi = $this->pola(['nama' => 'Lokasi', 'jumlah_shift' => 4, 'region_id' => 2, 'site_id' => $e->site_id]);
+
+        $this->assertSame($lokasi->id, ShiftResolver::patternFor($e->fresh())->id);
+    }
+
+    public function test_setelan_cakupan_wilayah_mengabaikan_pola_lokasi(): void
+    {
+        $e = $this->karyawan(2);
+        $e->forceFill(['is_shift' => true])->save();
+
+        $this->pola(['nama' => 'Global', 'jumlah_shift' => 2]);
+        $wilayah = $this->pola(['nama' => 'Wilayah', 'jumlah_shift' => 3, 'region_id' => 2]);
+        $this->pola(['nama' => 'Lokasi', 'jumlah_shift' => 4, 'region_id' => 2, 'site_id' => $e->site_id]);
+
+        AttendanceSetting::query()->update(['cakupan_pola_shift' => 'wilayah']);
+
+        $this->assertSame($wilayah->id, ShiftResolver::patternFor($e->fresh())->id);
+    }
+
+    public function test_setelan_cakupan_global_hanya_memakai_pola_global(): void
+    {
+        $e = $this->karyawan(2);
+        $e->forceFill(['is_shift' => true])->save();
+
+        $global = $this->pola(['nama' => 'Global', 'jumlah_shift' => 2]);
+        $this->pola(['nama' => 'Wilayah', 'jumlah_shift' => 3, 'region_id' => 2]);
+        $this->pola(['nama' => 'Lokasi', 'jumlah_shift' => 4, 'region_id' => 2, 'site_id' => $e->site_id]);
+
+        AttendanceSetting::query()->update(['cakupan_pola_shift' => 'global']);
+
+        $this->assertSame($global->id, ShiftResolver::patternFor($e->fresh())->id);
+
+        // Tanpa pola global, tidak ada pola yang berlaku sama sekali.
+        $global->delete();
+        $this->assertNull(ShiftResolver::patternFor($e->fresh()));
+    }
+
+    public function test_halaman_pola_menyaring_cakupan_sesuai_setelan(): void
+    {
+        AttendanceSetting::query()->update(['cakupan_pola_shift' => 'wilayah']);
+
+        $this->actingAs($this->superAdmin(), 'web')
+            ->get('/super-admin/pola-shift')
+            ->assertOk()
+            ->assertInertia(fn (Assert $p) => $p
+                ->component('Admin/PolaShift')
+                ->where('cakupanPola', 'wilayah')
+                ->where('cakupanDiizinkan', ['global', 'wilayah']));
+    }
+
+    public function test_pola_di_luar_cakupan_setelan_ditolak(): void
+    {
+        AttendanceSetting::query()->update(['cakupan_pola_shift' => 'wilayah']);
+
+        $this->actingAs($this->superAdmin(), 'web')
+            ->from('/super-admin/pola-shift')
+            ->post('/super-admin/pola-shift', [
+                'nama' => 'Pola Lokasi',
+                'jumlahShift' => 2,
+                'jamMulaiShift1' => '07:00',
+                'cakupan' => 'lokasi',
+                'siteId' => $this->karyawan(2)->site_id,
+            ])
+            ->assertSessionHasErrors('cakupan');
+
+        $this->assertDatabaseCount('shift_patterns', 0);
+    }
+
+    public function test_setelan_cakupan_dan_jatah_cuti_shift_tersimpan(): void
+    {
+        $this->actingAs($this->superAdmin(), 'web')
+            ->from('/super-admin/settings')
+            ->put('/super-admin/settings', [
+                'jamMasuk' => '07:30',
+                'jamPulang' => '16:00',
+                'toleransi' => 15,
+                'loveMax' => 4,
+                'cutiTahunanMax' => 12,
+                'cakupanPolaShift' => 'wilayah',
+                'cutiShiftMax' => 10,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $s = AttendanceSetting::first();
+        $this->assertSame('wilayah', $s->cakupan_pola_shift);
+        $this->assertSame(10, (int) $s->cuti_shift_max);
+    }
+
+    public function test_setelan_cakupan_pola_yang_tidak_dikenal_ditolak(): void
+    {
+        $this->actingAs($this->superAdmin(), 'web')
+            ->from('/super-admin/settings')
+            ->put('/super-admin/settings', [
+                'jamMasuk' => '07:30',
+                'jamPulang' => '16:00',
+                'toleransi' => 15,
+                'loveMax' => 4,
+                'cakupanPolaShift' => 'entah',
+            ])
+            ->assertSessionHasErrors('cakupanPolaShift');
+    }
+
+    // ── P1: data cakupan 24 jam di halaman jadwal ──────────
+
+    public function test_payload_jadwal_shift_membawa_data_cakupan_24_jam(): void
+    {
+        $e = $this->karyawan(2);
+        $p = $this->pola(['jumlah_shift' => 2]);
+        $this->jadikanShift($e, 1, $p, self::SENIN);
+
+        // Shift malam sehari sebelum minggu ini — dipakai untuk menghitung
+        // limpahan ke Senin pagi.
+        ShiftSchedule::create([
+            'employee_id' => $e->id,
+            'tanggal' => '2026-10-11',
+            'shift_ke' => 2,
+            'shift_pattern_id' => $p->id,
+        ]);
+
+        $this->actingAs($this->superAdmin(), 'web')
+            ->get('/super-admin/jadwal-shift')
+            ->assertOk()
+            ->assertInertia(fn (Assert $p) => $p
+                ->component('Admin/JadwalShift')
+                ->where('sebelum', '2026-10-11')
+                ->where('employees.0.durasiMenit', 720)
+                ->where('employees.0.siteId', $e->site_id)
+                ->where('employees.0.sebelum', 2)
+                ->where('employees.0.shiftLabels.0.mulaiMenit', 420));
+    }
+
+    // ── P3: kuota cuti pekerja shift ───────────────────────
+
+    public function test_cuti_pekerja_shift_dihitung_dari_jadwal_shift(): void
+    {
+        $e = $this->karyawan(2);
+        $p = $this->pola();
+
+        // Karyawan biasa: Senin–Jumat = 5 hari kerja.
+        $this->assertSame(5, CutiKuota::hariKerjaUntuk($e, '2026-10-12', '2026-10-18'));
+
+        // Setelah jadi pekerja shift: hanya tanggal yang dijadwalkan yang dihitung.
+        $this->jadikanShift($e, 1, $p, '2026-10-12');
+        $this->jadikanShift($e, 1, $p, '2026-10-14');
+
+        $this->assertSame(2, CutiKuota::hariKerjaUntuk($e->fresh(), '2026-10-12', '2026-10-18'));
+    }
+
+    public function test_jatah_cuti_shift_khusus_dipakai_bila_diisi(): void
+    {
+        $e = $this->karyawan(2);
+        $this->jadikanShift($e);
+
+        // Bawaan 0 = ikut kuota umum.
+        $this->assertSame(CutiKuota::max(), CutiKuota::maxUntuk($e->fresh()));
+
+        AttendanceSetting::query()->update(['cuti_shift_max' => 8]);
+
+        $this->assertSame(8, CutiKuota::maxUntuk($e->fresh()));
+    }
+
+    public function test_pengajuan_cuti_pekerja_shift_dinilai_terhadap_jadwal_shift(): void
+    {
+        $e = $this->karyawan(2);
+        $p = $this->pola();
+        $this->jadikanShift($e, 1, $p, '2026-10-12');
+        $this->jadikanShift($e, 1, $p, '2026-10-13');
+        $this->jadikanShift($e, 1, $p, '2026-10-14');
+
+        AttendanceSetting::query()->update(['cuti_shift_max' => 2]);
+
+        // 3 hari terjadwal, jatah 2 → kurang 1 hari.
+        $pelanggaran = CutiKuota::pelanggaran($e->fresh(), 'Tahunan', '2026-10-12', '2026-10-16');
+
+        $this->assertCount(1, $pelanggaran);
+        $this->assertSame(3, $pelanggaran[0]['diminta']);
+        $this->assertSame(2, $pelanggaran[0]['sisa']);
+    }
+
+    public function test_halaman_cuti_pekerja_shift_membawa_jadwal_kerja(): void
+    {
+        $e = $this->karyawan(2);
+        $this->jadikanShift($e, 1, null, '2026-10-12');
+
+        $this->actingAs($e->fresh(), 'employee')
+            ->get('/karyawan/cuti')
+            ->assertOk()
+            ->assertInertia(fn (Assert $p) => $p
+                ->component('Karyawan/Cuti')
+                ->where('kuota.isShift', true)
+                ->where('kuota.jadwalKerja', ['2026-10-12']));
     }
 }

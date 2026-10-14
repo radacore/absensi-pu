@@ -11,13 +11,15 @@ export default function Settings() {
     const { url, props } = usePage();
     const base = getBase(url);
     const hariKerjaLabel = (props.settings?.hariKerja ?? ['1', '2', '3', '4', '5']).map((d) => HARI[String(d)] ?? d).join(', ');
-    const init = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, cutiTahunanMax: 12, absenLiburAktif: false, absenLiburMode: 'tolak', hariKerja: ['1', '2', '3', '4', '5'] };
+    const init = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, cutiTahunanMax: 12, cakupanPolaShift: 'bertingkat', cutiShiftMax: 0, absenLiburAktif: false, absenLiburMode: 'tolak', hariKerja: ['1', '2', '3', '4', '5'] };
     const readOnly = !!props.readOnly;
     const [jamMasuk, setJamMasuk] = useState(init.jamMasuk);
     const [jamPulang, setJamPulang] = useState(init.jamPulang);
     const [toleransi, setToleransi] = useState(init.toleransi);
     const [loveMax, setLoveMax] = useState(init.loveMax);
     const [cutiTahunanMax, setCutiTahunanMax] = useState(init.cutiTahunanMax ?? 12);
+    const [cakupanPolaShift, setCakupanPolaShift] = useState(init.cakupanPolaShift ?? 'bertingkat');
+    const [cutiShiftMax, setCutiShiftMax] = useState(init.cutiShiftMax ?? 0);
     const [absenLiburAktif, setAbsenLiburAktif] = useState(!!init.absenLiburAktif);
     const [absenLiburMode, setAbsenLiburMode] = useState(init.absenLiburMode ?? 'tolak');
     const [hariKerja, setHariKerja] = useState((init.hariKerja ?? ['1', '2', '3', '4', '5']).map(String));
@@ -25,9 +27,11 @@ export default function Settings() {
     useEffect(() => {
         setJamMasuk(init.jamMasuk); setJamPulang(init.jamPulang); setToleransi(init.toleransi); setLoveMax(init.loveMax);
         setCutiTahunanMax(init.cutiTahunanMax ?? 12);
+        setCakupanPolaShift(init.cakupanPolaShift ?? 'bertingkat');
+        setCutiShiftMax(init.cutiShiftMax ?? 0);
         setAbsenLiburAktif(!!init.absenLiburAktif); setAbsenLiburMode(init.absenLiburMode ?? 'tolak');
         setHariKerja((init.hariKerja ?? ['1', '2', '3', '4', '5']).map(String));
-    }, [init.jamMasuk, init.jamPulang, init.toleransi, init.loveMax, init.cutiTahunanMax, init.absenLiburAktif, init.absenLiburMode, init.hariKerja]);
+    }, [init.jamMasuk, init.jamPulang, init.toleransi, init.loveMax, init.cutiTahunanMax, init.cakupanPolaShift, init.cutiShiftMax, init.absenLiburAktif, init.absenLiburMode, init.hariKerja]);
 
     const toggleHari = (d) => {
         if (readOnly) return;
@@ -40,8 +44,9 @@ export default function Settings() {
         if (toleransi < 0 || toleransi > 60) { toast.error('Kelonggaran harus antara 0–60 menit'); return; }
         if (loveMax < 1 || loveMax > 10) { toast.error('Kuota toleransi harus antara 1–10 per bulan'); return; }
         if (cutiTahunanMax < 1 || cutiTahunanMax > 60) { toast.error('Kuota cuti tahunan harus antara 1–60 hari kerja'); return; }
+        if (cutiShiftMax < 0 || cutiShiftMax > 60) { toast.error('Jatah cuti pekerja shift harus 0–60 hari kerja'); return; }
         if (hariKerja.length === 0) { toast.error('Pilih minimal satu hari kerja'); return; }
-        router.put(`${base}/settings`, { jamMasuk, jamPulang, toleransi, loveMax, cutiTahunanMax, absenLiburAktif, absenLiburMode, hariKerja }, { preserveScroll: true });
+        router.put(`${base}/settings`, { jamMasuk, jamPulang, toleransi, loveMax, cutiTahunanMax, cakupanPolaShift, cutiShiftMax, absenLiburAktif, absenLiburMode, hariKerja }, { preserveScroll: true });
     };
 
     return (
@@ -137,6 +142,46 @@ export default function Settings() {
                         Hanya jenis <span className="font-medium text-[#334155]">Tahunan</span> yang memotong kuota — Sakit, Besar, dan Melahirkan tidak dibatasi.
                         Pengajuan berstatus <span className="font-medium text-[#334155]">Menunggu</span> sudah memotong kuota; yang Ditolak tidak.
                     </p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-5">
+                    <h3 className="font-medium text-sm text-[#0F172A] flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-xl bg-[#EFF6FF] flex items-center justify-center">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" strokeWidth="1.7"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                        </span>
+                        Shift Kerja
+                    </h3>
+
+                    <div>
+                        <label htmlFor="cakupan" className="text-xs font-medium text-[#334155]">Cakupan pola shift {readOnly && <span className="text-[#64748B]">— read-only</span>}</label>
+                        <select
+                            id="cakupan"
+                            value={cakupanPolaShift}
+                            disabled={readOnly}
+                            onChange={(e) => !readOnly && setCakupanPolaShift(e.target.value)}
+                            className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${readOnly ? 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`}
+                        >
+                            <option value="bertingkat">Bertingkat — lokasi, lalu wilayah, lalu global</option>
+                            <option value="wilayah">Per wilayah saja — lokasi diabaikan</option>
+                            <option value="global">Global saja — wilayah dan lokasi diabaikan</option>
+                        </select>
+                        <p className="mt-2 text-xs text-[#64748B]">
+                            Menentukan seberapa dalam pola shift dicari untuk tiap pekerja shift. Yang paling spesifik menang.
+                            Pilihan ini juga menyaring cakupan yang boleh dibuat di halaman <span className="font-medium text-[#334155]">Pola Shift</span>.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label htmlFor="cutiShift" className="text-xs font-medium text-[#334155]">Jatah cuti pekerja shift (0–60 hari kerja) {readOnly && <span className="text-[#64748B]">— read-only</span>}</label>
+                        <div className="mt-1.5 flex items-center gap-3">
+                            <input id="cutiShift" type="range" min="0" max="60" value={cutiShiftMax} onChange={(e) => !readOnly && setCutiShiftMax(Number(e.target.value))} disabled={readOnly} className={`flex-1 accent-[#1E3A8A] ${readOnly ? 'opacity-40 cursor-not-allowed' : ''}`} />
+                            <span className="w-14 h-10 rounded-xl bg-[#1E3A8A] text-white flex items-center justify-center font-semibold text-sm">{cutiShiftMax === 0 ? 'Umum' : cutiShiftMax}</span>
+                        </div>
+                        <p className="mt-2 text-xs text-[#64748B]">
+                            <span className="font-medium text-[#334155]">0 = ikut kuota umum.</span> Bila diisi, angka ini jadi jatah khusus pekerja shift.
+                            Hari cuti pekerja shift dihitung dari <span className="font-medium text-[#334155]">jadwal shift-nya sendiri</span> — hari yang tidak dijadwalkan kerja tidak memotong cuti.
+                        </p>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] space-y-4">

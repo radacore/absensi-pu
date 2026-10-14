@@ -17,6 +17,13 @@ const JENIS_CAKUPAN = [
     { value: 'lokasi', label: 'Per lokasi' },
 ];
 
+/** Keterangan singkat cakupan yang sedang berlaku. */
+const CAKUPAN_AKTIF = {
+    bertingkat: 'Pola bisa dibuat untuk semua wilayah, satu wilayah, atau satu lokasi. Yang paling spesifik dipakai.',
+    wilayah: 'Pola hanya diatur per wilayah — pola per lokasi diabaikan.',
+    global: 'Pola hanya diatur sekali untuk semua wilayah.',
+};
+
 /** Jam selesai shift ke-n, dihitung dari jam mulai + panjang shift. */
 function jamSelesai(jamMulai, jumlahShift, ke) {
     const [h, m] = String(jamMulai || '07:00').split(':').map((v) => parseInt(v, 10) || 0);
@@ -41,13 +48,18 @@ export default function PolaShift() {
     const regions = props.regions ?? [];
     const confirm = useConfirm();
 
+    // Cakupan yang boleh dipakai mengikuti setelan `cakupan_pola_shift` (K5).
+    const cakupanDiizinkan = props.cakupanDiizinkan ?? ['global', 'wilayah', 'lokasi'];
+    const opsiCakupan = JENIS_CAKUPAN.filter((c) => cakupanDiizinkan.includes(c.value) && (!isWilayah || c.value !== 'global'));
+    const cakupanAwal = opsiCakupan[0]?.value ?? (isWilayah ? 'wilayah' : 'global');
+
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({
         nama: '',
         jumlahShift: 2,
         jamMulaiShift1: '07:00',
-        cakupan: isWilayah ? 'wilayah' : 'global',
+        cakupan: cakupanAwal,
         regionId: regions[0]?.id ?? null,
         siteId: regions[0]?.sites?.[0]?.id ?? null,
     });
@@ -73,7 +85,7 @@ export default function PolaShift() {
             nama: '',
             jumlahShift: 2,
             jamMulaiShift1: '07:00',
-            cakupan: isWilayah ? 'wilayah' : 'global',
+            cakupan: cakupanAwal,
             regionId: regions[0]?.id ?? null,
             siteId: regions[0]?.sites?.[0]?.id ?? null,
         });
@@ -159,10 +171,14 @@ export default function PolaShift() {
                             Panjang shift dihitung otomatis: 24 jam dibagi jumlah shift — 2 shift = 12 jam, 3 shift = 8 jam, 4 shift = 6 jam.
                         </p>
                         <p className="text-xs text-[#64748B] mt-1">
-                            {isWilayah ? 'Anda menyusun pola untuk wilayah Anda.' : 'Pola bisa dibuat untuk semua wilayah, satu wilayah, atau satu lokasi. Yang paling spesifik dipakai.'}
+                            {opsiCakupan.length === 0
+                                ? 'Cakupan pola sedang dipersempit ke global — pola hanya bisa dibuat Super Admin.'
+                                : isWilayah
+                                    ? 'Anda menyusun pola untuk wilayah Anda.'
+                                    : CAKUPAN_AKTIF[cakupanDiizinkan.length === 1 ? cakupanDiizinkan[0] : 'bertingkat']}
                         </p>
                     </div>
-                    <button type="button" onClick={bukaTambah} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0">+ Tambah Pola</button>
+                    <button type="button" onClick={bukaTambah} disabled={opsiCakupan.length === 0} className={`rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0 ${opsiCakupan.length === 0 ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>+ Tambah Pola</button>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
@@ -284,7 +300,7 @@ export default function PolaShift() {
                                         onChange={(e) => setForm({ ...form, cakupan: e.target.value })}
                                         className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none"
                                     >
-                                        {JENIS_CAKUPAN.filter((c) => !isWilayah || c.value !== 'global').map((c) => (
+                                        {opsiCakupan.map((c) => (
                                             <option key={c.value} value={c.value}>{c.label}</option>
                                         ))}
                                     </select>

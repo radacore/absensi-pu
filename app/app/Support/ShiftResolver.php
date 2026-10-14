@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\AttendanceSetting;
 use App\Models\Employee;
 use App\Models\ShiftPattern;
 use App\Models\ShiftSchedule;
@@ -12,32 +13,57 @@ use Illuminate\Support\Carbon;
  *
  * Dipakai bersama oleh absen masuk, absen pulang, dan tampilan jadwal supaya
  * aturannya tidak tersebar dan tidak berbeda antar halaman.
+ *
+ * Cakupan pencarian pola (K5) mengikuti setelan `cakupan_pola_shift` supaya
+ * keputusan client soal "pola diatur di level mana" bisa diubah tanpa ubah
+ * kode. Bawaannya bertingkat: per lokasi → per wilayah → global.
  */
 class ShiftResolver
 {
     /** Karyawan boleh absen masuk sampai sekian menit sebelum jam shift. */
     public const AWAL_MENIT = 120;
 
+    /** Cakupan pencarian pola yang berlaku. */
+    public static function cakupan(?AttendanceSetting $settings = null): string
+    {
+        $settings ??= AttendanceSetting::first();
+
+        return $settings?->cakupanPola() ?? AttendanceSetting::CAKUPAN_POLA_DEFAULT;
+    }
+
+    /** Cakupan ini memakai pola per lokasi? */
+    public static function pakaiLokasi(string $cakupan): bool
+    {
+        return $cakupan === 'bertingkat';
+    }
+
+    /** Cakupan ini masih memakai pola per wilayah? */
+    public static function pakaiWilayah(string $cakupan): bool
+    {
+        return in_array($cakupan, ['bertingkat', 'wilayah'], true);
+    }
+
     /**
      * Pola shift yang berlaku untuk karyawan — yang paling spesifik menang:
-     * per lokasi → per wilayah → global.
+     * per lokasi → per wilayah → global, dipersempit sesuai setelan cakupan.
      */
-    public static function patternFor(Employee $employee): ?ShiftPattern
+    public static function patternFor(Employee $employee, ?AttendanceSetting $settings = null): ?ShiftPattern
     {
         if (! $employee->is_shift) {
             return null;
         }
 
+        $cakupan = self::cakupan($settings);
         $base = fn () => ShiftPattern::where('is_active', true)->orderBy('id');
 
-        if ($employee->site_id) {
+        if (self::pakaiLokasi($cakupan) && $employee->site_id) {
             $site = $base()->whereNotNull('site_id')->where('site_id', $employee->site_id)->first();
             if ($site) {
                 return $site;
             }
         }
 
-        if ($employee->region_id) {
+        if (self::pakaiWilayah($cakupan) && $employee->region_id) {
             $wilayah = $base()->whereNull('site_id')->whereNotNull('region_id')
                 ->where('region_id', $employee->region_id)->first();
             if ($wilayah) {
@@ -64,8 +90,9 @@ class ShiftResolver
      * @param  \Illuminate\Support\Collection<int, Employee>  $employees
      * @return array<int, ShiftPattern|null> kunci = employee_id
      */
-    public static function patternsFor($employees): array
+    public static function patternsFor($employees, ?AttendanceSetting $settings = null): array
     {
+        $cakupan = self::cakupan($settings);
         $pola = ShiftPattern::where('is_active', true)->orderBy('id')->get();
 
         $perSite = [];
@@ -83,9 +110,15 @@ class ShiftResolver
 
         $out = [];
         foreach ($employees as $e) {
-            $out[$e->id] = $e->is_shift
-                ? ($perSite[$e->site_id] ?? $perRegion[$e->region_id] ?? $global)
-                : null;
+            if (! $e->is_shift) {
+                $out[$e->id] = null;
+
+                continue;
+            }
+
+            $out[$e->id] = self::pakaiLokasi($cakupan) ? ($perSite[$e->site_id] ?? null) : null;
+            $out[$e->id] ??= self::pakaiWilayah($cakupan) ? ($perRegion[$e->region_id] ?? null) : null;
+            $out[$e->id] ??= $global;
         }
 
         return $out;
