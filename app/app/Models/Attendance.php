@@ -16,6 +16,8 @@ class Attendance extends Model
         'work_date',
         'clock_in_at',
         'clock_out_at',
+        // Snapshot shift yang berlaku saat absen masuk (null = bukan pekerja shift).
+        'shift_ke',
         'status',
         'lat_in',
         'lng_in',

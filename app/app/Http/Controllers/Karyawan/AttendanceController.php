@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Karyawan;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\AttendanceSetting;
+use App\Models\EarlyLeaveRequest;
 use App\Models\Leave;
+use App\Models\ShiftSchedule;
 use App\Support\AdminPresenter;
+use App\Support\ShiftResolver;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -21,6 +24,12 @@ class AttendanceController extends Controller
     {
         $me = Auth::guard('employee')->user()->load(['region', 'site']);
 
+        $now = now('Asia/Makassar');
+        $today = $now->toDateString();
+
+        $isShift = (bool) $me->is_shift;
+        $pattern = $isShift ? ShiftResolver::patternFor($me) : null;
+
         $history = Attendance::where('employee_id', $me->id)
             ->orderByDesc('work_date')
             ->orderByDesc('clock_in_at')
@@ -34,6 +43,7 @@ class AttendanceController extends Controller
                 'status' => $a->status ?? 'on_time',
                 'jarak' => (int) ($a->distance_in_m ?? 0),
                 'selfie' => $a->selfieRouteUrl('masuk'),
+                'shift' => ($pattern && $a->shift_ke) ? $pattern->labelShift((int) $a->shift_ke) : null,
             ])->values()->all();
 
         $assigned = $me->site ? [
@@ -48,12 +58,10 @@ class AttendanceController extends Controller
         ] : null;
 
         $settings = AttendanceSetting::first();
-        $today = now('Asia/Makassar')->toDateString();
-        $todayRow = Attendance::where('employee_id', $me->id)->whereDate('work_date', $today)->first();
 
         // Info gerbang hari libur → dipakai UI untuk mematikan tombol absen.
-        $now = now('Asia/Makassar');
-        $liburLabel = ($settings && $settings->absen_libur_aktif)
+        // Pekerja shift tidak terkena gerbang ini (mereka bekerja menurut jadwal).
+        $liburLabel = ($settings && $settings->absen_libur_aktif && ! $isShift)
             ? AdminPresenter::nonWorkDayLabel($settings, $now)
             : null;
         $absenLibur = [
@@ -63,6 +71,54 @@ class AttendanceController extends Controller
             'label' => $liburLabel,
             'ditolak' => $liburLabel !== null && ($settings?->absen_libur_mode ?: 'tolak') === 'tolak',
         ];
+
+        // ── Info shift untuk halaman absen (hanya pekerja shift).
+        $current = $isShift ? ShiftResolver::currentShift($me, $now) : null;
+        $shift = null;
+        $bolehPulang = true;
+        $pulangCepat = null;
+
+        if ($current) {
+            $tanggalShift = $current['schedule']->tanggal->toDateString();
+            $shift = [
+                'label' => $current['pattern']->labelShift((int) $current['schedule']->shift_ke),
+                'tanggal' => $tanggalShift,
+                'jamMulai' => $current['mulai']->format('H:i'),
+                'jamSelesai' => $current['selesai']->format('H:i'),
+            ];
+            $bolehPulang = $now->gte($current['selesai']);
+
+            $req = EarlyLeaveRequest::where('employee_id', $me->id)
+                ->whereDate('tanggal', $tanggalShift)
+                ->orderByDesc('id')
+                ->first();
+            if ($req) {
+                $pulangCepat = [
+                    'status' => $req->status,
+                    'jamRencana' => substr((string) $req->jam_rencana, 0, 5),
+                    'alasan' => $req->alasan,
+                    'note' => $req->note ?? '',
+                ];
+                if ($req->status === 'Disetujui') {
+                    $bolehPulang = true;
+                }
+            }
+        }
+
+        // Baris absensi yang masih terbuka (belum absen pulang). Untuk shift
+        // malam, baris ini bisa bertanggal kemarin.
+        $openRow = Attendance::where('employee_id', $me->id)
+            ->whereNull('clock_out_at')
+            ->whereDate('work_date', '>=', $now->copy()->subDay()->toDateString())
+            ->orderByDesc('work_date')
+            ->first();
+
+        $todayRow = Attendance::where('employee_id', $me->id)->whereDate('work_date', $today)->first();
+
+        // Tanggal kerja yang relevan sekarang: tanggal shift yang berjalan,
+        // tanggal baris terbuka, atau hari ini.
+        $workDateAktif = $shift['tanggal']
+            ?? ($openRow && $openRow->work_date instanceof Carbon ? $openRow->work_date->toDateString() : $today);
 
         return Inertia::render('Karyawan/Absensi', [
             'me' => [
@@ -81,6 +137,12 @@ class AttendanceController extends Controller
             'absenLibur' => $absenLibur,
             'alreadyToday' => (bool) $todayRow,
             'todayISO' => $today,
+            'isShift' => $isShift,
+            'shift' => $shift,
+            'shiftHariIni' => $isShift ? ShiftResolver::labelFor($me, $now) : null,
+            'bolehPulang' => $bolehPulang,
+            'pulangCepat' => $pulangCepat,
+            'workDateAktif' => $workDateAktif,
         ]);
     }
 
@@ -101,8 +163,15 @@ class AttendanceController extends Controller
         ]);
 
         $now = now('Asia/Makassar');
-        $today = $now->toDateString();
-        if (Attendance::where('employee_id', $me->id)->whereDate('work_date', $today)->exists()) {
+        $settings = AttendanceSetting::first();
+
+        // Pekerja shift mengikuti jadwal shift; karyawan lain mengikuti jam
+        // masuk global. `$shift` berisi rentang shift yang sedang berlaku —
+        // null berarti karyawan ini tidak sedang dalam sebuah shift.
+        $shift = ShiftResolver::currentShift($me, $now);
+        $workDate = $shift ? $shift['schedule']->tanggal->toDateString() : $now->toDateString();
+
+        if (Attendance::where('employee_id', $me->id)->whereDate('work_date', $workDate)->exists()) {
             throw ValidationException::withMessages(['work_date' => 'Sudah absen hari ini.']);
         }
 
@@ -112,40 +181,53 @@ class AttendanceController extends Controller
             throw ValidationException::withMessages(['distance' => "{$dist} m / {$site->radius_m} m — di luar radius."]);
         }
 
-        $settings = AttendanceSetting::first();
-
         // ── Gerbang hari kerja (Super Admin: absen_libur_aktif / absen_libur_mode)
         //   aktif + 'tolak' → absen di luar hari kerja ditolak (422).
         //   aktif + 'catat' → absen tetap dicatat, status 'libur'.
         //   nonaktif        → perilaku lama: dicatat seperti hari kerja biasa.
-        $liburLabel = ($settings && $settings->absen_libur_aktif)
-            ? AdminPresenter::nonWorkDayLabel($settings, $now)
-            : null;
+        // Pekerja shift TIDAK terkena gerbang ini: mereka bekerja menurut jadwal,
+        // dan absen pada hari libur nasional dicatat sebagai absen biasa (P4).
+        $liburLabel = null;
+        if (! $shift) {
+            $liburLabel = ($settings && $settings->absen_libur_aktif)
+                ? AdminPresenter::nonWorkDayLabel($settings, $now)
+                : null;
 
-        if ($liburLabel !== null && ($settings->absen_libur_mode ?: 'tolak') === 'tolak') {
-            throw ValidationException::withMessages([
-                'work_date' => "Absen ditolak — {$liburLabel}. Hubungi Admin Wilayah bila perlu dispensasi.",
-            ]);
+            if ($liburLabel !== null && ($settings->absen_libur_mode ?: 'tolak') === 'tolak') {
+                throw ValidationException::withMessages([
+                    'work_date' => "Absen ditolak — {$liburLabel}. Hubungi Admin Wilayah bila perlu dispensasi.",
+                ]);
+            }
         }
 
-        $jamMasuk = $settings ? substr((string) $settings->jam_masuk, 0, 5) : '07:30';
         $tol = $settings ? (int) $settings->toleransi_late_menit : 15;
-        [$h, $m] = array_map('intval', explode(':', $jamMasuk));
-        $cutoffMin = $h * 60 + $m + $tol;
-        $curMin = (int) $now->format('G') * 60 + (int) $now->format('i');
-        $status = $curMin > $cutoffMin ? 'late' : 'on_time';
-        if ($liburLabel !== null) {
-            $status = 'libur';
+
+        if ($shift) {
+            // Terlambat diukur dari jam mulai shift + toleransi global
+            // (A4: satu toleransi berlaku untuk semua).
+            $status = $now->gt($shift['mulai']->copy()->addMinutes($tol)) ? 'late' : 'on_time';
+            $shiftKe = (int) $shift['schedule']->shift_ke;
+        } else {
+            $jamMasuk = $settings ? substr((string) $settings->jam_masuk, 0, 5) : '07:30';
+            [$h, $m] = array_map('intval', explode(':', $jamMasuk));
+            $cutoffMin = $h * 60 + $m + $tol;
+            $curMin = (int) $now->format('G') * 60 + (int) $now->format('i');
+            $status = $curMin > $cutoffMin ? 'late' : 'on_time';
+            $shiftKe = null;
+            if ($liburLabel !== null) {
+                $status = 'libur';
+            }
         }
 
         $disk = config('filesystems.uploads.private_disk');
-        $selfiePath = $request->file('selfie')->store("selfie/{$today}", $disk);
+        $selfiePath = $request->file('selfie')->store("selfie/{$workDate}", $disk);
 
         try {
             Attendance::create([
                 'employee_id' => $me->id,
-                'work_date' => $today,
+                'work_date' => $workDate,
                 'clock_in_at' => $now->format('H:i:s'),
+                'shift_ke' => $shiftKe,
                 'status' => $status,
                 'lat_in' => $data['lat'],
                 'lng_in' => $data['lng'],
@@ -168,6 +250,10 @@ class AttendanceController extends Controller
             'libur' => "Absen tercatat — {$liburLabel}",
             default => 'Absen tercatat — Tepat waktu',
         };
+        if ($shift) {
+            $pesan = 'Absen tercatat — '.$shift['pattern']->labelShift($shiftKe)
+                .($status === 'late' ? ' • Terlambat' : ' • Tepat waktu');
+        }
 
         return back()->with('success', $pesan);
     }
@@ -189,13 +275,33 @@ class AttendanceController extends Controller
             'catatan_pulang' => ['required', 'string', 'min:1', 'max:500'],
         ]);
 
-        $today = now('Asia/Makassar')->toDateString();
+        $now = now('Asia/Makassar');
+        $today = $now->toDateString();
+
         $row = Attendance::where('employee_id', $me->id)->whereDate('work_date', $today)->first();
+        if ($row && $row->clock_out_at) {
+            throw ValidationException::withMessages(['work_date' => 'Sudah absen pulang hari ini.']);
+        }
+
+        if (! $row) {
+            // Shift malam melewati tengah malam: baris absensinya bertanggal
+            // kemarin (A3 dibatalkan — satu shift tetap SATU baris, K10 = YA).
+            $row = Attendance::where('employee_id', $me->id)
+                ->whereDate('work_date', $now->copy()->subDay()->toDateString())
+                ->whereNull('clock_out_at')
+                ->first();
+        }
+
         if (! $row) {
             throw ValidationException::withMessages(['work_date' => 'Belum absen masuk hari ini.']);
         }
-        if ($row->clock_out_at) {
-            throw ValidationException::withMessages(['work_date' => 'Sudah absen pulang hari ini.']);
+
+        // Gerbang pulang cepat (P2/P5): pekerja shift tidak boleh pulang
+        // sebelum jam shiftnya berakhir kecuali pengajuan tanggal itu sudah
+        // disetujui Admin Wilayah.
+        $tolakPulang = $this->gerbangPulangCepat($me, $row, $now);
+        if ($tolakPulang !== null) {
+            throw ValidationException::withMessages(['clock_out_at' => $tolakPulang]);
         }
 
         $dist = AdminPresenter::haversineM((float) $data['lat'], (float) $data['lng'], (float) $me->site->lat, (float) $me->site->lng);
@@ -203,9 +309,12 @@ class AttendanceController extends Controller
             throw ValidationException::withMessages(['distance' => "{$dist} m / {$me->site->radius_m} m — di luar radius."]);
         }
 
-        $now = now('Asia/Makassar');
+        $tanggalKerja = $row->work_date instanceof Carbon
+            ? $row->work_date->toDateString()
+            : (string) $row->work_date;
+
         $disk = config('filesystems.uploads.private_disk');
-        $pulangPath = $request->file('selfie_pulang')->store("selfie/{$today}", $disk);
+        $pulangPath = $request->file('selfie_pulang')->store("selfie/{$tanggalKerja}", $disk);
         $row->update([
             'clock_out_at' => $now->format('H:i:s'),
             'lat_out' => $data['lat'],
@@ -215,6 +324,44 @@ class AttendanceController extends Controller
         ]);
 
         return back()->with('success', 'Absen pulang tercatat');
+    }
+
+    /**
+     * Pesan penolakan bila karyawan shift belum boleh pulang, atau null bila
+     * sudah boleh (bukan pekerja shift, sudah lewat jam shift, atau pengajuan
+     * pulang cepatnya disetujui).
+     */
+    private function gerbangPulangCepat($me, Attendance $row, Carbon $now): ?string
+    {
+        if (! $me->is_shift || ! $row->shift_ke) {
+            return null;
+        }
+
+        $pattern = ShiftResolver::patternFor($me);
+        if (! $pattern) {
+            return null;
+        }
+
+        $tanggal = $row->work_date instanceof Carbon
+            ? $row->work_date->copy()->startOfDay()
+            : Carbon::parse((string) $row->work_date)->startOfDay();
+
+        $selesai = $pattern->windowFor($tanggal, (int) $row->shift_ke)['selesai'];
+        if ($now->gte($selesai)) {
+            return null;
+        }
+
+        $disetujui = EarlyLeaveRequest::where('employee_id', $me->id)
+            ->whereDate('tanggal', $tanggal->toDateString())
+            ->where('status', 'Disetujui')
+            ->exists();
+
+        if ($disetujui) {
+            return null;
+        }
+
+        return 'Belum waktunya pulang — shift berakhir pukul '.$selesai->format('H:i')
+            .'. Ajukan pulang cepat lalu tunggu persetujuan Admin Wilayah.';
     }
 
     /** Rekap: data untuk kalender + ringkasan bulan ini. */
@@ -236,6 +383,22 @@ class AttendanceController extends Controller
             ->whereYear('work_date', $year)
             ->whereMonth('work_date', $month)
             ->get();
+
+        // Pekerja shift: label shift per baris + jadwal sebulan (A7 — karyawan
+        // bisa melihat jadwalnya sendiri).
+        $pattern = $me->is_shift ? ShiftResolver::patternFor($me) : null;
+        $jadwalBulan = $me->is_shift
+            ? ShiftSchedule::with('pattern')
+                ->where('employee_id', $me->id)
+                ->whereBetween('tanggal', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+                ->orderBy('tanggal')
+                ->get()
+                ->map(fn (ShiftSchedule $s) => [
+                    'tgl' => $s->tanggal->toDateString(),
+                    'shift' => $s->label(),
+                    'jamMulai' => $s->jamMulai(),
+                ])->values()->all()
+            : [];
 
         $approvedLeaves = Leave::where('employee_id', $me->id)
             ->where('status', 'Disetujui')
@@ -280,7 +443,10 @@ class AttendanceController extends Controller
             'monthRows' => $rows->map(fn (Attendance $a) => [
                 'tgl' => $a->work_date instanceof Carbon ? $a->work_date->format('Y-m-d') : (string) $a->work_date,
                 'status' => $a->status,
+                'shift' => ($pattern && $a->shift_ke) ? $pattern->labelShift((int) $a->shift_ke) : null,
             ])->values()->all(),
+            'jadwalBulan' => $jadwalBulan,
+            'isShift' => (bool) $me->is_shift,
             'cutiDates' => array_keys($cutiDates),
             'cutiDays' => $cutiDays,
             'hadir' => $rows->count(),

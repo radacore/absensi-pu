@@ -6,6 +6,8 @@ export default function Rekap() {
     const assigned = props.assigned ?? null;
     const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, loveQuota: null };
     const monthRows = props.monthRows ?? [];
+    const jadwalBulan = props.jadwalBulan ?? [];
+    const isShift = !!props.isShift;
     const cutiDates = props.cutiDates ?? [];
     const cutiDays = props.cutiDays ?? 0;
     const hadir = props.hadir ?? 0;
@@ -25,27 +27,41 @@ export default function Rekap() {
     const statusByDay = new Map();
     monthRows.forEach((r) => {
         const d = new Date(r.tgl + 'T00:00:00').getDate();
-        if (new Date(r.tgl).getMonth() === month) statusByDay.set(d, r.status);
+        if (new Date(r.tgl).getMonth() === month) statusByDay.set(d, { status: r.status, shift: r.shift });
     });
     const cutiSet = new Set(cutiDates.map((s) => new Date(s + 'T00:00:00').getDate()));
+
+    // Pekerja shift: acuan hari kerja bukan akhir pekan, tapi jadwal giliran.
+    const jadwalByDay = new Map();
+    jadwalBulan.forEach((j) => {
+        const d = new Date(j.tgl + 'T00:00:00').getDate();
+        if (new Date(j.tgl).getMonth() === month) jadwalByDay.set(d, j);
+    });
 
     const days = Array.from({ length: daysInMonth }, (_, i) => {
         const d = i + 1;
         const dow = new Date(year, month, d).getDay();
         const isWeekend = dow === 0 || dow === 6;
-        if (isWeekend) return { d, status: 'libur' };
-        if (cutiSet.has(d)) return { d, status: 'cuti' };
+        const j = jadwalByDay.get(d) ?? null;
+        if (cutiSet.has(d)) return { d, status: 'cuti', shift: j?.shift ?? null };
         if (statusByDay.has(d)) {
             const s = statusByDay.get(d);
-            if (s === 'late') return { d, status: 'terlambat' };
-            return { d, status: 'hadir' };
+            return { d, status: s.status === 'late' ? 'terlambat' : 'hadir', shift: s.shift ?? j?.shift ?? null };
         }
-        if (d > today) return { d, status: 'future' };
-        return { d, status: 'kosong' };
+        if (isShift) {
+            if (j && j.shift === 'Libur') return { d, status: 'libur', shift: 'Libur' };
+            if (j) return { d, status: d > today ? 'rencana' : 'kosong', shift: j.shift, jamMulai: j.jamMulai };
+            return { d, status: d > today ? 'future' : 'kosong', shift: null };
+        }
+        if (isWeekend) return { d, status: 'libur', shift: null };
+        if (d > today) return { d, status: 'future', shift: null };
+        return { d, status: 'kosong', shift: null };
     });
 
     const offset = firstDow === 0 ? 6 : firstDow - 1;
-    const workDays = days.filter((x) => x.status !== 'libur' && x.status !== 'future').length || 1;
+    const workDays = (isShift
+        ? days.filter((x) => x.shift && x.shift !== 'Libur').length
+        : days.filter((x) => x.status !== 'libur' && x.status !== 'future').length) || 1;
     const pct = Math.min(99, Math.round((hadir / workDays) * 100));
 
     if (!assigned) {
@@ -71,7 +87,7 @@ export default function Rekap() {
                 </div>
                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-3 flex items-center justify-between">
                     <span className="text-xs font-medium text-[#1E3A8A]">{assigned.nama_lokasi} • {assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)}</span>
-                    <span className="text-xs text-[#64748B]">{assigned.radius} m • {settings.jamMasuk}–{settings.jamPulang}</span>
+                    <span className="text-xs text-[#64748B]">{assigned.radius} m • {isShift ? 'jadwal shift' : `${settings.jamMasuk}–${settings.jamPulang}`}</span>
                 </div>
                 <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] flex items-center justify-between">
                     <div className="flex gap-1.5">
@@ -110,6 +126,7 @@ export default function Rekap() {
                             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#F59E0B]"></span> Terlambat</span>
                             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#0D9488]"></span> Cuti</span>
                             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#E2E8F0]"></span> Libur</span>
+                            {isShift && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#1E3A8A]"></span> Rencana shift</span>}
                         </div>
                     </div>
                     <div className="grid grid-cols-7 gap-1.5 text-center">
@@ -117,12 +134,33 @@ export default function Rekap() {
                             <span key={h} className="text-xs font-medium text-[#64748B] py-1">{h}</span>
                         ))}
                         {Array.from({ length: offset }).map((_, i) => <span key={`off-${i}`} className="py-2"></span>)}
-                        {days.map((d) => (
-                            <span key={d.d} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium mx-auto
-                                ${d.status === 'hadir' ? 'bg-[#FCB833] text-[#0F172A]' : d.status === 'terlambat' ? 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]' : d.status === 'cuti' ? 'bg-[#ECFDF5] text-[#065F46]' : d.status === 'future' ? 'text-[#CBD5E1]' : 'bg-[#F8FAFC] text-[#64748B]'}`}>{d.d}</span>
-                        ))}
+                        {days.map((d) => {
+                            const kotak = d.status === 'hadir' ? 'bg-[#FCB833] text-[#0F172A]'
+                                : d.status === 'terlambat' ? 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]'
+                                    : d.status === 'cuti' ? 'bg-[#ECFDF5] text-[#065F46]'
+                                        : d.status === 'future' ? 'text-[#CBD5E1]'
+                                            : d.status === 'rencana' ? 'bg-[#EFF6FF] text-[#1E3A8A] border border-[#DBEAFE]'
+                                                : 'bg-[#F8FAFC] text-[#64748B]';
+                            return (
+                                <span key={d.d} className={`w-9 h-11 rounded-lg flex flex-col items-center justify-center text-xs font-medium mx-auto ${kotak}`}>
+                                    <span>{d.d}</span>
+                                    {isShift && d.shift && (
+                                        <span className="text-[9px] font-normal leading-tight">{d.shift === 'Libur' ? 'L' : d.shift.slice(0, 4)}</span>
+                                    )}
+                                </span>
+                            );
+                        })}
                     </div>
-                    <p className="text-xs text-[#64748B] mt-4">Jam {settings.jamMasuk}–{settings.jamPulang} WITA • Kelonggaran {settings.toleransi}m • Di luar {assigned.radius} m titik {assigned.nama_lokasi} tidak tercatat</p>
+                    <p className="text-xs text-[#64748B] mt-4">
+                        {isShift
+                            ? `Jam mengikuti jadwal shift • Kelonggaran ${settings.toleransi}m • Di luar ${assigned.radius} m titik ${assigned.nama_lokasi} tidak tercatat`
+                            : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA • Kelonggaran ${settings.toleransi}m • Di luar ${assigned.radius} m titik ${assigned.nama_lokasi} tidak tercatat`}
+                    </p>
+                    {isShift && (
+                        <p className="text-xs text-[#64748B] mt-1">
+                            Jadwal shift bulan ini disusun Admin Wilayah. Belum ada jadwal untuk hari yang kosong — hubungi Admin Wilayah bila ada yang belum sesuai.
+                        </p>
+                    )}
                 </div>
             </div>
         </KaryawanLayout>

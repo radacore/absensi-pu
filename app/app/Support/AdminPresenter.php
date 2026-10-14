@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\Region;
+use App\Models\ShiftSchedule;
 use App\Models\ToleranceClaim;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -74,6 +75,8 @@ class AdminPresenter
             'office_location_id' => $e->site_id,
             'kantor' => $kantor,
             'foto' => $e->foto_url ?: self::DEFAULT_AVATAR,
+            // K4: penanda pekerja shift hanya per orang.
+            'isShift' => (bool) $e->is_shift,
         ];
     }
 
@@ -129,7 +132,9 @@ class AdminPresenter
             ->limit(500)
             ->get();
 
-        return $rows->map(function (Attendance $a) {
+        $shiftLabels = self::shiftLabelsFor($rows);
+
+        return $rows->map(function (Attendance $a) use ($shiftLabels) {
             $emp = $a->employee;
             $regionName = $emp?->region?->name ?? Region::where('id', $a->region_id)->value('name') ?? '';
             $kantor = str_replace(['Kab. ', 'Kota '], '', $regionName);
@@ -158,8 +163,41 @@ class AdminPresenter
                 'selfie' => $a->selfieRouteUrl('masuk') ?: ($emp?->foto_url ?: self::DEFAULT_AVATAR),
                 'selfie_pulang' => $a->selfieRouteUrl('pulang'),
                 'catatan_pulang' => $a->catatan_pulang ?? '',
+                // Label shift terjadwal (null untuk karyawan non-shift).
+                'shift' => $shiftLabels[$a->employee_id.'|'.$tgl] ?? null,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Label shift untuk sekumpulan baris absensi, diambil sekali jalan supaya
+     * daftar absensi admin tidak menembak satu query per baris.
+     *
+     * @param  \Illuminate\Support\Collection<int, Attendance>  $rows
+     * @return array<string, string|null>
+     */
+    private static function shiftLabelsFor($rows): array
+    {
+        $employeeIds = $rows->pluck('employee_id')->unique()->values()->all();
+        $tanggal = $rows->map(fn (Attendance $a) => $a->work_date instanceof Carbon
+            ? $a->work_date->toDateString()
+            : (string) $a->work_date)->unique()->values()->all();
+
+        if (! $employeeIds || ! $tanggal) {
+            return [];
+        }
+
+        $schedules = ShiftSchedule::with('pattern')
+            ->whereIn('employee_id', $employeeIds)
+            ->whereIn('tanggal', $tanggal)
+            ->get();
+
+        $out = [];
+        foreach ($schedules as $s) {
+            $out[$s->employee_id.'|'.$s->tanggal->toDateString()] = $s->label();
+        }
+
+        return $out;
     }
 
     /**

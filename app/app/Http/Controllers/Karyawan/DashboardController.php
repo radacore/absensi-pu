@@ -7,6 +7,7 @@ use App\Models\AnnouncementRead;
 use App\Models\Leave;
 use App\Models\ToleranceClaim;
 use App\Support\AdminPresenter;
+use App\Support\ShiftResolver;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -33,6 +34,8 @@ class DashboardController extends Controller
             'me'=>['id'=>$me->id,'nama'=>$me->name,'foto'=>$me->foto_url ?? '', 'region'=>$me->region?->name ?? '','regionId'=>$me->region_id,'office_location_id'=>$me->site_id],
             'assigned'=>$assigned,
             'settings'=>$settings,
+            'isShift'=>(bool) $me->is_shift,
+            'shiftHariIni'=>$me->is_shift ? ShiftResolver::labelFor($me, now('Asia/Makassar')) : null,
             'quota'=>$quota,
             'hadir'=>$hadir ?: 0,
             'unread'=>$unread,

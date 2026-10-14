@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CutiController as AdminCutiController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DinasController as AdminDinasController;
+use App\Http\Controllers\Admin\EarlyLeaveController as AdminEarlyLeaveController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\EmployeeRekapController;
 use App\Http\Controllers\Admin\HolidayController;
@@ -13,6 +14,8 @@ use App\Http\Controllers\Admin\LoveController as AdminLoveController;
 use App\Http\Controllers\Admin\PengumumanController as AdminPengumumanController;
 use App\Http\Controllers\Admin\RegionController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\ShiftPatternController;
+use App\Http\Controllers\Admin\ShiftScheduleController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\AttendanceSelfieController;
 use App\Http\Controllers\Auth\AdminAuthController;
@@ -21,6 +24,7 @@ use App\Http\Controllers\Karyawan\AttendanceController as KaryawanAttendanceCont
 use App\Http\Controllers\Karyawan\CutiController as KaryawanCutiController;
 use App\Http\Controllers\Karyawan\DashboardController as KaryawanDashboardController;
 use App\Http\Controllers\Karyawan\DinasController as KaryawanDinasController;
+use App\Http\Controllers\Karyawan\EarlyLeaveController as KaryawanEarlyLeaveController;
 use App\Http\Controllers\Karyawan\LoveController as KaryawanLoveController;
 use App\Http\Controllers\Karyawan\PengumumanController as KaryawanPengumumanController;
 use App\Http\Controllers\Karyawan\ProfilController as KaryawanProfilController;
@@ -67,6 +71,9 @@ Route::prefix('karyawan')->group(function () {
         Route::delete('/cuti/{cuti}', [KaryawanCutiController::class, 'destroy'])->name('karyawan.cuti.destroy');
         Route::get('/love', [KaryawanLoveController::class, 'index'])->name('karyawan.love');
         Route::post('/love', [KaryawanLoveController::class, 'store'])->name('karyawan.love.store');
+        Route::get('/pulang-cepat', [KaryawanEarlyLeaveController::class, 'index'])->name('karyawan.pulang_cepat');
+        Route::post('/pulang-cepat', [KaryawanEarlyLeaveController::class, 'store'])->name('karyawan.pulang_cepat.store');
+        Route::delete('/pulang-cepat/{pulangCepat}', [KaryawanEarlyLeaveController::class, 'destroy'])->name('karyawan.pulang_cepat.destroy');
         Route::get('/dinas', [KaryawanDinasController::class, 'index'])->name('karyawan.dinas');
         Route::post('/dinas', [KaryawanDinasController::class, 'store'])
             ->middleware('throttle:uploads')
@@ -109,6 +116,21 @@ function adminMasterRoutes(string $prefix, string $role, string $label): void
         Route::put('/love/{love}/approve', [AdminLoveController::class, 'approve'])->name("{$label}.love.approve");
         Route::put('/love/{love}/reject', [AdminLoveController::class, 'reject'])->name("{$label}.love.reject");
         Route::delete('/love/{love}', [AdminLoveController::class, 'destroy'])->name("{$label}.love.destroy");
+
+        // Pola shift & jadwal shift (K4–K9)
+        Route::get('/pola-shift', [ShiftPatternController::class, 'index'])->name("{$label}.pola-shift");
+        Route::post('/pola-shift', [ShiftPatternController::class, 'store'])->name("{$label}.pola-shift.store");
+        Route::put('/pola-shift/{pola}', [ShiftPatternController::class, 'update'])->name("{$label}.pola-shift.update");
+        Route::put('/pola-shift/{pola}/toggle', [ShiftPatternController::class, 'toggle'])->name("{$label}.pola-shift.toggle");
+        Route::delete('/pola-shift/{pola}', [ShiftPatternController::class, 'destroy'])->name("{$label}.pola-shift.destroy");
+
+        Route::get('/jadwal-shift', [ShiftScheduleController::class, 'index'])->name("{$label}.jadwal-shift");
+        Route::post('/jadwal-shift', [ShiftScheduleController::class, 'save'])->name("{$label}.jadwal-shift.save");
+
+        // Pulang cepat (P2/P5)
+        Route::get('/pulang-cepat', [AdminEarlyLeaveController::class, 'index'])->name("{$label}.pulang-cepat");
+        Route::put('/pulang-cepat/{pulangCepat}/approve', [AdminEarlyLeaveController::class, 'approve'])->name("{$label}.pulang-cepat.approve");
+        Route::put('/pulang-cepat/{pulangCepat}/reject', [AdminEarlyLeaveController::class, 'reject'])->name("{$label}.pulang-cepat.reject");
         Route::get('/dinas', [AdminDinasController::class, 'index'])->name("{$label}.dinas");
         Route::put('/dinas/{dinas}/approve', [AdminDinasController::class, 'approve'])->name("{$label}.dinas.approve");
         Route::put('/dinas/{dinas}/reject', [AdminDinasController::class, 'reject'])->name("{$label}.dinas.reject");
@@ -141,6 +163,7 @@ function adminMasterRoutes(string $prefix, string $role, string $label): void
         Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->name("{$label}.employees.update");
         Route::post('/employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name("{$label}.employees.reset-password");
         Route::get('/employees/{employee}/rekap', [EmployeeRekapController::class, 'show'])->name("{$label}.employees.rekap");
+        Route::get('/employees/{employee}/rekap/unduh', [EmployeeRekapController::class, 'download'])->name("{$label}.employees.rekap.unduh");
         Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->name("{$label}.employees.destroy");
 
         // Audit log (super admin only via controller guard)

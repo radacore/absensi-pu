@@ -27,6 +27,8 @@ class Employee extends Authenticatable
         'email',
         'phone',
         'must_change_password',
+        // Penanda pekerja shift (K4: per orang saja).
+        'is_shift',
     ];
 
     protected $hidden = [
@@ -39,6 +41,7 @@ class Employee extends Authenticatable
         return [
             'password' => 'hashed',
             'must_change_password' => 'boolean',
+            'is_shift' => 'boolean',
         ];
     }
 
@@ -70,6 +73,17 @@ class Employee extends Authenticatable
     public function dinasClaims(): HasMany
     {
         return $this->hasMany(DinasClaim::class);
+    }
+
+    /** Jadwal shift milik karyawan (hanya berarti bila is_shift = true). */
+    public function shiftSchedules(): HasMany
+    {
+        return $this->hasMany(ShiftSchedule::class);
+    }
+
+    public function earlyLeaveRequests(): HasMany
+    {
+        return $this->hasMany(EarlyLeaveRequest::class);
     }
 
     /**

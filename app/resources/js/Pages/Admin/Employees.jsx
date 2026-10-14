@@ -25,6 +25,7 @@ export default function Employees() {
         nik: '', nip: '', nama: '', email: '', gol: '-', jabatan: '', unit: '', status: 'PNS',
         region: isWilayah ? OWN_REGION : regionsList[1],
         office_location_id: null,
+        isShift: false,
     });
 
     // keep form office_location_id valid when region changes
@@ -56,12 +57,12 @@ export default function Employees() {
         const r = regionsData.find((x) => x.name === defaultRegion);
         const firstSiteId = r?.locations?.[0]?.id ?? null;
         setEditing(null);
-        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', region: defaultRegion, office_location_id: firstSiteId });
+        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', region: defaultRegion, office_location_id: firstSiteId, isShift: false });
         setPhoto(null); setPreview(null); setOpen(true);
     };
     const openEdit = (e) => {
         setEditing(e);
-        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, region:e.region, office_location_id: e.office_location_id ?? null });
+        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, region:e.region, office_location_id: e.office_location_id ?? null, isShift: !!e.isShift });
         setPreview(e.foto); setPhoto(null); setOpen(true);
     };
     const close = () => setOpen(false);
@@ -88,6 +89,7 @@ export default function Employees() {
             nik: form.nik, nip: form.nip || '', nama: form.nama, email: form.email, gol: form.gol,
             jabatan: form.jabatan, unit: form.unit, status: form.status,
             region: form.region, office_location_id: Number(form.office_location_id),
+            isShift: !!form.isShift,
         };
         if (editing) {
             if (isWilayah && editing.region !== OWN_REGION) { toast.error('Tidak bisa mengedit karyawan luar wilayah'); return; }
@@ -177,7 +179,7 @@ export default function Employees() {
                                                 <div className="flex items-center gap-3">
                                                     <img src={e.foto} alt={e.nama} className="w-8 h-8 rounded-full object-cover" />
                                                     <div>
-                                                        <p className="font-medium text-[#0F172A]">{e.nama}</p>
+                                                        <p className="font-medium text-[#0F172A]">{e.nama}{e.isShift && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#E0E7FF] text-[#3730A3] px-2 py-0.5 rounded-full">Shift</span>}</p>
                                                         <p className="text-xs text-[#64748B]">{e.gol} • {e.unit} • {e.status}</p>
                                                         <p className="text-xs text-[#64748B]">{e.email}</p>
                                                     </div>
@@ -289,6 +291,15 @@ export default function Employees() {
                                         <p className="text-xs mt-1">
                                             <span className="text-[#065F46]">✓ Akan absen di {sitesForFormRegion.find((s)=>s.id===Number(form.office_location_id))?.nama_lokasi || '— pilih titik'} — dalam radius baru valid.</span>
                                         </p>
+                                    </div>
+                                    <div className="col-span-2 rounded-xl bg-[#F8FAFC] px-3 py-3">
+                                        <label className="flex items-start gap-3 cursor-pointer">
+                                            <input type="checkbox" checked={!!form.isShift} onChange={(e)=>setForm({...form, isShift:e.target.checked})} className="mt-0.5 w-4 h-4 accent-[#0F172A]" />
+                                            <span>
+                                                <span className="text-sm font-medium text-[#0F172A]">Pekerja shift</span>
+                                                <span className="block text-xs text-[#64748B] mt-0.5">Centang bila karyawan ini bekerja giliran (pagi/siang/malam). Absensinya mengikuti jadwal shift, bukan jam kantor biasa.</span>
+                                            </span>
+                                        </label>
                                     </div>
                                 </div>
                                 <div className="flex gap-2 pt-2">

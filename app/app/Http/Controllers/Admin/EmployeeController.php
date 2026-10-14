@@ -73,6 +73,7 @@ class EmployeeController extends Controller
             'status_kepegawaian' => $data['status'],
             'region_id' => $region->id,
             'site_id' => $data['office_location_id'],
+            'is_shift' => (bool) ($data['isShift'] ?? false),
         ]);
 
         Audit::log(
@@ -148,6 +149,9 @@ class EmployeeController extends Controller
             'status' => ['required', 'in:PNS,PPPK,Kontrak,Honorer'],
             'region' => ['required', 'string', 'max:120'],
             'office_location_id' => ['required', 'integer'],
+            // Penanda pekerja shift (K4: per orang). Opsional supaya pemanggil
+            // lama tetap valid.
+            'isShift' => ['sometimes', 'boolean'],
         ]);
     }
 
@@ -168,6 +172,7 @@ class EmployeeController extends Controller
             'status_kepegawaian' => $data['status'],
             'region_id' => $region->id,
             'site_id' => $data['office_location_id'],
+            'is_shift' => (bool) ($data['isShift'] ?? false),
             'password' => $data['nik'],
             'must_change_password' => true,
         ]);

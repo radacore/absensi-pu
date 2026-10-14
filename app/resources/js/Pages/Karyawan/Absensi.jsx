@@ -1,6 +1,6 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
 import { toast } from '@/lib/toast';
-import { router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 function haversineM(lat1, lng1, lat2, lng2) {
@@ -27,9 +27,18 @@ export default function Absensi() {
     const assigned = props.assigned ?? null;
     const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15 };
     const history = props.history ?? [];
-    const alreadyToday = !!props.alreadyToday;
     const todayISO = props.todayISO ?? new Date().toISOString().slice(0, 10);
+    // Tanggal kerja yang sedang berlaku: untuk shift malam yang melewati
+    // tengah malam, baris absensinya bertanggal kemarin.
+    const workDateAktif = props.workDateAktif ?? todayISO;
+    const isShift = !!props.isShift;
+    const shift = props.shift ?? null;
+    const shiftHariIni = props.shiftHariIni ?? null;
+    const bolehPulang = props.bolehPulang !== false;
+    const pulangCepat = props.pulangCepat ?? null;
     const absenLibur = props.absenLibur ?? { aktif: false, mode: 'tolak', hariIniLibur: false, label: null, ditolak: false };
+    const sudahMasuk = useMemo(() => history.some((h) => h.tgl === workDateAktif), [history, workDateAktif]);
+    const alreadyToday = sudahMasuk;
     const blokirAbsen = !!absenLibur.ditolak && !alreadyToday;
 
     const [captured, setCaptured] = useState(false);
@@ -67,8 +76,8 @@ export default function Absensi() {
     };
 
     const openRow = useMemo(
-        () => history.some((h) => h.tgl === todayISO && !h.pulang),
-        [history, todayISO],
+        () => history.some((h) => h.tgl === workDateAktif && !h.pulang),
+        [history, workDateAktif],
     );
 
     const startCamera = async () => {
@@ -153,6 +162,7 @@ export default function Absensi() {
     const handlePulang = () => {
         if (tanpaTitik) { toast.error('Titik belum di-assign'); return; }
         if (!openRow) { toast.error('Belum absen masuk hari ini'); return; }
+        if (!bolehPulang) { toast.error('Belum waktunya pulang — ajukan pulang cepat lalu tunggu persetujuan'); return; }
         if (!captured || mode !== 'pulang') {
             openPanel('pulang');
             toast.success('Ambil foto selfie lalu kirim absen pulang');
@@ -209,9 +219,41 @@ export default function Absensi() {
                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-4">
                     <p className="text-xs font-medium text-[#64748B]">Titik assigned kamu • {assigned.regionName}</p>
                     <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.nama_lokasi}</p>
-                    <p className="text-xs font-mono text-[#64748B]">{assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)} • {assigned.radius} m • Jam {settings.jamMasuk}–{settings.jamPulang} WITA</p>
+                    <p className="text-xs font-mono text-[#64748B]">{assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)} • {assigned.radius} m{isShift ? ' • jam mengikuti jadwal shift' : ` • Jam ${settings.jamMasuk}–${settings.jamPulang} WITA`}</p>
                     {assigned.address && <p className="text-xs text-[#64748B] mt-1">{assigned.address}</p>}
                 </div>
+
+                {isShift && (
+                    <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
+                        <p className="text-xs font-medium text-[#64748B]">Jadwal shift kamu</p>
+                        {shift ? (
+                            <>
+                                <p className="text-sm font-semibold text-[#0F172A] mt-1">{shift.label} • {shift.jamMulai} — {shift.jamSelesai} WITA</p>
+                                <p className="text-xs text-[#64748B] mt-0.5">Tanggal kerja {shift.tanggal}</p>
+                                {!bolehPulang && (
+                                    <p className="text-xs text-[#92400E] mt-2 bg-[#FFF7E6] rounded-lg px-2.5 py-1.5 inline-block">
+                                        Absen pulang terbuka setelah pukul {shift.jamSelesai} — atau setelah pengajuan pulang cepat disetujui.
+                                    </p>
+                                )}
+                            </>
+                        ) : (
+                            <p className="text-sm text-[#334155] mt-1">
+                                {shiftHariIni ? `Hari ini: ${shiftHariIni}` : 'Tidak ada shift berjalan saat ini.'}
+                            </p>
+                        )}
+                        {pulangCepat && (
+                            <p className="text-xs text-[#334155] mt-2">
+                                Pengajuan pulang cepat {pulangCepat.jamRencana}{' '}
+                                <span className={`px-2 py-0.5 rounded-full ${pulangCepat.status === 'Disetujui' ? 'bg-[#DCFCE7] text-[#065F46]' : pulangCepat.status === 'Ditolak' ? 'bg-[#FEF2F2] text-[#991B1B]' : 'bg-[#FFF7E6] text-[#92400E]'}`}>
+                                    {pulangCepat.status}
+                                </span>
+                            </p>
+                        )}
+                        <Link href="/karyawan/pulang-cepat" className="inline-block mt-3 text-xs font-semibold text-[#1E3A8A] bg-[#EFF6FF] px-3 py-2 rounded-lg">
+                            Ajukan / lihat pulang cepat
+                        </Link>
+                    </div>
+                )}
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <div className="rounded-2xl bg-[#F8FAFC] p-4">
@@ -272,9 +314,9 @@ export default function Absensi() {
                                         <button
                                             type="button"
                                             onClick={handlePulang}
-                                            disabled={jarak == null || !inRadius || !selfieFile || !openRow || !catatanPulang.trim()}
-                                            title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : !catatanPulang.trim() ? 'Isi catatan pekerjaan dulu' : ''}
-                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && openRow && catatanPulang.trim() ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
+                                            disabled={jarak == null || !inRadius || !selfieFile || !openRow || !bolehPulang || !catatanPulang.trim()}
+                                            title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : !bolehPulang ? 'Belum waktunya pulang — ajukan pulang cepat dulu' : !catatanPulang.trim() ? 'Isi catatan pekerjaan dulu' : ''}
+                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && openRow && bolehPulang && catatanPulang.trim() ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
                                         >
                                             Absen Pulang
                                         </button>
@@ -294,9 +336,14 @@ export default function Absensi() {
                         )}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => openPanel('pulang')} className={`rounded-xl py-3 text-sm font-semibold ${openRow ? 'bg-[#0F172A] text-white' : 'bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF] font-medium'}`}>Absen pulang</button>
+                        <button type="button" onClick={() => openPanel('pulang')} disabled={!bolehPulang} title={!bolehPulang ? 'Belum waktunya pulang — ajukan pulang cepat dulu' : ''} className={`rounded-xl py-3 text-sm font-semibold ${!bolehPulang ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed' : openRow ? 'bg-[#0F172A] text-white' : 'bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF] font-medium'}`}>Absen pulang</button>
                         <button type="button" onClick={() => openPanel('masuk')} className={`rounded-xl py-3 text-sm font-semibold ${!alreadyToday ? 'bg-[#0F172A] text-white' : 'bg-[#F8FAFC] text-[#334155] hover:bg-[#EFF6FF] font-medium'}`}>Absen masuk</button>
                     </div>
+                    {!bolehPulang && (
+                        <p className="text-xs text-[#92400E] mt-3 text-center">
+                            Absen pulang baru bisa dilakukan setelah jam shift berakhir. Perlu pulang lebih awal? <Link href="/karyawan/pulang-cepat" className="font-semibold underline">Ajukan pulang cepat</Link>.
+                        </p>
+                    )}
                     <p className="text-xs text-[#64748B] mt-3 text-center">Absen tercatat hanya di dalam radius titik penugasan</p>
                 </div>
 
@@ -329,6 +376,7 @@ export default function Absensi() {
                                         <tr key={`${r.tgl}-${r.datang}-${r.id}`} className={`hover:bg-[#F8FAFC]/50 ${r.tgl === todayISO ? 'bg-[#F0F7FF]' : ''}`}>
                                             <td className="px-5 py-3">
                                                 <p className="font-medium text-[#0F172A] whitespace-nowrap">{new Date(r.tgl + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                                {r.shift && <span className="inline-block mt-1 text-[10px] font-medium bg-[#E0E7FF] text-[#3730A3] px-2 py-0.5 rounded-full">{r.shift}</span>}
                                             </td>
                                             <td className="px-5 py-3 whitespace-nowrap">
                                                 <p className="font-medium text-[#0F172A]"><span className="text-[11px] font-normal text-[#64748B] inline-block w-12">Masuk</span>{r.datang}</p>
