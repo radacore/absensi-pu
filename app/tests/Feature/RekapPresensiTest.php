@@ -219,4 +219,63 @@ class RekapPresensiTest extends TestCase
             ->post('/admin/holidays', ['tanggal' => '2026-11-11', 'nama' => 'Uji Ditolak'])
             ->assertForbidden();
     }
+
+    public function test_rekap_bulanan_perorangan_bisa_diunduh_sebagai_csv(): void
+    {
+        $emp = $this->empGowa();
+
+        Attendance::create([
+            'employee_id' => $emp->id, 'work_date' => '2026-09-01',
+            'clock_in_at' => '07:25:00', 'clock_out_at' => '16:10:00',
+            'status' => 'on_time', 'lat_in' => 0, 'lng_in' => 0, 'distance_in_m' => 10,
+            'site_id' => $emp->site_id, 'region_id' => $emp->region_id,
+        ]);
+
+        $res = $this->actingAs($this->superAdmin(), 'web')
+            ->get("/super-admin/employees/{$emp->id}/rekap/unduh?bulan=2026-09");
+
+        $res->assertOk();
+        $this->assertStringContainsString('text/csv', $res->headers->get('content-type'));
+        $this->assertStringContainsString("rekap-presensi-{$emp->nik}-2026-09.csv", $res->headers->get('content-disposition'));
+
+        $isi = $res->streamedContent();
+
+        // BOM UTF-8 supaya Excel membaca aksara dengan benar.
+        $this->assertStringStartsWith("\xEF\xBB\xBF", $isi);
+
+        // Dibaca ulang sebagai CSV supaya pemeriksaan tidak bergantung pada
+        // aturan pengutipan fputcsv (field berspasi ikut dikutip). BOM dibuang
+        // lebih dulu — kalau tidak, tanda kutip di awal baris tidak dikenali.
+        $baris = array_map(fn ($l) => str_getcsv($l, ';'), explode("\n", rtrim(substr($isi, 3), "\n")));
+
+        $this->assertSame(['Rekap Presensi Perorangan'], $baris[0]);
+        $this->assertContains(['Nama', $emp->name], $baris);
+        $this->assertContains(['NIK', $emp->nik], $baris);
+        $this->assertContains(['Periode', 'September 2026'], $baris);
+        $this->assertContains(['Hadir', '1'], $baris);
+
+        $header = $baris[array_search('Tanggal', array_column($baris, 0), true)];
+        $this->assertSame(['Tanggal', 'Hari', 'Jam masuk', 'Jam pulang', 'Keterangan'], $header);
+
+        $harian = collect($baris)->firstWhere(0, '2026-09-01');
+        $this->assertSame(['2026-09-01', 'Sel', '07:25', '16:10', 'Hadir tepat waktu'], $harian);
+    }
+
+    public function test_admin_wilayah_bisa_mengunduh_rekap_karyawan_wilayahnya(): void
+    {
+        $emp = $this->empGowa();
+
+        $this->actingAs($this->adminGowa(), 'web')
+            ->get("/admin/employees/{$emp->id}/rekap/unduh?bulan=2026-09")
+            ->assertOk();
+    }
+
+    public function test_admin_wilayah_tidak_bisa_mengunduh_rekap_luar_wilayahnya(): void
+    {
+        $emp = $this->empMaros();
+
+        $this->actingAs($this->adminGowa(), 'web')
+            ->get("/admin/employees/{$emp->id}/rekap/unduh?bulan=2026-09")
+            ->assertForbidden();
+    }
 }

@@ -40,4 +40,98 @@ class EmployeeRekapController extends Controller
             'rekap' => $rekap,
         ]);
     }
+
+    /**
+     * Unduh rekap presensi perorangan satu bulan sebagai berkas CSV.
+     *
+     * Pemisah kolom memakai titik-koma karena Excel berbahasa Indonesia
+     * memakai ';' sebagai pemisah daftar. Ubah CSV_SEPARATOR bila perlu.
+     */
+    private const CSV_SEPARATOR = ';';
+
+    public function download(Request $request, Employee $employee)
+    {
+        $u = Auth::guard('web')->user();
+        $scope = $u->role === 'super_admin' ? null : $u->region_id;
+        abort_if($scope !== null && (int) $employee->region_id !== $scope, 403, 'Karyawan ini di luar cakupan Anda.');
+
+        $employee->load(['region', 'site']);
+
+        $data = $request->validate([
+            'bulan' => ['nullable', 'regex:/^\d{4}-\d{2}$/'],
+        ]);
+        $bulan = $data['bulan'] ?? now('Asia/Makassar')->format('Y-m');
+        [$year, $month] = array_map('intval', explode('-', $bulan));
+
+        $rekap = RekapPresenter::buildRekap($employee, $year, $month);
+
+        Audit::log(
+            'employee.rekap.download',
+            subject: $employee,
+            label: $employee->name,
+            description: "Unduh rekap presensi {$employee->name} untuk {$rekap['periode']['label']}",
+            meta: ['periode' => $bulan]
+        );
+
+        $namaBerkas = 'rekap-presensi-'.$employee->nik.'-'.$bulan.'.csv';
+
+        return response()->streamDownload(function () use ($rekap) {
+            $out = fopen('php://output', 'w');
+
+            // BOM supaya Excel membaca aksara ber-aksen/UTF-8 dengan benar.
+            fwrite($out, "\xEF\xBB\xBF");
+
+            $tulis = function (array $kolom) use ($out) {
+                fputcsv($out, $kolom, self::CSV_SEPARATOR);
+            };
+
+            $k = $rekap['karyawan'];
+            $p = $rekap['periode'];
+            $d = $rekap['distribusi'];
+            $m = $rekap['metrikHadir'];
+
+            $tulis(['Rekap Presensi Perorangan']);
+            $tulis([]);
+            $tulis(['Nama', $k['nama']]);
+            $tulis(['NIK', $k['nik']]);
+            $tulis(['NIP', $k['nip']]);
+            $tulis(['Jabatan', $k['jabatan']]);
+            $tulis(['Golongan', $k['golongan']]);
+            $tulis(['Status kepegawaian', $k['status_kepegawaian']]);
+            $tulis(['Unit kerja', $k['unit_kerja']]);
+            $tulis(['Wilayah', $k['region']]);
+            $tulis(['Lokasi kerja', $k['site']]);
+            $tulis(['Periode', $p['label']]);
+            $tulis([]);
+
+            $tulis(['Ringkasan']);
+            $tulis(['Hadir', $d['hadir']]);
+            $tulis(['Dinas', $d['dinas']]);
+            $tulis(['Cuti', $d['cuti']]);
+            $tulis(['Tanpa keterangan', $d['tanpa_keterangan']]);
+            $tulis([]);
+
+            $tulis(['Rincian kehadiran']);
+            $tulis(['Tepat waktu', $m['tepat_waktu']]);
+            $tulis(['Toleransi terlambat', $m['toleransi_terlambat']]);
+            $tulis(['Terlambat', $m['terlambat']]);
+            $tulis(['Total hadir', $m['total']]);
+            $tulis([]);
+
+            $tulis(['Tanggal', 'Hari', 'Jam masuk', 'Jam pulang', 'Keterangan']);
+            foreach ($rekap['harian'] as $hari) {
+                $tulis([
+                    $hari['iso'],
+                    $hari['hari'],
+                    $hari['jam_masuk'],
+                    $hari['jam_pulang'],
+                    (string) ($hari['catatan'] ?? ''),
+                ]);
+            }
+
+            fclose($out);
+        }, $namaBerkas, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
 }

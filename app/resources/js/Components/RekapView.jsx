@@ -16,8 +16,9 @@ function formatTimestamp(iso) {
  *  - rekap: hasil RekapPresenter::buildRekap()
  *  - onChangeBulan: (bulan YYYY-MM) => void
  *  - backHref: string
+ *  - downloadHref: string | null — tautan unduh CSV bulan aktif (opsional)
  */
-export default function RekapView({ rekap, onChangeBulan, backHref }) {
+export default function RekapView({ rekap, onChangeBulan, backHref, downloadHref }) {
     const k = rekap.karyawan;
     const p = rekap.periode;
     const d = rekap.distribusi;
@@ -66,6 +67,9 @@ export default function RekapView({ rekap, onChangeBulan, backHref }) {
                             {bulanOptions.map((b) => <option key={b.val} value={b.val}>{b.label}</option>)}
                         </select>
                     </label>
+                    {downloadHref && (
+                        <a href={downloadHref} className="bg-white border border-[#E2E8F0] hover:bg-[#F1F5F9] text-[#334155] rounded-lg px-4 py-2 text-sm font-semibold transition">Unduh CSV</a>
+                    )}
                     <button type="button" onClick={cetakPDF} className="bg-[#0F172A] hover:bg-[#1E3A8A] text-white rounded-lg px-4 py-2 text-sm font-semibold transition">Cetak PDF</button>
                 </div>
             </div>

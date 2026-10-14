@@ -10,5 +10,7 @@ export default function EmployeeRekap() {
         router.get(`${base}/employees/${rekap.karyawan.id}/rekap`, { bulan }, { preserveState: true, preserveScroll: false });
     };
 
-    return <RekapView rekap={rekap} onChangeBulan={changeBulan} backHref={`${base}/employees`} />;
+    const bulanAktif = `${rekap.periode.year}-${String(rekap.periode.month).padStart(2, '0')}`;
+
+    return <RekapView rekap={rekap} onChangeBulan={changeBulan} backHref={`${base}/employees`} downloadHref={`${base}/employees/${rekap.karyawan.id}/rekap/unduh?bulan=${bulanAktif}`} />;
 }
