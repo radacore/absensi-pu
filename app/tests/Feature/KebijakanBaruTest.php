@@ -201,6 +201,67 @@ class KebijakanBaruTest extends TestCase
         $this->assertNotSame('libur', $row->status);
     }
 
+    public function test_super_admin_bisa_mengubah_hari_kerja_lewat_halaman_pengaturan(): void
+    {
+        // Sengaja tidak urut — controller harus menyimpan urut tanpa duplikat.
+        $this->asAdmin($this->superAdmin())
+            ->put('/super-admin/settings', [
+                'jamMasuk' => '07:30',
+                'jamPulang' => '16:00',
+                'toleransi' => 15,
+                'loveMax' => 4,
+                'hariKerja' => ['6', '1', '2', '3', '4', '5'],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['1', '2', '3', '4', '5', '6'], AttendanceSetting::firstOrFail()->hari_kerja);
+    }
+
+    public function test_hari_kerja_tanpa_pilihan_ditolak(): void
+    {
+        $this->asAdmin($this->superAdmin())
+            ->put('/super-admin/settings', [
+                'jamMasuk' => '07:30',
+                'jamPulang' => '16:00',
+                'toleransi' => 15,
+                'loveMax' => 4,
+                'hariKerja' => [],
+            ])
+            ->assertSessionHasErrors('hariKerja');
+
+        $this->assertSame(['1', '2', '3', '4', '5'], AttendanceSetting::firstOrFail()->hari_kerja);
+    }
+
+    public function test_hari_kerja_di_luar_senin_sampai_minggu_ditolak(): void
+    {
+        $this->asAdmin($this->superAdmin())
+            ->put('/super-admin/settings', [
+                'jamMasuk' => '07:30',
+                'jamPulang' => '16:00',
+                'toleransi' => 15,
+                'loveMax' => 4,
+                'hariKerja' => ['1', '9'],
+            ])
+            ->assertSessionHasErrors('hariKerja.1');
+
+        $this->assertSame(['1', '2', '3', '4', '5'], AttendanceSetting::firstOrFail()->hari_kerja);
+    }
+
+    public function test_admin_wilayah_tidak_bisa_mengubah_hari_kerja(): void
+    {
+        $this->asAdmin($this->adminGowa())
+            ->put('/admin/settings', [
+                'jamMasuk' => '07:30',
+                'jamPulang' => '16:00',
+                'toleransi' => 15,
+                'loveMax' => 4,
+                'hariKerja' => ['1', '2', '3', '4', '5', '6'],
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(['1', '2', '3', '4', '5'], AttendanceSetting::firstOrFail()->hari_kerja);
+    }
+
     public function test_admin_wilayah_tidak_bisa_mengubah_gerbang_libur(): void
     {
         $this->asAdmin($this->adminGowa())

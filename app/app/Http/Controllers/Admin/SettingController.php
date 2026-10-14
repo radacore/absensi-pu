@@ -47,6 +47,9 @@ class SettingController extends Controller
             // Gerbang hari libur — opsional supaya pemanggil lama tetap valid.
             'absenLiburAktif' => ['sometimes', 'boolean'],
             'absenLiburMode' => ['sometimes', 'in:tolak,catat'],
+            // Daftar hari kerja (1 = Senin … 7 = Minggu) — minimal satu hari.
+            'hariKerja' => ['sometimes', 'array', 'min:1'],
+            'hariKerja.*' => ['in:1,2,3,4,5,6,7'],
         ]);
 
         if ($data['jamMasuk'] >= $data['jamPulang']) {
@@ -66,6 +69,12 @@ class SettingController extends Controller
         }
         if (array_key_exists('absenLiburMode', $data)) {
             $s->absen_libur_mode = $data['absenLiburMode'];
+        }
+        if (array_key_exists('hariKerja', $data)) {
+            // Simpan urut dan tanpa duplikat supaya perbandingan & tampilan konsisten.
+            $hari = array_values(array_unique(array_map('strval', $data['hariKerja'])));
+            sort($hari);
+            $s->hari_kerja = $hari;
         }
         $s->updated_by = $a->id;
         $s->save();

@@ -11,7 +11,7 @@ export default function Settings() {
     const { url, props } = usePage();
     const base = getBase(url);
     const hariKerjaLabel = (props.settings?.hariKerja ?? ['1', '2', '3', '4', '5']).map((d) => HARI[String(d)] ?? d).join(', ');
-    const init = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, cutiTahunanMax: 12, absenLiburAktif: false, absenLiburMode: 'tolak' };
+    const init = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, cutiTahunanMax: 12, absenLiburAktif: false, absenLiburMode: 'tolak', hariKerja: ['1', '2', '3', '4', '5'] };
     const readOnly = !!props.readOnly;
     const [jamMasuk, setJamMasuk] = useState(init.jamMasuk);
     const [jamPulang, setJamPulang] = useState(init.jamPulang);
@@ -20,12 +20,19 @@ export default function Settings() {
     const [cutiTahunanMax, setCutiTahunanMax] = useState(init.cutiTahunanMax ?? 12);
     const [absenLiburAktif, setAbsenLiburAktif] = useState(!!init.absenLiburAktif);
     const [absenLiburMode, setAbsenLiburMode] = useState(init.absenLiburMode ?? 'tolak');
+    const [hariKerja, setHariKerja] = useState((init.hariKerja ?? ['1', '2', '3', '4', '5']).map(String));
 
     useEffect(() => {
         setJamMasuk(init.jamMasuk); setJamPulang(init.jamPulang); setToleransi(init.toleransi); setLoveMax(init.loveMax);
         setCutiTahunanMax(init.cutiTahunanMax ?? 12);
         setAbsenLiburAktif(!!init.absenLiburAktif); setAbsenLiburMode(init.absenLiburMode ?? 'tolak');
-    }, [init.jamMasuk, init.jamPulang, init.toleransi, init.loveMax, init.cutiTahunanMax, init.absenLiburAktif, init.absenLiburMode]);
+        setHariKerja((init.hariKerja ?? ['1', '2', '3', '4', '5']).map(String));
+    }, [init.jamMasuk, init.jamPulang, init.toleransi, init.loveMax, init.cutiTahunanMax, init.absenLiburAktif, init.absenLiburMode, init.hariKerja]);
+
+    const toggleHari = (d) => {
+        if (readOnly) return;
+        setHariKerja((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
+    };
 
     const handleSave = () => {
         if (readOnly) return;
@@ -33,7 +40,8 @@ export default function Settings() {
         if (toleransi < 0 || toleransi > 60) { toast.error('Kelonggaran harus antara 0–60 menit'); return; }
         if (loveMax < 1 || loveMax > 10) { toast.error('Kuota toleransi harus antara 1–10 per bulan'); return; }
         if (cutiTahunanMax < 1 || cutiTahunanMax > 60) { toast.error('Kuota cuti tahunan harus antara 1–60 hari kerja'); return; }
-        router.put(`${base}/settings`, { jamMasuk, jamPulang, toleransi, loveMax, cutiTahunanMax, absenLiburAktif, absenLiburMode }, { preserveScroll: true });
+        if (hariKerja.length === 0) { toast.error('Pilih minimal satu hari kerja'); return; }
+        router.put(`${base}/settings`, { jamMasuk, jamPulang, toleransi, loveMax, cutiTahunanMax, absenLiburAktif, absenLiburMode, hariKerja }, { preserveScroll: true });
     };
 
     return (
@@ -65,9 +73,26 @@ export default function Settings() {
                             <label htmlFor="tol" className="text-xs font-medium text-[#334155]">Kelonggaran (menit) {readOnly && <span className="text-[#64748B]">— read-only</span>}</label>
                             <input id="tol" type="number" min="0" max="60" value={toleransi} onChange={(e) => !readOnly && setToleransi(Number(e.target.value))} disabled={readOnly} className={`mt-1.5 w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none ${readOnly ? 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed' : 'bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10'}`} />
                         </div>
-                        <div>
-                            <label className="text-xs font-medium text-[#334155]">Hari kerja</label>
-                            <div className="mt-1.5 bg-[#F8FAFC] rounded-xl px-3 py-2.5 text-sm text-[#334155]">{hariKerjaLabel}</div>
+                        <div className="col-span-2">
+                            <label className="text-xs font-medium text-[#334155]">Hari kerja {readOnly && <span className="text-[#64748B]">— read-only</span>}</label>
+                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                {Object.entries(HARI).map(([val, nama]) => {
+                                    const aktif = hariKerja.includes(val);
+                                    return (
+                                        <button
+                                            key={val}
+                                            type="button"
+                                            onClick={() => toggleHari(val)}
+                                            disabled={readOnly}
+                                            aria-pressed={aktif}
+                                            className={`rounded-lg px-3 py-2 text-xs font-medium transition ${aktif ? 'bg-[#0F172A] text-white' : 'bg-[#F8FAFC] text-[#334155] border border-[#E2E8F0] hover:bg-[#F1F5F9]'} ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                        >
+                                            {nama}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <p className="mt-2 text-xs text-[#64748B]">Berlaku langsung untuk absensi, jatah cuti, dan rekap presensi.</p>
                         </div>
                     </div>
                     <p className="text-xs text-[#64748B]">Timezone Asia/Makassar • Tepat waktu ≤ jam_masuk + kelonggaran → on_time</p>
