@@ -270,6 +270,7 @@ Lembur dihitung **terpisah** dari jam kerja shift: menit kerja di luar blok shif
 - **F3** — keterlambatan dihitung dari jadwal shift yang berlaku untuk hari itu, bukan dari `jam_masuk` global.
 - Rekap menampilkan **shift** tiap baris (mis. "Malam"), supaya jam masuk/pulang yang tidak lazim bisa dimengerti pembaca.
 - Rekap CSV (F2, sudah ada) ikut menyertakan kolom shift.
+- **Unduh PDF** (`Support\RekapPdf`, `barryvdh/laravel-dompdf`) memakai sumber data rekap yang sama, jadi dokumen yang diunduh karyawan dan admin selalu seragam. Untuk pekerja shift, kolom **Shift** dan **jam mulai sesuai jadwal** ikut tampil; hari tanpa jadwal ditandai **"Belum dijadwalkan"**, hari libur jadwal ditandai **"Libur"**, dan hari kerja biasa ditandai **"Absen Biasa"** pada pekerja shift.
 - **P3 — cuti pekerja shift** dihitung dari **jadwal shift orang itu sendiri**, bukan dari `hari_kerja` kantor: hari yang tidak dijadwalkan shift tidak memotong cuti. Karyawan non-shift tidak berubah sama sekali (tetap `hari_kerja` + hari libur nasional dikecualikan).
 - Jatah cuti pekerja shift bisa dibedakan lewat setelan `cuti_shift_max`. **Bawaan 0 berarti ikut kuota umum** — jadi tanpa diisi, perilaku lama tetap berlaku dan tidak ada kejutan.
 - Layar Cuti karyawan memakai perhitungan yang sama di sisi tampilan, sehingga angka "hari kerja diminta" yang dilihat karyawan shift sama dengan yang divalidasi server.
@@ -315,6 +316,7 @@ Semua layar baru mengikuti pola yang sudah ada: Inertia + React, presenter di `a
 | 6 | Rekap & laporan: tampilkan shift, keterlambatan dari jadwal (F3) | tidak | **selesai** |
 | 7 | Aturan silang: WFA diblokir untuk pekerja shift (C8), hari libur (P4) | tidak | **sebagian** — WFA tidak ada di aplikasi ini |
 | 8 | K5 + P1 + P3: cakupan pola jadi setelan, panel cakupan 24 jam, cuti pekerja shift | ya | **selesai** |
+| 9 | Ekspor PDF rekap (karyawan & admin): templat A4 bersama, ikut menampilkan shift | tidak | **selesai** |
 
 Fase 7 hanya dikerjakan bagian hari liburnya (P4). Aturan "WFA diblokir untuk pekerja shift" tidak bisa dikerjakan karena fitur WFA tidak pernah ada di aplikasi ini — lihat §11.
 
@@ -346,7 +348,7 @@ Soal C1–C8: seluruh rangkaian pertanyaan WFA tidak bisa dijawab lewat kode kar
 - **`unique(employee_id, work_date)`** tetap dipertahankan; justru inilah alasan shift malam disimpan satu baris (§1).
 - **Zona waktu:** semua perhitungan memakai `now('Asia/Makassar')` seperti kode sekarang. Perbandingan jam shift malam lintas tengah malam harus memakai objek `Carbon` bertanggal, bukan perbandingan string jam.
 - **Beban Admin Wilayah** (§3.1): penjadwalan manual mingguan adalah pilihan client, tapi berpotensi melelahkan bila karyawan shift banyak. Perlu diperhatikan saat uji coba.
-- **Dampak tes:** suite naik dari 226 menjadi **273 tes** (268 lulus, 5 dilewati). `tests/Feature/ShiftKerjaTest.php` berisi 47 tes khusus shift — termasuk penjaga regresi untuk shift malam, karyawan non-shift, hari libur nasional, cakupan pola, dan kuota cuti pekerja shift.
+- **Dampak tes:** suite naik dari 226 menjadi **291 tes** (286 lulus, 5 dilewati). `tests/Feature/ShiftKerjaTest.php` berisi 47 tes khusus shift — termasuk penjaga regresi untuk shift malam, karyawan non-shift, hari libur nasional, cakupan pola, dan kuota cuti pekerja shift. Ekspor PDF dijaga `tests/Feature/RekapPdfTest.php` (18 tes).
 - **Bawaan yang aman:** dua setelan baru (`cakupan_pola_shift` = `bertingkat`, `cuti_shift_max` = 0) keduanya menghasilkan perilaku yang **identik** dengan sebelum revisi 4. Jadi menjalankan migrasi tidak mengubah apa pun sampai Super Admin sengaja mengubahnya.
 - **Perhitungan cakupan 24 jam di sisi tampilan** memakai `mulaiMenit` dan `durasiMenit` yang dikirim server, bukan mengurai ulang label jam. Kalau aturan durasi shift berubah, panel ikut berubah tanpa penyesuaian terpisah.
 - **Cuti pekerja shift vs hari libur nasional:** karena pekerja shift tetap bekerja saat libur nasional (P4), hari libur tidak dikecualikan dari hitungan cuti mereka — yang menentukan hanya ada tidaknya jadwal shift.
@@ -374,6 +376,9 @@ Lima migrasi sudah dibuat dan dijalankan (urutan penting):
 - `app/Http/Controllers/Karyawan/EarlyLeaveController.php`.
 - `app/resources/js/Pages/Admin/PolaShift.jsx`, `JadwalShift.jsx`, `PulangAwal.jsx`.
 - `app/resources/js/Pages/Karyawan/PulangAwal.jsx`.
+- `app/Support/RekapPdf.php` — pemetaan data rekap → dokumen PDF A4 landscape (dipakai karyawan dan admin).
+- `app/Support/TrenJamSvg.php` — grafik tren jam versi PHP agar grafik di PDF sama dengan grafik di layar.
+- `app/resources/views/pdf/rekap-presensi.blade.php` — templat dokumen PDF bersama.
 - `app/tests/Feature/ShiftKerjaTest.php` (47 tes).
 
 **Berkas lama yang disesuaikan:** `Admin/EmployeeController.php` (penanda shift), `Karyawan/AttendanceController.php` (absen mengikuti shift), `Karyawan/DashboardController.php` (jam kerja vs shift), `Karyawan/CutiController.php` (cuti pekerja shift), `Support/AdminPresenter.php`, `Support/ShiftResolver.php` (cakupan pola), `Support/CutiKuota.php` (kuota pekerja shift), `Models/AttendanceSetting.php`, `Models/Employee.php`, `Models/Attendance.php`, `Admin/SettingController.php`, `Admin/ShiftPatternController.php` (penyaringan cakupan), `Admin/ShiftScheduleController.php` (data panel cakupan), `routes/web.php`, serta layar `Admin/Employees.jsx`, `Admin/Settings.jsx`, `Admin/PolaShift.jsx`, `Admin/JadwalShift.jsx`, `Karyawan/Absensi.jsx`, `Karyawan/Cuti.jsx`, `Karyawan/Dashboard.jsx`, `Karyawan/Rekap.jsx`, dan kedua layout.

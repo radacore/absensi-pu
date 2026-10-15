@@ -45,7 +45,7 @@ export default function AdminLayout({ children }) {
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex">
             {/* Sidebar — desktop */}
-            <aside className={`hidden lg:flex lg:flex-col w-[264px] bg-[#0F172A] text-white sticky top-0 h-screen shrink-0`}>
+            <aside className="print-hide hidden lg:flex lg:flex-col w-[264px] bg-[#0F172A] text-white sticky top-0 h-screen shrink-0">
                 <div className="px-5 py-5 flex items-center gap-3 border-b border-white/10">
                     <img src="/logo.png" alt="BBWS" className="w-9 h-9 rounded-xl object-cover bg-white" />
                     <div>
@@ -85,7 +85,7 @@ export default function AdminLayout({ children }) {
 
             {/* Mobile topbar + sidebar drawer */}
             <div className="flex-1 flex flex-col min-w-0">
-                <header className="lg:hidden sticky top-0 z-20 bg-[#0F172A] text-white px-4 py-3 flex items-center justify-between">
+                <header className="print-hide lg:hidden sticky top-0 z-20 bg-[#0F172A] text-white px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
@@ -134,7 +134,7 @@ export default function AdminLayout({ children }) {
                         </div>
                     </div>
                 )}
-                <main className="flex-1 p-4 lg:p-6 max-w-[1280px] w-full mx-auto">{children}</main>
+                <main className="flex-1 p-4 lg:p-6 max-w-[1280px] print-flush print-wide w-full mx-auto">{children}</main>
             </div>
         </div>
     );

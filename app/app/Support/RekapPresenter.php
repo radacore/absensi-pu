@@ -8,6 +8,7 @@ use App\Models\DinasClaim;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Leave;
+use App\Models\ShiftSchedule;
 use App\Models\ToleranceClaim;
 use Illuminate\Support\Carbon;
 
@@ -108,6 +109,24 @@ class RekapPresenter
             ->mapWithKeys(fn (Holiday $h) => [$h->tanggal->format('Y-m-d') => ['nama' => $h->nama, 'cuti_bersama' => $h->cuti_bersama]])
             ->all();
 
+        // Jadwal shift (K3/A7). Hanya dimuat untuk pekerja shift; selain itu
+        // jalur lama dipakai apa adanya sehingga rekap non-shift tidak berubah.
+        $isShift = (bool) $emp->is_shift;
+        $polaShift = $isShift ? ShiftResolver::patternFor($emp, $settings) : null;
+        $jadwalShift = [];
+        if ($isShift) {
+            // whereDate, bukan whereBetween: kolom bertipe date dikirim
+            // sebagai "Y-m-d 00:00:00" sehingga hari terakhir bulan bisa
+            // terbuang dari rentang.
+            $jadwalShift = ShiftSchedule::with('pattern')
+                ->where('employee_id', $emp->id)
+                ->whereDate('tanggal', '>=', $start->toDateString())
+                ->whereDate('tanggal', '<=', $end->toDateString())
+                ->get()
+                ->keyBy(fn (ShiftSchedule $s) => $s->tanggal->format('Y-m-d'))
+                ->all();
+        }
+
         // Metrik counters
         $hadirCount = 0;
         $tanpaKeteranganCount = 0;
@@ -135,6 +154,36 @@ class RekapPresenter
             $hariLabel = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][$dow];
             $hariFull = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][$dow];
 
+            // ── Acuan hari ini ───────────────────────────────────────────
+            // Pekerja non-shift memakai kalender (akhir pekan + libur nasional).
+            // Pekerja shift memakai JADWAL: hari yang dijadwalkan masuk tetap
+            // dihitung hari kerja walau jatuh pada akhir pekan atau libur
+            // nasional (P4 — di hari libur shift tetap "Absen Biasa").
+            $sched = $jadwalShift[$dateKey] ?? null;
+            $shiftKe = $sched?->shift_ke;
+            $shiftLabel = $sched?->label();
+            // Libur eksplisit dari jadwal (baris ada, shift_ke null) vs hari
+            // yang belum dijadwalkan sama sekali — dua hal berbeda.
+            $liburJadwal = $isShift && $sched !== null && $shiftKe === null;
+            $masukHariIni = $isShift
+                ? ($sched !== null && $shiftKe !== null)
+                : (! $isWeekend && ! $isHoliday);
+
+            $shiftMulaiMin = null;
+            $shiftSelesaiMin = null;
+            if ($isShift && $shiftKe !== null) {
+                $polaRow = $sched->pattern ?: $polaShift;
+                if ($polaRow) {
+                    $window = $polaRow->windowFor($date, (int) $shiftKe);
+                    $shiftMulaiMin = ((int) $window['mulai']->format('G') * 60) + (int) $window['mulai']->format('i');
+                    $shiftSelesaiMin = ((int) $window['selesai']->format('G') * 60) + (int) $window['selesai']->format('i');
+                }
+            }
+
+            // Jam acuan penilaian masuk: jadwal shift bila ada, kalau tidak
+            // setelan global (perilaku lama untuk pekerja non-shift).
+            $acuanMasukMin = $shiftMulaiMin ?? $jamMasukMin;
+
             $jamMasukStr = '—';
             $jamPulangStr = '—';
             $catatan = '';
@@ -142,11 +191,24 @@ class RekapPresenter
             $trenPulangMin = null;
             $zonaMasuk = null;
 
-            if ($isWeekend && ! $isHoliday) {
-                $catatan = "Bukan hari kerja ({$hariFull})";
-            }
-            if ($isHoliday) {
-                $catatan = ($isWeekend ? 'Bukan hari kerja & ' : '').'Libur nasional: '.$holidays[$dateKey]['nama'];
+            if ($isShift) {
+                if ($shiftKe !== null) {
+                    $catatan = 'Shift '.$shiftLabel;
+                    if ($isHoliday) {
+                        $catatan .= ' · Libur nasional: '.$holidays[$dateKey]['nama'];
+                    }
+                } elseif ($sched !== null) {
+                    $catatan = 'Libur (jadwal shift)';
+                } else {
+                    $catatan = 'Belum ada jadwal shift';
+                }
+            } else {
+                if ($isWeekend && ! $isHoliday) {
+                    $catatan = "Bukan hari kerja ({$hariFull})";
+                }
+                if ($isHoliday) {
+                    $catatan = ($isWeekend ? 'Bukan hari kerja & ' : '').'Libur nasional: '.$holidays[$dateKey]['nama'];
+                }
             }
             if ($isCuti) {
                 $catatan = 'Cuti '.$cutiDates[$dateKey]['jenis'];
@@ -174,18 +236,18 @@ class RekapPresenter
                     $p = Carbon::parse($att->clock_in_at);
                     $inMin = (int) $p->format('G') * 60 + (int) $p->format('i');
                     $trenMasukMin = $inMin;
-                    if ($inMin <= $jamMasukMin) {
+                    if ($inMin <= $acuanMasukMin) {
                         $tepatWaktu++;
                         $zonaMasuk = 'tepat';
                         $catatan = 'Hadir tepat waktu';
-                    } elseif ($inMin <= $batasToleransiMin) {
+                    } elseif ($inMin <= $acuanMasukMin + $toleransi) {
                         $toleransiCount++;
                         $zonaMasuk = 'toleransi';
                         $catatan = 'Masuk toleransi terlambat';
                     } else {
                         $terlambat++;
                         $zonaMasuk = 'terlambat';
-                        $menitTerlambat = $inMin - $jamMasukMin;
+                        $menitTerlambat = $inMin - $acuanMasukMin;
                         $noKeterlambatan++;
                         $keterlambatan[] = [
                             'no' => $noKeterlambatan,
@@ -197,41 +259,65 @@ class RekapPresenter
                     }
                 }
 
-                if ($att->clock_out_at) {
-                    $p = Carbon::parse($att->clock_out_at);
-                    $outMin = (int) $p->format('G') * 60 + (int) $p->format('i');
-                    $trenPulangMin = $outMin;
-                    if (! $isWeekend && ! $isHoliday && $outMin < $jamPulangMin) {
-                        $menitPSW = $jamPulangMin - $outMin;
-                        // gabung PSW ke keterlambatan yang sama kalau ada; kalau tidak, tambah row baru
-                        $found = false;
-                        foreach ($keterlambatan as &$row) {
-                            if ($row['tgl'] === $date->locale('id')->isoFormat('D MMM YYYY')) {
-                                $row['menit_psw'] = $menitPSW;
-                                $found = true;
-                                break;
+                if ($isShift && $shiftKe !== null) {
+                    // Pekerja shift: pulang cepat sudah lewat gerbang
+                    // persetujuan Admin Wilayah di halaman absensi, jadi di
+                    // rekap hanya ditandai — tidak dihitung sebagai
+                    // kekurangan jam (PSW) secara sepihak.
+                    if ($att->clock_out_at) {
+                        $p = Carbon::parse($att->clock_out_at);
+                        $outMin = (int) $p->format('G') * 60 + (int) $p->format('i');
+                        $trenPulangMin = $outMin;
+                        if ($shiftSelesaiMin !== null && $outMin < $shiftSelesaiMin) {
+                            $catatan .= ($catatan ? ' · ' : '').'Pulang cepat (disetujui)';
+                        }
+                    } else {
+                        $catatan .= ($catatan ? ' · ' : '').'Tidak ada absen pulang';
+                    }
+                } else {
+                    if ($att->clock_out_at) {
+                        $p = Carbon::parse($att->clock_out_at);
+                        $outMin = (int) $p->format('G') * 60 + (int) $p->format('i');
+                        $trenPulangMin = $outMin;
+                        if (! $isWeekend && ! $isHoliday && $outMin < $jamPulangMin) {
+                            $menitPSW = $jamPulangMin - $outMin;
+                            // gabung PSW ke keterlambatan yang sama kalau ada; kalau tidak, tambah row baru
+                            $found = false;
+                            foreach ($keterlambatan as &$row) {
+                                if ($row['tgl'] === $date->locale('id')->isoFormat('D MMM YYYY')) {
+                                    $row['menit_psw'] = $menitPSW;
+                                    $found = true;
+                                    break;
+                                }
+                            }
+                            unset($row);
+                            if (! $found) {
+                                $noKeterlambatan++;
+                                $keterlambatan[] = [
+                                    'no' => $noKeterlambatan,
+                                    'tgl' => $date->locale('id')->isoFormat('D MMM YYYY'),
+                                    'menit_terlambat' => 0,
+                                    'menit_psw' => $menitPSW,
+                                ];
                             }
                         }
-                        unset($row);
-                        if (! $found) {
-                            $noKeterlambatan++;
-                            $keterlambatan[] = [
-                                'no' => $noKeterlambatan,
-                                'tgl' => $date->locale('id')->isoFormat('D MMM YYYY'),
-                                'menit_terlambat' => 0,
-                                'menit_psw' => $menitPSW,
-                            ];
-                        }
+                    } elseif (! $isWeekend && ! $isHoliday) {
+                        $catatan .= ($catatan ? ' · ' : '').'Tidak ada absen pulang';
                     }
-                } elseif (! $isWeekend && ! $isHoliday) {
-                    $catatan .= ($catatan ? ' · ' : '').'Tidak ada absen pulang';
                 }
 
                 // Detail per hari untuk kartu detail
                 $detailHari[] = self::buildDetailHari($att, $date, $hariFull, $zonaMasuk, $emp);
             } else {
-                // Hari kerja tanpa absen dan tanpa cuti/dinas
-                if (! $isWeekend && ! $isHoliday) {
+                // Hari kerja tanpa absen dan tanpa cuti/dinas. Pekerja shift
+                // hanya dihitung "tanpa keterangan" pada hari yang benar-benar
+                // dijadwalkan masuk (libur jadwal bukan pelanggaran).
+                if ($isShift) {
+                    if ($shiftKe !== null) {
+                        $tanpaKeteranganCount++;
+                        $catatan = 'Tidak ada absen masuk · Tidak ada absen pulang';
+                    }
+                } elseif ($masukHariIni) {
                     $tanpaKeteranganCount++;
                     $catatan = 'Tidak ada absen masuk · Tidak ada absen pulang';
                 }
@@ -248,7 +334,13 @@ class RekapPresenter
                 'is_holiday' => $isHoliday,
                 'is_cuti' => $isCuti,
                 'is_dinas' => $isDinas,
-                'is_tanpa_keterangan' => (! $att && ! $isWeekend && ! $isHoliday && ! $isCuti && ! $isDinas),
+                'is_tanpa_keterangan' => (! $att && ! $isCuti && ! $isDinas && ($isShift ? $shiftKe !== null : $masukHariIni)),
+                'is_shift' => $isShift,
+                'shift' => $shiftLabel,
+                'shift_ke' => $shiftKe,
+                'shift_jam' => $shiftMulaiMin !== null ? sprintf('%02d:%02d', intdiv($shiftMulaiMin, 60), $shiftMulaiMin % 60) : null,
+                'is_libur_jadwal' => $liburJadwal,
+                'is_hari_kerja' => $masukHariIni,
                 'dinas' => $isDinas ? $dinasDates[$dateKey] : null,
                 'cuti' => $isCuti ? $cutiDates[$dateKey] : null,
                 'holiday' => $isHoliday ? $holidays[$dateKey] : null,
@@ -262,6 +354,9 @@ class RekapPresenter
                 'is_holiday' => $isHoliday,
                 'is_cuti' => $isCuti,
                 'is_dinas' => $isDinas,
+                // Acuan "hari kerja" yang sudah sadar-shift — dipakai grafik
+                // (React & PDF) untuk menandai hari tanpa absen.
+                'is_hari_kerja' => $masukHariIni,
                 'zona' => $zonaMasuk,
             ];
         }
@@ -280,6 +375,8 @@ class RekapPresenter
                 'unit_kerja' => $emp->unit_kerja,
                 'region' => $emp->region?->name ?? '',
                 'site' => $emp->site?->nama_lokasi ?? '',
+                'is_shift' => $isShift,
+                'pola_shift' => $polaShift?->ringkasan(),
             ],
             'periode' => [
                 'year' => $year,
@@ -301,6 +398,7 @@ class RekapPresenter
                 'jamMasukMin' => $jamMasukMin,
                 'jamPulangMin' => $jamPulangMin,
                 'batasToleransiMin' => $batasToleransiMin,
+                'isShift' => $isShift,
             ],
             'distribusi' => [
                 'hadir' => $hadirCount,
@@ -322,6 +420,7 @@ class RekapPresenter
             'keterlambatan' => $keterlambatan,
             'total_keterlambatan' => array_sum(array_column($keterlambatan, 'menit_terlambat')),
             'total_psw' => array_sum(array_column($keterlambatan, 'menit_psw')),
+            'ada_pulang_cepat' => collect($harian)->contains(fn ($h) => str_contains((string) $h['catatan'], 'Pulang cepat')),
             'harian' => $harian,
             'tren' => $tren,
             'detailHari' => $detailHari,

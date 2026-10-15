@@ -9,6 +9,9 @@ use App\Models\EarlyLeaveRequest;
 use App\Models\Leave;
 use App\Models\ShiftSchedule;
 use App\Support\AdminPresenter;
+use App\Support\Audit;
+use App\Support\RekapPdf;
+use App\Support\RekapPresenter;
 use App\Support\ShiftResolver;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -364,8 +367,8 @@ class AttendanceController extends Controller
             .'. Ajukan pulang cepat lalu tunggu persetujuan Admin Wilayah.';
     }
 
-    /** Rekap: data untuk kalender + ringkasan bulan ini. */
-    public function rekap()
+    /** Rekap: data untuk kalender + ringkasan satu bulan (bawaan: bulan berjalan). */
+    public function rekap(Request $request)
     {
         $me = Auth::guard('employee')->user()->load(['region', 'site']);
         $settings = AttendanceSetting::first();
@@ -373,9 +376,12 @@ class AttendanceController extends Controller
         $jamPulang = $settings ? substr((string) $settings->jam_pulang, 0, 5) : '16:00';
         $loveMax = $settings ? (int) $settings->love_max : 4;
 
-        $now = now('Asia/Makassar');
-        $year = (int) $now->format('Y');
-        $month = (int) $now->format('n');
+        $data = $request->validate([
+            'bulan' => ['nullable', 'regex:/^\d{4}-\d{2}$/'],
+        ]);
+        $bulan = $data['bulan'] ?? now('Asia/Makassar')->format('Y-m');
+        [$year, $month] = array_map('intval', explode('-', $bulan));
+
         $startOfMonth = Carbon::create($year, $month, 1, 0, 0, 0, 'Asia/Makassar');
         $endOfMonth = $startOfMonth->copy()->endOfMonth();
 
@@ -433,6 +439,7 @@ class AttendanceController extends Controller
         return Inertia::render('Karyawan/Rekap', [
             'me' => ['id' => $me->id, 'nama' => $me->name, 'region' => $me->region?->name ?? ''],
             'assigned' => $assigned,
+            'bulan' => sprintf('%04d-%02d', $year, $month),
             'settings' => [
                 'jamMasuk' => $jamMasuk,
                 'jamPulang' => $jamPulang,
@@ -452,5 +459,34 @@ class AttendanceController extends Controller
             'hadir' => $rows->count(),
             'terlambat' => $rows->where('status', 'late')->count(),
         ]);
+    }
+
+    /**
+     * Unduh rekap presensi diri sendiri sebagai berkas PDF (A4 landscape).
+     *
+     * Cakupan selalu milik karyawan yang sedang masuk — tidak ada parameter
+     * karyawan, sehingga tidak mungkin mengunduh rekap orang lain.
+     */
+    public function rekapPdf(Request $request)
+    {
+        $me = Auth::guard('employee')->user()->load(['region', 'site']);
+
+        $data = $request->validate([
+            'bulan' => ['nullable', 'regex:/^\d{4}-\d{2}$/'],
+        ]);
+        $bulan = $data['bulan'] ?? now('Asia/Makassar')->format('Y-m');
+        [$year, $month] = array_map('intval', explode('-', $bulan));
+
+        $rekap = RekapPresenter::buildRekap($me, $year, $month);
+
+        Audit::log(
+            'karyawan.rekap.pdf',
+            subject: $me,
+            label: $me->name,
+            description: "Karyawan unduh PDF rekap presensi sendiri untuk {$rekap['periode']['label']}",
+            meta: ['periode' => $bulan]
+        );
+
+        return RekapPdf::unduh($rekap, $bulan);
     }
 }

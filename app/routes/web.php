@@ -66,6 +66,7 @@ Route::prefix('karyawan')->group(function () {
         Route::post('/absensi/clock-in', [KaryawanAttendanceController::class, 'clockIn'])->name('karyawan.absensi.clock_in');
         Route::post('/absensi/clock-out', [KaryawanAttendanceController::class, 'clockOut'])->name('karyawan.absensi.clock_out');
         Route::get('/rekap', [KaryawanAttendanceController::class, 'rekap'])->name('karyawan.rekap');
+        Route::get('/rekap/pdf', [KaryawanAttendanceController::class, 'rekapPdf'])->name('karyawan.rekap.pdf');
         Route::get('/cuti', [KaryawanCutiController::class, 'index'])->name('karyawan.cuti');
         Route::post('/cuti', [KaryawanCutiController::class, 'store'])->name('karyawan.cuti.store');
         Route::delete('/cuti/{cuti}', [KaryawanCutiController::class, 'destroy'])->name('karyawan.cuti.destroy');
@@ -164,6 +165,7 @@ function adminMasterRoutes(string $prefix, string $role, string $label): void
         Route::post('/employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name("{$label}.employees.reset-password");
         Route::get('/employees/{employee}/rekap', [EmployeeRekapController::class, 'show'])->name("{$label}.employees.rekap");
         Route::get('/employees/{employee}/rekap/unduh', [EmployeeRekapController::class, 'download'])->name("{$label}.employees.rekap.unduh");
+        Route::get('/employees/{employee}/rekap/pdf', [EmployeeRekapController::class, 'pdf'])->name("{$label}.employees.rekap.pdf");
         Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->name("{$label}.employees.destroy");
 
         // Audit log (super admin only via controller guard)

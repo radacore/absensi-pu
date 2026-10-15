@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Support\Audit;
+use App\Support\RekapPdf;
 use App\Support\RekapPresenter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -133,5 +134,39 @@ class EmployeeRekapController extends Controller
         }, $namaBerkas, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /**
+     * Unduh rekap presensi perorangan satu bulan sebagai berkas PDF (A4 landscape).
+     *
+     * Berbeda dari tombol "Cetak" di layar (yang memakai dialog cetak peramban),
+     * endpoint ini menghasilkan berkas PDF asli di server sehingga bisa
+     * dilampirkan langsung tanpa langkah "Simpan sebagai PDF".
+     */
+    public function pdf(Request $request, Employee $employee)
+    {
+        $u = Auth::guard('web')->user();
+        $scope = $u->role === 'super_admin' ? null : $u->region_id;
+        abort_if($scope !== null && (int) $employee->region_id !== $scope, 403, 'Karyawan ini di luar cakupan Anda.');
+
+        $employee->load(['region', 'site']);
+
+        $data = $request->validate([
+            'bulan' => ['nullable', 'regex:/^\d{4}-\d{2}$/'],
+        ]);
+        $bulan = $data['bulan'] ?? now('Asia/Makassar')->format('Y-m');
+        [$year, $month] = array_map('intval', explode('-', $bulan));
+
+        $rekap = RekapPresenter::buildRekap($employee, $year, $month);
+
+        Audit::log(
+            'employee.rekap.pdf',
+            subject: $employee,
+            label: $employee->name,
+            description: "Unduh PDF rekap presensi {$employee->name} untuk {$rekap['periode']['label']}",
+            meta: ['periode' => $bulan]
+        );
+
+        return RekapPdf::unduh($rekap, $bulan);
     }
 }

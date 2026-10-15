@@ -11,6 +11,16 @@ export default function EmployeeRekap() {
     };
 
     const bulanAktif = `${rekap.periode.year}-${String(rekap.periode.month).padStart(2, '0')}`;
+    const akar = `${base}/employees/${rekap.karyawan.id}/rekap`;
+    const kueri = `?bulan=${bulanAktif}`;
 
-    return <RekapView rekap={rekap} onChangeBulan={changeBulan} backHref={`${base}/employees`} downloadHref={`${base}/employees/${rekap.karyawan.id}/rekap/unduh?bulan=${bulanAktif}`} />;
+    return (
+        <RekapView
+            rekap={rekap}
+            onChangeBulan={changeBulan}
+            backHref={`${base}/employees`}
+            pdfHref={`${akar}/pdf${kueri}`}
+            csvHref={`${akar}/unduh${kueri}`}
+        />
+    );
 }

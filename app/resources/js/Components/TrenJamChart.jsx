@@ -21,16 +21,36 @@ function minToLabel(min) {
     return `${h}:${m}`;
 }
 
+/** Langkah label sumbu-Y supaya jumlah baris wajar (2–5). */
+function langkahLabel(rentang) {
+    const kandidat = [30, 60, 120, 180, 240, 360];
+    return kandidat.find((k) => rentang / k <= 4) ?? 360;
+}
+
 export default function TrenJamChart({ tren, mode, settings }) {
     const lastDay = tren.length;
     if (lastDay === 0) return null;
 
     const isMasuk = mode === 'masuk';
+    const isShift = !!settings.isShift;
     const points = tren.map((r) => ({ ...r, val: isMasuk ? r.jam_masuk_min : r.jam_pulang_min }));
 
-    // Range Y: masuk 06:00–10:00 (360–600 min); pulang 15:00–22:00 (900–1320)
-    const yMin = isMasuk ? 360 : 900;
-    const yMax = isMasuk ? 600 : 1320;
+    // Rentang Y. Untuk jam kerja tetap dipatok 06:00–10:00 / 15:00–22:00 supaya
+    // zona tepat/toleransi/terlambat selalu utuh. Pekerja shift bisa masuk
+    // pukul 23:00 atau pulang pukul 07:00 — rentang dihitung dari data,
+    // kalau tidak titiknya menempel di tepi dan tidak terbaca.
+    let yMin;
+    let yMax;
+    if (isShift) {
+        const nilai = points.filter((p) => p.val !== null && p.val !== undefined).map((p) => p.val);
+        if (nilai.length === 0) return null;
+        yMin = Math.max(0, Math.floor(Math.min(...nilai) / 60) * 60 - 60);
+        yMax = Math.min(24 * 60, Math.ceil(Math.max(...nilai) / 60) * 60 + 60);
+        if (yMax - yMin < 120) yMax = Math.min(24 * 60, yMin + 120);
+    } else {
+        yMin = isMasuk ? 360 : 900;
+        yMax = isMasuk ? 600 : 1320;
+    }
 
     const xFor = (day) => PAD_L + ((day - 1) / Math.max(1, lastDay - 1)) * (W - PAD_L - PAD_R);
     const yFor = (min) => {
@@ -41,9 +61,10 @@ export default function TrenJamChart({ tren, mode, settings }) {
     const chartH = H - PAD_T - PAD_B;
     const chartW = W - PAD_L - PAD_R;
 
-    // Zona background (hanya untuk mode masuk)
+    // Zona background (hanya untuk jam kerja tetap — acuan zona tidak berlaku
+    // untuk pekerja shift yang jamnya berbeda setiap hari).
     let zonaBg = null;
-    if (isMasuk) {
+    if (isMasuk && !isShift) {
         const yTepat0 = yFor(yMin);
         const yTepat1 = yFor(settings.jamMasukMin);
         const yToleransi1 = yFor(settings.batasToleransiMin);
@@ -57,13 +78,16 @@ export default function TrenJamChart({ tren, mode, settings }) {
         );
     }
 
-    // Garis referensi
+    // Garis referensi — tidak ditampilkan untuk pekerja shift karena jam
+    // acuannya berbeda tiap hari (mengikuti jadwal, bukan setelan global).
     const refLines = [];
-    if (isMasuk) {
-        refLines.push({ y: yFor(settings.jamMasukMin), label: minToLabel(settings.jamMasukMin), stroke: '#64748B' });
-        refLines.push({ y: yFor(settings.batasToleransiMin), label: minToLabel(settings.batasToleransiMin), stroke: '#F59E0B' });
-    } else {
-        refLines.push({ y: yFor(settings.jamPulangMin), label: minToLabel(settings.jamPulangMin), stroke: '#10B981' });
+    if (!isShift) {
+        if (isMasuk) {
+            refLines.push({ y: yFor(settings.jamMasukMin), label: minToLabel(settings.jamMasukMin), stroke: '#64748B' });
+            refLines.push({ y: yFor(settings.batasToleransiMin), label: minToLabel(settings.batasToleransiMin), stroke: '#F59E0B' });
+        } else {
+            refLines.push({ y: yFor(settings.jamPulangMin), label: minToLabel(settings.jamPulangMin), stroke: '#10B981' });
+        }
     }
 
     // Poin data yang punya value
@@ -72,13 +96,28 @@ export default function TrenJamChart({ tren, mode, settings }) {
         ? valid.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xFor(p.day)} ${yFor(p.val)}`).join(' ')
         : '';
 
-    // Missing points (hari kerja tanpa absen)
-    const missing = points.filter((p) => p.val === null && !p.is_weekend && !p.is_holiday && !p.is_cuti && !p.is_dinas);
+    // Hari kerja tanpa absen — pekerja shift memakai acuan jadwal dari server
+    // (`is_hari_kerja`), non-shift memakai kalender.
+    const missing = points.filter((p) => {
+        if (p.val !== null && p.val !== undefined) return false;
+        if (p.is_cuti || p.is_dinas) return false;
+        return p.is_hari_kerja !== undefined
+            ? !!p.is_hari_kerja
+            : (!p.is_weekend && !p.is_holiday);
+    });
 
-    // Y-axis labels (3-4 label)
-    const yLabels = isMasuk
-        ? [{ min: 600, txt: '10:00' }, { min: 480, txt: '08:00' }, { min: 420, txt: '07:00' }, { min: 360, txt: '06:00' }]
-        : [{ min: 900, txt: '15:00' }, { min: 1080, txt: '18:00' }, { min: 1200, txt: '20:00' }, { min: 1320, txt: '22:00' }];
+    // Label sumbu-Y: tetap untuk jam kerja biasa, mengikuti rentang untuk shift.
+    const yLabels = (() => {
+        if (!isShift) {
+            return isMasuk
+                ? [{ min: 600 }, { min: 480 }, { min: 420 }, { min: 360 }]
+                : [{ min: 900 }, { min: 1080 }, { min: 1200 }, { min: 1320 }];
+        }
+        const langkah = langkahLabel(yMax - yMin);
+        const out = [];
+        for (let m = Math.ceil(yMin / langkah) * langkah; m <= yMax; m += langkah) out.push({ min: m });
+        return out;
+    })();
 
     // X-axis labels (tanggal 1, 7, 14, 21, 28, lastDay)
     const xLabels = [1, 7, 14, 21, 28, lastDay].filter((d, i, arr) => arr.indexOf(d) === i && d <= lastDay);
@@ -96,7 +135,7 @@ export default function TrenJamChart({ tren, mode, settings }) {
                 ))}
 
                 {yLabels.map((yl) => (
-                    <text key={`yl-${yl.min}`} x={PAD_L - 4} y={yFor(yl.min) + 3} fontSize="10" fill="#64748B" textAnchor="end">{yl.txt}</text>
+                    <text key={`yl-${yl.min}`} x={PAD_L - 4} y={yFor(yl.min) + 3} fontSize="10" fill="#64748B" textAnchor="end">{yl.txt ?? minToLabel(yl.min)}</text>
                 ))}
 
                 {xLabels.map((d) => (
@@ -114,9 +153,11 @@ export default function TrenJamChart({ tren, mode, settings }) {
                 ))}
             </svg>
             <p className="text-xs text-[#64748B] mt-1">
-                {isMasuk
-                    ? 'Zona hijau tepat waktu · Zona kuning toleransi · Zona merah muda terlambat · Titik merah = tanpa absen'
-                    : 'Garis putus hijau: jam pulang standar · Titik merah = tanpa absen pulang'}
+                {isShift
+                    ? 'Rentang jam mengikuti jadwal shift · Titik merah = hari terjadwal tanpa absen'
+                    : (isMasuk
+                        ? 'Zona hijau tepat waktu · Zona kuning toleransi · Zona merah muda terlambat · Titik merah = tanpa absen'
+                        : 'Garis putus hijau: jam pulang standar · Titik merah = tanpa absen pulang')}
             </p>
         </div>
     );

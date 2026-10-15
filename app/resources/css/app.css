@@ -45,3 +45,76 @@
 .animate-toast-in {
     animation: toast-in 180ms ease-out;
 }
+
+/*
+ * Aturan cetak — dipakai bersama oleh rekap admin/super admin dan rekap
+ * karyawan lewat tombol "Cetak" (Ctrl+P / Simpan sebagai PDF).
+ *
+ * Dulu aturan ini disuntik inline di RekapView.jsx sehingga halaman karyawan
+ * tidak bisa ikut rapi saat dicetak. Sekarang satu tempat saja.
+ *
+ *  - .print-hide     : disembunyikan saat cetak (toolbar, navigasi, topbar)
+ *  - .print-flush    : buang padding/max-width supaya kertas terpakai penuh
+ *  - .print-break    : mulai bagian baru di halaman baru
+ *  - .print-keep     : jangan pecah di tengah (kartu, tabel baris)
+ *  - .print-grid-2   : paksa dua kolom (grafik berdampingan)
+ */
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 8mm;
+    }
+
+    html,
+    body {
+        background: #fff !important;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .print-hide {
+        display: none !important;
+    }
+
+    .print-flush {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        box-shadow: none !important;
+    }
+
+    /* Wadah berlebar terbatas (mis. kerangka PWA karyawan) dibuka penuh. */
+    .print-wide {
+        max-width: 100% !important;
+        width: 100% !important;
+        box-shadow: none !important;
+    }
+
+    .print-min-h {
+        min-height: auto !important;
+    }
+
+    .print-break {
+        break-before: page;
+        page-break-before: always;
+    }
+
+    .print-keep,
+    section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .print-grid-2,
+    .chart-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    table {
+        font-size: 10.5px;
+    }
+}

@@ -2,9 +2,9 @@
 
 Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pusat di **Makassar** + kantor wilayah se-Sulawesi Selatan — dengan portal HR multi-tenant dan **PWA Karyawan** (login email, absensi GPS + selfie dengan radius kantor, *love system*, cuti berjenjang, rekap bulanan, pengumuman, dan pengajuan **perjalanan dinas** dengan unggah dokumen).
 
-> **Status dokumen ini:** seluruh versi, jumlah tabel, jumlah route, dan perilaku penyimpanan di bawah **sudah diverifikasi langsung dari kode dan dari basis data yang berjalan**. Angka-angka di bagian [Basis Data](#basis-data-mysql--mariadb) berasal dari verifikasi 20 Sep 2026; jumlah berkas migrasi/seeder/tabel/tes di bawah sudah dihitung ulang pada 11 Okt 2026.
+> **Status dokumen ini:** seluruh versi, jumlah tabel, jumlah route, dan perilaku penyimpanan di bawah **sudah diverifikasi langsung dari kode dan dari basis data yang berjalan**. Angka-angka di bagian [Basis Data](#basis-data-mysql--mariadb) berasal dari verifikasi 20 Sep 2026; jumlah berkas migrasi/seeder/tabel/route/tes di bawah sudah dihitung ulang pada 15 Okt 2026.
 >
-> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **27 berkas migrasi + 7 seeder**, **20 tabel**, **188 route**, dan **219 tes (214 lulus, 5 di-skip)**. Simulasi HTTP nyata **68/68 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
+> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **33 berkas migrasi + 7 seeder**, **24 tabel**, **228 route**, dan **291 tes (286 lulus, 5 di-skip)**. Simulasi HTTP nyata **68/68 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
 >
 > Laporan simulasi end-to-end lengkap (6 celah keamanan yang ditemukan & diperbaiki, plus 13 temuan tambahan): **[`docs/laporan-simulasi.md`](docs/laporan-simulasi.md)**.
 
@@ -46,6 +46,7 @@ Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pus
 | Peta | Leaflet | **1.9.4** | Tile OpenStreetMap |
 | Font | Bunny Fonts | — | Diunduh **saat build**, jadi build butuh internet |
 | Object storage | `league/flysystem-aws-s3-v3` | **3.35.3** | + `aws/aws-sdk-php` **3.395.6** |
+| Generator PDF | `barryvdh/laravel-dompdf` | **3.1.6** | Rekap kehadiran A4 landscape (`RekapPdf`); font DejaVu bawaan, tanpa unduhan daring |
 | Database | **MySQL / MariaDB** (aktif) | MariaDB **12.2.2** di lokal | Sudah diverifikasi — lihat [Basis Data](#basis-data-mysql--mariadb) |
 | Test | PHPUnit | **12.5.33** | |
 | Formatter | Laravel Pint | **v1.30.5** | |
@@ -54,7 +55,7 @@ Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pus
 **Yang TIDAK dipakai** (jangan dipasang di VPS): Redis, Memcached, Sanctum, Prisma, Sentry, Telescope, Debugbar, Horizon.
 Session, cache, dan queue semuanya memakai driver **`database`** — jadi **MySQL wajib hidup** sebelum aplikasi bisa melayani request. Tanpa MySQL, bahkan halaman login akan gagal (`SQLSTATE[HY000] [2002]`).
 
-**Skala aplikasi:** 188 route, 20 tabel (terverifikasi di MySQL).
+**Skala aplikasi:** 228 route, 24 tabel (terverifikasi di MySQL).
 
 ---
 
@@ -111,7 +112,7 @@ Ukuran berkas untuk header `Content-Length` diambil dari kolom `dokumen_size` di
 
 ## Kebijakan Absensi & Persetujuan
 
-Empat aturan yang sebelumnya belum diputuskan kini sudah ditetapkan dan dikerjakan (20 Sep 2026, kuota cuti 11 Okt 2026). Detail lengkap + tesnya ada di [`docs/laporan-simulasi.md` §6b](docs/laporan-simulasi.md).
+Empat aturan yang sebelumnya belum diputuskan kini sudah ditetapkan dan dikerjakan (20 Sep 2026, kuota cuti 11 Okt 2026, fitur shift 15 Okt 2026). Detail lengkap + tesnya ada di [`docs/laporan-simulasi.md` §6b](docs/laporan-simulasi.md) dan [`docs/desain-fitur-shift.md`](docs/desain-fitur-shift.md).
 
 ### 1. Absen di akhir pekan / hari libur — diatur Super Admin
 
@@ -179,6 +180,23 @@ Kolom baru `attendances.catatan_pulang` (varchar 500, **nullable di level basis 
 - Karena validasi berjalan **sebelum** pemeriksaan `work_date`/radius, pemanggil `clock-out` lama yang tidak mengirim `catatan_pulang` akan menerima `422` — perilaku yang disengaja.
 - Tampil di **detail absensi admin** (`/super-admin/attendances`, `/admin/attendances`), kolom terakhir **ekspor CSV**, dan blok **Absen Pulang** pada **rekap cetak perorangan** (`/admin/employees/{id}/rekap`). Riwayat milik karyawan sendiri tidak menampilkannya.
 
+### 6. Blanko shift kerja & ekspor PDF rekap (15 Okt 2026)
+
+Ringkasnya, lihat rancangan lengkap dan riwayat keputusannya di **[`docs/desain-fitur-shift.md`](docs/desain-fitur-shift.md)**.
+
+| Aspek | Aturan |
+| :--- | :--- |
+| Penanda pekerja shift | Per orang (`employees.is_shift`). Karyawan non-shift tidak terpengaruh apa pun. |
+| Durasi shift | 24 jam ÷ jumlah shift (2 → 12 jam, 3 → 8 jam, 4 → 6 jam). Yang diatur admin adalah jumlah shift + jam acuan, bukan durasi. |
+| Penyusunan jadwal | Manual oleh Admin Wilayah, mingguan. Tidak ada rotasi otomatis. |
+| Keterlambatan | Diukur dari **jam mulai shift hari itu**, bukan `jam_masuk` global. |
+| Hari libur nasional | Tidak menutup absen pekerja shift — bekerja sesuai jadwal; statusnya absen biasa. |
+| Pulang lebih awal | Boleh, wajib beralasan, dan harus disetujui Admin Wilayah sebelum absen pulang. |
+| Batas awal absen masuk | 120 menit sebelum jam shift mulai (`ShiftResolver::AWAL_MENIT`). |
+| Cuti pekerja shift | Dihitung dari jadwal shift orang itu sendiri; jatah khusus opsional lewat `cuti_shift_max` (0 = ikut kuota umum). |
+
+**Ekspor PDF rekap.** Tiga route PDF (`/karyawan/rekap/pdf`, `/admin/.../rekap/pdf`, `/super-admin/.../rekap/pdf`, `/wilayah/.../rekap/pdf`) memakai **satu templat** (`resources/views/pdf/rekap-presensi.blade.php`) melalui `App\Support\RekapPdf` + `barryvdh/laravel-dompdf`. Berkasnya A4 **landscape**, satu dokumen per karyawan per bulan, nama `rekap-presensi-{NIK}-{YYYY-MM}.pdf` — sama dengan penamaan ekspor CSV. Admin Wilayah hanya bisa mengunduh karyawan di wilayahnya (di luar itu `403`), dan route karyawan tidak menerima parameter `employee`. Setiap unduhan dicatat ke `audit_logs` (`employee.rekap.pdf` / `karyawan.rekap.pdf`). Tombol **Cetak** di layar memakai aturan `@media print` global di `resources/css/app.css` dengan tata letak A4 yang sama.
+
 ---
 
 ## Prasyarat VPS
@@ -190,6 +208,8 @@ Kolom baru `attendances.catatan_pulang` (varchar 500, **nullable di level basis 
 - **Kredensial S3:** access key, secret key, nama bucket, endpoint
 
 > **Penting:** build frontend mengunduh font dari Bunny Fonts, jadi **butuh akses internet saat `npm run build`**. Sertakan juga `--prefer-dist` untuk Composer.
+>
+> **PDF rekap** memakai `barryvdh/laravel-dompdf` yang sudah masuk `composer.json`. Pustaka ini memakai font DejaVu yang dipaketkan di dalam `vendor/` (tanpa unduhan daring saat render) dan menulis cache ke `app/storage/fonts` — direktori itu sudah disertakan repositori, jadi tidak ada langkah tambahan saat deploy selain hak tulis storage.
 
 ---
 
@@ -460,11 +480,11 @@ Aplikasi **sudah berjalan penuh di MySQL/MariaDB**. Ini bukan lagi target — st
 | :--- | :--- | :--- |
 | Driver yang dipakai Laravel | `php artisan about --only=drivers` | `Database ............ mysql` |
 | Info server & basis data | `php artisan db:show` | **MariaDB 12.2.2**, koneksi `mysql`, DB `absensi_pu`, host `127.0.0.1:3306` |
-| Jumlah tabel | `SHOW TABLES` | **20 tabel** (`BASE TABLE`) |
+| Jumlah tabel | `SHOW TABLES` | **24 tabel** (`BASE TABLE`) |
 | Storage engine | `php artisan db:table employees` | **InnoDB**, kolasi `utf8mb4_unicode_ci` |
-| Skema dari nol | `php artisan migrate:fresh --seed` | 27 berkas migrasi + 7 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
+| Skema dari nol | `php artisan migrate:fresh --seed` | 33 berkas migrasi + 7 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
 | Data ikut masuk | query `JOIN` | `employees` × `regions` mengembalikan relasi yang benar |
-| Tes (SQLite in-memory, 11 Okt 2026) | `php artisan test` | **219 tes: 214 lulus, 5 di-skip, 1352 assertions** — jalankan ulang di `absensi_pu_test` untuk angka MySQL |
+| Tes (SQLite in-memory, 15 Okt 2026) | `php artisan test` | **291 tes: 286 lulus, 5 di-skip, 1710 assertions** — jalankan ulang di `absensi_pu_test` untuk angka MySQL |
 | Smoke test HTTP | `php artisan serve` + `curl` | `/`, `/karyawan/login`, `/admin/login`, `/super-admin/login` → **200** |
 
 Konfigurasi `.env` yang aktif:
@@ -571,19 +591,20 @@ S3_INTEGRATION=1 php artisan test --filter=S3DinasIntegrationTest
 php artisan test --filter=KebijakanBaruTest
 ```
 
-Hasil terakhir yang terverifikasi (SQLite in-memory, 11 Okt 2026):
+Hasil terakhir yang terverifikasi (SQLite in-memory, 15 Okt 2026):
 
 ```
-php artisan test                                    => 214 passed, 5 skipped (1352 assertions)  [SQLite in-memory, ~23 s]
+php artisan test                                    => 286 passed, 5 skipped (1710 assertions)  [SQLite in-memory, ~27 s]
 php artisan test (DB absensi_pu_test)               => jalankan sendiri untuk angka MySQL (lihat catatan)
 php artisan test --filter=KebijakanBaruTest         => 29 passed (132 assertions)
 php artisan test --filter=CutiKuotaTest             => 16 passed (66 assertions)
 php artisan test --filter=AttendanceCatatanTest     => 6 passed (36 assertions)
 php artisan test --filter=ErrorPageTest             => 3 passed (22 assertions)
 php artisan test --filter=AttendanceSelfieTest      => 9 passed (15 assertions)
+php artisan test --filter=RekapPdfTest              => 18 passed (74 assertions)
 S3_INTEGRATION=1 php artisan test --filter=S3...    => 3 passed (17 assertions)   [20 Sep 2026]
 bash scripts/simulasi-http.sh                       => SELESAI — 68 lulus, 0 gagal
-npm run build                                       => sukses (PWA precache 52 entri, halaman ter-split per route)
+npm run build                                       => sukses (PWA precache 57 entri, halaman ter-split per route)
 ```
 
 **Suite yang sama lulus di kedua mesin basis data.** Lima tes di-skip pada SQLite karena memang menguji perilaku khusus MySQL atau butuh jaringan, dan **melewati diri sendiri** (bukan gagal):
@@ -607,6 +628,8 @@ Berkas uji yang relevan:
 | `tests/Feature/AttendanceCatatanTest.php` | Buku catatan pekerjaan saat absen pulang: wajib, spasi saja ditolak, batas 500 karakter, tampil di daftar admin & rekap perorangan |
 | `tests/Feature/AttendanceSelfieTest.php` | Swafoto absen disimpan sebagai *path* di disk privat + hanya bisa dibuka lewat route ber-otorisasi |
 | `tests/Feature/ErrorPageTest.php` | 403/404 dirender lewat Inertia (bukan halaman Blade mentah); permintaan JSON tetap menerima JSON |
+| `tests/Feature/ShiftKerjaTest.php` | Shift kerja: penanda `is_shift`, durasi 24 ÷ jumlah shift, jadwal mingguan, absen mengikuti shift, lintas tengah malam, hari libur nasional, cakupan pola, kuota cuti pekerja shift |
+| `tests/Feature/RekapPdfTest.php` | Ekspor PDF rekap: otorisasi per peran & per wilayah, rekap shift-aware (shift, hari libur jadwal, belum dijadwalkan), isi PDF, grafik tren versi PHP, jejak audit |
 
 **CI:** `.github/workflows/ci.yml` menjalankan `php artisan test` pada PHP 8.3 & 8.4 (SQLite in-memory) sekaligus `npm run build` untuk menangkap JSX yang rusak — `vite build` adalah satu-satunya pemeriksa JS di proyek ini karena tidak ada ESLint.
 
@@ -643,6 +666,7 @@ Berkas uji yang relevan:
 | `SQLSTATE[23000] ... foreign key constraint fails (employees.region_id)` | Seeder dijalankan ulang di MySQL: `AUTO_INCREMENT` tidak di-reset oleh `ROLLBACK`. Lihat [`RegionSeeder`](#-auto_increment-tidak-di-reset-oleh-rollback). |
 | `Bad magic header in tc log` / `Crash recovery failed` (MariaDB lokal) | `tc.log` korup setelah mati mendadak. Hentikan **watchdog `mariadbd-safe` lebih dulu**, baru daemon-nya, lalu pindahkan `tc.log` yang korup ke samping dan jalankan ulang. |
 | Unggah > 5 MB gagal `413` | Naikkan `client_max_body_size` (Nginx) dan `upload_max_filesize`/`post_max_size` (PHP-FPM). |
+| Unduh PDF rekap gagal: `Permission denied` pada `storage/fonts` | Dompdf menulis font cache ke `app/storage/fonts`. Pastikan direktori ada (`storage/fonts/.gitignore` sudah disertakan) dan `www-data` punya hak tulis atas `storage` (lihat [Hak akses](#10-hak-akses)). |
 
 ---
 
@@ -709,9 +733,9 @@ sul proyek/                      # akar repo (git root)
 │   │   ├── Models/
 │   │   └── Support/             # AdminPresenter, Audit, StreamsDokumen (trait unduh S3)
 │   ├── config/filesystems.php   # blok 'uploads' + disk s3
-│   ├── database/migrations/     # 25 berkas → 20 tabel
+│   ├── database/migrations/     # 33 berkas → 24 tabel
 │   ├── resources/js/Pages/      # Karyawan/ dan Admin/
-│   ├── routes/web.php           # 188 route (tidak ada routes/api.php)
+│   ├── routes/web.php           # 228 route (tidak ada routes/api.php)
 │   ├── tests/Feature/           # termasuk S3DinasIntegrationTest (opt-in)
 │   ├── vite.config.js           # Tailwind v4 + React + PWA
 │   └── .env.example

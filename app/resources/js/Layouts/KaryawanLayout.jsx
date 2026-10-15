@@ -33,9 +33,9 @@ export default function KaryawanLayout({ children }) {
     const mustChangePassword = !!props.auth?.employee?.must_change_password;
     const onProfilPage = url.startsWith('/karyawan/profil');
     return (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col max-w-[480px] mx-auto shadow-[0_0_40px_rgba(15,23,42,0.06)]">
+        <div className="min-h-screen print-min-h bg-[#F8FAFC] flex flex-col max-w-[480px] print-wide mx-auto shadow-[0_0_40px_rgba(15,23,42,0.06)]">
             {/* Topbar — no outline, subtle */}
-            <header className="sticky top-0 z-20 bg-[#0F172A] text-white px-5 pt-3 pb-4" style={{ paddingTop: 'calc(0.75rem + var(--sat))' }}>
+            <header className="print-hide sticky top-0 z-20 bg-[#0F172A] text-white px-5 pt-3 pb-4" style={{ paddingTop: 'calc(0.75rem + var(--sat))' }}>
                 <div className="flex items-center gap-3">
                     <img src="/logo.png" alt="BBWS Pompengan Jeneberang" className="w-9 h-9 rounded-xl object-cover bg-white shadow-sm" />
                     <div>
@@ -58,10 +58,10 @@ export default function KaryawanLayout({ children }) {
                 </div>
             )}
 
-            <main className="flex-1 pb-[86px] px-4 pt-4">{children}</main>
+            <main className="flex-1 pb-[86px] print-flush px-4 pt-4">{children}</main>
 
             {/* Bottom Nav — no outline card, blurred bg */}
-            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 flex justify-around py-2" style={{ paddingBottom: 'calc(0.5rem + var(--sab))', boxShadow: '0 -1px 24px rgba(15,23,42,0.08)' }}>
+            <nav className="print-hide fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 flex justify-around py-2" style={{ paddingBottom: 'calc(0.5rem + var(--sab))', boxShadow: '0 -1px 24px rgba(15,23,42,0.08)' }}>
                 {navItems.map((it) => {
                     const active = it.match ? it.match(url) : url.startsWith(it.href);
                     const isInfo = it.label === 'Info';

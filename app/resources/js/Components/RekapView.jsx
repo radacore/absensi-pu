@@ -1,3 +1,4 @@
+import RekapActions from './RekapActions';
 import TrenJamChart from './TrenJamChart';
 
 const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -16,24 +17,17 @@ function formatTimestamp(iso) {
  *  - rekap: hasil RekapPresenter::buildRekap()
  *  - onChangeBulan: (bulan YYYY-MM) => void
  *  - backHref: string
- *  - downloadHref: string | null — tautan unduh CSV bulan aktif (opsional)
+ *  - pdfHref: string | null — berkas PDF asli dari server (opsional)
+ *  - csvHref: string | null — tautan unduh CSV bulan aktif (opsional)
  */
-export default function RekapView({ rekap, onChangeBulan, backHref, downloadHref }) {
+export default function RekapView({ rekap, onChangeBulan, backHref, pdfHref, csvHref }) {
     const k = rekap.karyawan;
     const p = rekap.periode;
     const d = rekap.distribusi;
     const m = rekap.metrikHadir;
     const s = rekap.settings;
 
-    const cetakPDF = () => {
-        const ts = formatTimestamp(p.diExportPada);
-        const original = document.title;
-        document.title = `Rekap presensi perorangan - ${k.nik} (${p.namaBulan} ${p.year})-${ts}`;
-        setTimeout(() => {
-            window.print();
-            setTimeout(() => { document.title = original; }, 1000);
-        }, 50);
-    };
+    const cetakNamaBerkas = `Rekap presensi perorangan - ${k.nik} (${p.namaBulan} ${p.year})-${formatTimestamp(p.diExportPada)}`;
 
     // Bulan option: 12 bulan terakhir
     const bulanOptions = [];
@@ -47,7 +41,7 @@ export default function RekapView({ rekap, onChangeBulan, backHref, downloadHref
     return (
         <div className="rekap-print bg-white text-[#0F172A]">
             {/* Toolbar (tidak di-print) */}
-            <div className="no-print bg-white border-b border-[#E2E8F0] px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-10">
+            <div className="print-hide bg-white border-b border-[#E2E8F0] px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-10">
                 <div className="flex items-center gap-3">
                     {backHref && (
                         <a href={backHref} className="text-xs font-medium text-[#334155] bg-[#F1F5F9] px-3 py-2 rounded-lg hover:bg-[#E2E8F0]">← Kembali</a>
@@ -57,7 +51,11 @@ export default function RekapView({ rekap, onChangeBulan, backHref, downloadHref
                         <h1 className="text-sm font-semibold text-[#0F172A]">{k.nama} · {p.label}</h1>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <RekapActions
+                    pdfHref={pdfHref}
+                    csvHref={csvHref}
+                    namaBerkas={cetakNamaBerkas}
+                >
                     <label className="text-xs font-medium text-[#334155]">Bulan
                         <select
                             value={`${p.year}-${String(p.month).padStart(2, '0')}`}
@@ -67,14 +65,10 @@ export default function RekapView({ rekap, onChangeBulan, backHref, downloadHref
                             {bulanOptions.map((b) => <option key={b.val} value={b.val}>{b.label}</option>)}
                         </select>
                     </label>
-                    {downloadHref && (
-                        <a href={downloadHref} className="bg-white border border-[#E2E8F0] hover:bg-[#F1F5F9] text-[#334155] rounded-lg px-4 py-2 text-sm font-semibold transition">Unduh CSV</a>
-                    )}
-                    <button type="button" onClick={cetakPDF} className="bg-[#0F172A] hover:bg-[#1E3A8A] text-white rounded-lg px-4 py-2 text-sm font-semibold transition">Cetak PDF</button>
-                </div>
+                </RekapActions>
             </div>
 
-            <div className="rekap-content px-6 py-6 max-w-[1200px] mx-auto space-y-6">
+            <div className="rekap-content print-flush px-6 py-6 max-w-[1200px] mx-auto space-y-6">
                 {/* Header karyawan */}
                 <div className="rekap-header pb-4 border-b border-[#E2E8F0]">
                     <p className="text-xs text-[#64748B]">Rekap presensi perorangan - {k.nik} ({p.namaBulan} {p.year})</p>
@@ -158,21 +152,26 @@ export default function RekapView({ rekap, onChangeBulan, backHref, downloadHref
                 {/* Tren jam absen hari kerja */}
                 <section>
                     <h2 className="text-sm font-semibold text-[#0F172A] mb-3">Tren jam absen hari kerja</h2>
-                    <p className="text-xs text-[#64748B] mb-3">Ringkasan per hari dalam bulan. Zona masuk: tepat ≤{s.jamMasuk}, toleransi {s.jamMasuk}–{s.batasToleransi}, terlambat &gt;{s.batasToleransi}. Pulang: jam riil ditampilkan.</p>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 chart-grid">
+                    <p className="text-xs text-[#64748B] mb-3">
+                        {s.isShift
+                            ? 'Ringkasan per hari dalam bulan. Acuan penilaian mengikuti jam jadwal shift tiap hari (toleransi ' + s.toleransi + ' menit).'
+                            : `Ringkasan per hari dalam bulan. Zona masuk: tepat ≤${s.jamMasuk}, toleransi ${s.jamMasuk}–${s.batasToleransi}, terlambat >${s.batasToleransi}. Pulang: jam riil ditampilkan.`}
+                    </p>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 chart-grid print-grid-2">
                         <TrenJamChart tren={rekap.tren} mode="masuk" settings={s} />
                         <TrenJamChart tren={rekap.tren} mode="pulang" settings={s} />
                     </div>
                 </section>
 
                 {/* Rekap harian kompak */}
-                <section className="page-break-before">
+                <section className="print-break">
                     <h2 className="text-sm font-semibold text-[#0F172A] mb-3">Rekap harian</h2>
                     <table className="w-full text-sm border border-[#E2E8F0] rounded-lg overflow-hidden">
                         <thead className="bg-[#F8FAFC] text-xs font-medium text-[#64748B]">
                             <tr>
                                 <th className="text-left px-3 py-2">Tanggal</th>
                                 <th className="text-left px-3 py-2 w-16">Hari</th>
+                                {s.isShift && <th className="text-left px-3 py-2 w-24">Shift</th>}
                                 <th className="text-left px-3 py-2 w-24">Jam masuk</th>
                                 <th className="text-left px-3 py-2 w-24">Jam pulang</th>
                                 <th className="text-left px-3 py-2">Catatan</th>
@@ -183,6 +182,11 @@ export default function RekapView({ rekap, onChangeBulan, backHref, downloadHref
                                 <tr key={h.iso} className={h.is_weekend || h.is_holiday ? 'bg-[#F8FAFC]/60' : ''}>
                                     <td className="px-3 py-2 text-[#0F172A]">{h.tgl}</td>
                                     <td className="px-3 py-2 text-[#334155]">{h.hari}</td>
+                                    {s.isShift && (
+                                        <td className="px-3 py-2 text-[#1E3A8A]">
+                                            {h.is_libur_jadwal ? 'Libur' : (h.shift ?? 'Belum dijadwalkan')}
+                                        </td>
+                                    )}
                                     <td className="px-3 py-2 font-mono text-[#0F172A]">{h.jam_masuk}</td>
                                     <td className="px-3 py-2 font-mono text-[#0F172A]">{h.jam_pulang}</td>
                                     <td className="px-3 py-2 text-xs text-[#475569]">{h.catatan || '—'}</td>
@@ -193,7 +197,7 @@ export default function RekapView({ rekap, onChangeBulan, backHref, downloadHref
                 </section>
 
                 {/* Kartu detail per hari (hari libur / cuti / dinas / hadir) */}
-                <section className="page-break-before">
+                <section className="print-break">
                     <h2 className="text-sm font-semibold text-[#0F172A] mb-3">Detail Harian</h2>
                     <p className="text-xs text-[#64748B] mb-3">Tampilan mengikuti kartu di halaman audit (hari libur, tanpa keterangan, hadir dengan detail masuk/pulang, dinas, cuti).</p>
                     <div className="space-y-3">
@@ -208,19 +212,6 @@ export default function RekapView({ rekap, onChangeBulan, backHref, downloadHref
                     Rekap presensi perorangan - {k.nik} ({p.label}) · Di-export: {p.diExportPada} WITA
                 </div>
             </div>
-
-            <style dangerouslySetInnerHTML={{ __html: `
-                @media print {
-                    @page { size: A4 landscape; margin: 8mm; }
-                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
-                    .no-print { display: none !important; }
-                    .rekap-content { padding: 0 !important; max-width: 100% !important; }
-                    .page-break-before { page-break-before: always; }
-                    section { page-break-inside: avoid; }
-                    .chart-grid { grid-template-columns: 1fr 1fr !important; }
-                    table { font-size: 10.5px; }
-                }
-            ` }} />
         </div>
     );
 }

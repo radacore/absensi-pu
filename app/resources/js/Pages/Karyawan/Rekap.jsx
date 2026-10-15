@@ -1,8 +1,11 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
-import { usePage } from '@inertiajs/react';
+import RekapActions from '@/Components/RekapActions';
+import { router, usePage } from '@inertiajs/react';
+
+const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
 export default function Rekap() {
-    const { props } = usePage();
+    const { url, props } = usePage();
     const assigned = props.assigned ?? null;
     const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, loveQuota: null };
     const monthRows = props.monthRows ?? [];
@@ -13,13 +16,29 @@ export default function Rekap() {
     const hadir = props.hadir ?? 0;
     const terlambat = props.terlambat ?? 0;
 
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const monthName = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    // Bulan aktif dikirim server (bawaan: bulan berjalan) supaya bulan yang
+    // sedang dilihat tidak bergantung pada jam perangkat karyawan.
+    const bulanAktif = props.bulan ?? new Date().toISOString().slice(0, 7);
+    const [tahunAktif, bulanKeAktif] = bulanAktif.split('-').map((v) => parseInt(v, 10));
+    const year = tahunAktif;
+    const month = bulanKeAktif - 1;
+    const monthName = `${namaBulan[month]} ${year}`;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDow = new Date(year, month, 1).getDay();
-    const today = now.getDate();
+    const isBulanBerjalan = bulanAktif === new Date().toISOString().slice(0, 7);
+    const today = isBulanBerjalan ? new Date().getDate() : daysInMonth;
+
+    // Daftar bulan untuk pemilih: 24 bulan terakhir.
+    const bulanOptions = [];
+    const sekarang = new Date();
+    for (let i = 0; i < 24; i++) {
+        const dt = new Date(sekarang.getFullYear(), sekarang.getMonth() - i, 1);
+        bulanOptions.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
+    }
+
+    const gantiBulan = (bulan) => {
+        router.get('/karyawan/rekap', { bulan }, { preserveState: false, preserveScroll: true });
+    };
 
     const loveMax = settings.loveMax ?? 4;
     const sisa = settings.loveQuota?.sisa ?? loveMax;
@@ -27,7 +46,7 @@ export default function Rekap() {
     const statusByDay = new Map();
     monthRows.forEach((r) => {
         const d = new Date(r.tgl + 'T00:00:00').getDate();
-        if (new Date(r.tgl).getMonth() === month) statusByDay.set(d, { status: r.status, shift: r.shift });
+        if (new Date(r.tgl + 'T00:00:00').getMonth() === month) statusByDay.set(d, { status: r.status, shift: r.shift });
     });
     const cutiSet = new Set(cutiDates.map((s) => new Date(s + 'T00:00:00').getDate()));
 
@@ -35,7 +54,7 @@ export default function Rekap() {
     const jadwalByDay = new Map();
     jadwalBulan.forEach((j) => {
         const d = new Date(j.tgl + 'T00:00:00').getDate();
-        if (new Date(j.tgl).getMonth() === month) jadwalByDay.set(d, j);
+        if (new Date(j.tgl + 'T00:00:00').getMonth() === month) jadwalByDay.set(d, j);
     });
 
     const days = Array.from({ length: daysInMonth }, (_, i) => {
@@ -64,6 +83,9 @@ export default function Rekap() {
         : days.filter((x) => x.status !== 'libur' && x.status !== 'future').length) || 1;
     const pct = Math.min(99, Math.round((hadir / workDays) * 100));
 
+    const pdfHref = `/karyawan/rekap/pdf?bulan=${bulanAktif}`;
+    const cetakNamaBerkas = `Rekap presensi - ${props.me?.nama ?? ''} - ${monthName}`;
+
     if (!assigned) {
         return (
             <KaryawanLayout>
@@ -77,14 +99,33 @@ export default function Rekap() {
 
     return (
         <KaryawanLayout>
-            <div className="space-y-5">
-                <div className="flex items-start justify-between">
+            <div className="space-y-5 rekap-karyawan">
+                <div className="flex items-start justify-between print-hide">
                     <div>
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Rekap kehadiran</h2>
                         <p className="text-sm text-[#64748B] capitalize">{monthName} • {assigned.regionName} • {assigned.nama_lokasi} • {assigned.radius} m • Toleransi {sisa}/{loveMax}</p>
                     </div>
                     <span className="bg-[#FCB833] text-[#0F172A] text-xs font-semibold px-3 py-1.5 rounded-full">{loveMax} Toleransi</span>
                 </div>
+
+                {/* Pemilih bulan + ekspor (tidak ikut tercetak) */}
+                <div className="bg-white rounded-2xl p-3 shadow-[0_2px_16px_rgba(15,23,42,0.04)] print-hide">
+                    <label className="block text-xs font-medium text-[#334155] mb-2">
+                        <span className="block mb-1 text-[#64748B]">Periode</span>
+                        <select
+                            value={bulanAktif}
+                            onChange={(e) => gantiBulan(e.target.value)}
+                            className="w-full rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] px-3 py-2.5 text-sm outline-none min-h-[44px]"
+                        >
+                            {bulanOptions.map((b) => {
+                                const [y, m] = b.split('-').map((v) => parseInt(v, 10));
+                                return <option key={b} value={b}>{namaBulan[m - 1]} {y}</option>;
+                            })}
+                        </select>
+                    </label>
+                    <RekapActions pdfHref={pdfHref} namaBerkas={cetakNamaBerkas} besar />
+                </div>
+
                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-3 flex items-center justify-between">
                     <span className="text-xs font-medium text-[#1E3A8A]">{assigned.nama_lokasi} • {assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)}</span>
                     <span className="text-xs text-[#64748B]">{assigned.radius} m • {isShift ? 'jadwal shift' : `${settings.jamMasuk}–${settings.jamPulang}`}</span>
@@ -161,6 +202,9 @@ export default function Rekap() {
                             Jadwal shift bulan ini disusun Admin Wilayah. Belum ada jadwal untuk hari yang kosong — hubungi Admin Wilayah bila ada yang belum sesuai.
                         </p>
                     )}
+                    <p className="text-xs text-[#64748B] mt-1">
+                        Butuh rincian resmi (keterlambatan, dinas, cuti, tanda tangan)? Unduh berkas PDF lewat tombol di atas.
+                    </p>
                 </div>
             </div>
         </KaryawanLayout>
