@@ -4,9 +4,11 @@ Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pus
 
 > **Status dokumen ini:** seluruh versi, jumlah tabel, jumlah route, dan perilaku penyimpanan di bawah **sudah diverifikasi langsung dari kode dan dari basis data yang berjalan**. Angka-angka di bagian [Basis Data](#basis-data-mysql--mariadb) berasal dari verifikasi 20 Sep 2026; jumlah berkas migrasi/seeder/tabel/route/tes di bawah sudah dihitung ulang pada 15 Okt 2026.
 >
-> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **33 berkas migrasi + 7 seeder**, **24 tabel**, **228 route**, dan **291 tes (286 lulus, 5 di-skip)**. Simulasi HTTP nyata **68/68 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
+> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **35 berkas migrasi + 8 seeder**, **24 tabel**, **231 route**, dan **327 tes (322 lulus, 5 di-skip)**. Simulasi HTTP nyata **68/68 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
 >
 > Laporan simulasi end-to-end lengkap (6 celah keamanan yang ditemukan & diperbaiki, plus 13 temuan tambahan): **[`docs/laporan-simulasi.md`](docs/laporan-simulasi.md)**.
+>
+> Simulasi **satu bulan penuh** untuk satu karyawan (semua skenario fitur) beserta 4 kekeliruan perhitungan yang ditemukan & diperbaiki: **[`docs/laporan-simulasi-sebulan.md`](docs/laporan-simulasi-sebulan.md)**. Penjaga regresinya: `php artisan test --filter=SimulasiSatuBulanTest`.
 
 ---
 
@@ -55,7 +57,7 @@ Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pus
 **Yang TIDAK dipakai** (jangan dipasang di VPS): Redis, Memcached, Sanctum, Prisma, Sentry, Telescope, Debugbar, Horizon.
 Session, cache, dan queue semuanya memakai driver **`database`** — jadi **MySQL wajib hidup** sebelum aplikasi bisa melayani request. Tanpa MySQL, bahkan halaman login akan gagal (`SQLSTATE[HY000] [2002]`).
 
-**Skala aplikasi:** 228 route, 24 tabel (terverifikasi di MySQL).
+**Skala aplikasi:** 231 route, 24 tabel (terverifikasi di MySQL).
 
 ---
 
@@ -480,11 +482,11 @@ Aplikasi **sudah berjalan penuh di MySQL/MariaDB**. Ini bukan lagi target — st
 | :--- | :--- | :--- |
 | Driver yang dipakai Laravel | `php artisan about --only=drivers` | `Database ............ mysql` |
 | Info server & basis data | `php artisan db:show` | **MariaDB 12.2.2**, koneksi `mysql`, DB `absensi_pu`, host `127.0.0.1:3306` |
-| Jumlah tabel | `SHOW TABLES` | **24 tabel** (`BASE TABLE`) |
+| Jumlah tabel | `SHOW TABLES` | **24 tabel** (`BASE TABLE`) — dihitung ulang 15 Okt 2026 |
 | Storage engine | `php artisan db:table employees` | **InnoDB**, kolasi `utf8mb4_unicode_ci` |
-| Skema dari nol | `php artisan migrate:fresh --seed` | 33 berkas migrasi + 7 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
+| Skema dari nol | `php artisan migrate:fresh --seed` | 35 berkas migrasi + 8 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
 | Data ikut masuk | query `JOIN` | `employees` × `regions` mengembalikan relasi yang benar |
-| Tes (SQLite in-memory, 15 Okt 2026) | `php artisan test` | **291 tes: 286 lulus, 5 di-skip, 1710 assertions** — jalankan ulang di `absensi_pu_test` untuk angka MySQL |
+| Tes (SQLite in-memory, 15 Okt 2026) | `php artisan test` | **327 tes: 322 lulus, 5 di-skip, 1991 assertions** — jalankan ulang di `absensi_pu_test` untuk angka MySQL |
 | Smoke test HTTP | `php artisan serve` + `curl` | `/`, `/karyawan/login`, `/admin/login`, `/super-admin/login` → **200** |
 
 Konfigurasi `.env` yang aktif:
@@ -594,14 +596,16 @@ php artisan test --filter=KebijakanBaruTest
 Hasil terakhir yang terverifikasi (SQLite in-memory, 15 Okt 2026):
 
 ```
-php artisan test                                    => 286 passed, 5 skipped (1710 assertions)  [SQLite in-memory, ~27 s]
+php artisan test                                    => 322 passed, 5 skipped (1991 assertions)  [SQLite in-memory, ~35 s]
 php artisan test (DB absensi_pu_test)               => jalankan sendiri untuk angka MySQL (lihat catatan)
-php artisan test --filter=KebijakanBaruTest         => 29 passed (132 assertions)
+php artisan test --filter=ShiftKerjaTest            => 49 passed (293 assertions)
+php artisan test --filter=KebijakanBaruTest         => 40 passed (158 assertions)
+php artisan test --filter=RekapPdfTest              => 34 passed (137 assertions)
 php artisan test --filter=CutiKuotaTest             => 16 passed (66 assertions)
-php artisan test --filter=AttendanceCatatanTest     => 6 passed (36 assertions)
-php artisan test --filter=ErrorPageTest             => 3 passed (22 assertions)
+php artisan test --filter=AttendanceCatatanTest     => 11 passed (50 assertions)
 php artisan test --filter=AttendanceSelfieTest      => 9 passed (15 assertions)
-php artisan test --filter=RekapPdfTest              => 18 passed (74 assertions)
+php artisan test --filter=ErrorPageTest             => 3 passed (22 assertions)
+php artisan test --filter=SimulasiSatuBulanTest     => 4 passed (147 assertions)
 S3_INTEGRATION=1 php artisan test --filter=S3...    => 3 passed (17 assertions)   [20 Sep 2026]
 bash scripts/simulasi-http.sh                       => SELESAI — 68 lulus, 0 gagal
 npm run build                                       => sukses (PWA precache 57 entri, halaman ter-split per route)
@@ -683,11 +687,13 @@ Berkas uji yang relevan:
 > php artisan test --filter=FullSimulationTest
 > # 3) Penjaga regresi 6 celah keamanan yang pernah ditemukan
 > php artisan test --filter=FullSimulationTest --group=regresi-keamanan
-> # 4) Tiga kebijakan absensi & persetujuan (29 tes)
+> # 4) Kebijakan absensi & persetujuan (40 tes)
 > php artisan test --filter=KebijakanBaruTest
+> # 5) Simulasi satu bulan penuh (4 tes, 147 assertions)
+> php artisan test --filter=SimulasiSatuBulanTest
 > ```
 >
-> Hasil terakhir (11 Okt 2026, SQLite in-memory): **214 lulus / 0 gagal / 5 di-skip** pada suite lengkap, **76 lulus / 2 di-skip** pada `FullSimulationTest`, dan **68/68** pada simulasi HTTP.
+> Hasil terakhir (15 Okt 2026, SQLite in-memory): **327 tes — 322 lulus / 0 gagal / 5 di-skip (1991 assertions)** pada suite lengkap, **76 lulus / 2 di-skip** pada `FullSimulationTest`, **49 lulus** pada `ShiftKerjaTest`, **4 lulus (147 assertions)** pada `SimulasiSatuBulanTest`, dan **68/68** pada simulasi HTTP.
 
 Sudah aman dan terverifikasi: nama berkas dibuat server (anti path traversal), tidak ada header yang bisa disuntik (anti CRLF), berkas PHP yang disamarkan `.pdf` ditolak (pemeriksaan isi, bukan ekstensi), objek privat tidak bisa diakses anonim (`403`), dan `X-Content-Type-Options: nosniff`.
 
@@ -733,15 +739,18 @@ sul proyek/                      # akar repo (git root)
 │   │   ├── Models/
 │   │   └── Support/             # AdminPresenter, Audit, StreamsDokumen (trait unduh S3)
 │   ├── config/filesystems.php   # blok 'uploads' + disk s3
-│   ├── database/migrations/     # 33 berkas → 24 tabel
+│   ├── database/migrations/     # 35 berkas → 24 tabel
 │   ├── resources/js/Pages/      # Karyawan/ dan Admin/
-│   ├── routes/web.php           # 228 route (tidak ada routes/api.php)
+│   ├── routes/web.php           # 231 route (tidak ada routes/api.php)
 │   ├── tests/Feature/           # termasuk S3DinasIntegrationTest (opt-in)
 │   ├── vite.config.js           # Tailwind v4 + React + PWA
 │   └── .env.example
 ├── .github/workflows/ci.yml     # tes + build aset
 ├── docs/activity-diagrams/
 ├── docs/laporan-simulasi.md
+├── docs/laporan-simulasi-sebulan.md
+├── docs/lembar-keputusan-penyempurnaan.pdf   # lembar keputusan untuk client
+├── docs/panduan-deploy-keamanan.md
 └── prd-profilkorp/              # ⚠️ dokumen PRD aplikasi LAIN — jangan dijadikan acuan
 ```
 
