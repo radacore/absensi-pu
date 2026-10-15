@@ -28,8 +28,9 @@ class RekapPresenter
         $settings = AttendanceSetting::first();
         // Hari kerja mengikuti setelan (bisa Sabtu/Minggu ikut kerja).
         // Jangan hardcode Sabtu+Minggu — rekap akan salah untuk kantor
-        // dengan pola hari kerja berbeda.
-        $hariKerja = $settings ? $settings->hariKerjaList() : AttendanceSetting::HARI_KERJA_DEFAULT;
+        // dengan pola hari kerja berbeda. B3: karyawan boleh punya hari
+        // kerja sendiri (libur bergeser); bila diisi, itu yang menang.
+        $hariKerja = $emp->hariKerjaList($settings);
         $jamMasuk = $settings ? substr((string) $settings->jam_masuk, 0, 5) : '07:30';
         $jamPulang = $settings ? substr((string) $settings->jam_pulang, 0, 5) : '16:00';
         $toleransi = $settings ? (int) $settings->toleransi_late_menit : 15;
@@ -187,6 +188,9 @@ class RekapPresenter
             $jamMasukStr = '—';
             $jamPulangStr = '—';
             $catatan = '';
+            // D8: catatan pekerjaan yang ditulis karyawan saat absen pulang,
+            // dibawa ikut ke rekap bulanan (layar, PDF, dan CSV).
+            $catatanPulang = null;
             $trenMasukMin = null;
             $trenPulangMin = null;
             $zonaMasuk = null;
@@ -220,6 +224,7 @@ class RekapPresenter
             } elseif ($att) {
                 $jamMasukStr = $att->clock_in_at ? Carbon::parse($att->clock_in_at)->format('H:i') : '—';
                 $jamPulangStr = $att->clock_out_at ? Carbon::parse($att->clock_out_at)->format('H:i') : '—';
+                $catatanPulang = $att->catatan_pulang ?: null;
                 $hadirCount++;
 
                 if ($att->status === 'excused_love') {
@@ -330,6 +335,7 @@ class RekapPresenter
                 'jam_masuk' => $jamMasukStr,
                 'jam_pulang' => $jamPulangStr,
                 'catatan' => $catatan,
+                'catatan_pulang' => $catatanPulang,
                 'is_weekend' => $isWeekend,
                 'is_holiday' => $isHoliday,
                 'is_cuti' => $isCuti,

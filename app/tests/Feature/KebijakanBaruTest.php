@@ -10,6 +10,7 @@ use App\Models\Leave;
 use App\Models\ToleranceClaim;
 use App\Models\User;
 use App\Support\AdminPresenter;
+use App\Support\CutiKuota;
 use App\Support\RekapPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -670,5 +671,122 @@ class KebijakanBaruTest extends TestCase
             ->assertInertia(fn ($p) => $p
                 ->where('list.0.approver_nama', $admin->name)
                 ->where('list.0.approved_by_nama', $admin->name));
+    }
+
+    // ── B3: hari kerja khusus per karyawan ─────────────────────────────────
+
+    /** Payload formulir karyawan, sama seperti halaman /super-admin/employees. */
+    private function payloadKaryawan(Employee $e, array $extra = []): array
+    {
+        return array_merge([
+            'nik' => $e->nik,
+            'nip' => $e->nip ?? '',
+            'nama' => $e->name,
+            'email' => $e->email,
+            'gol' => $e->golongan ?? '-',
+            'jabatan' => $e->jabatan,
+            'unit' => $e->unit_kerja,
+            'status' => $e->status_kepegawaian,
+            'region' => $e->region->name,
+            'office_location_id' => $e->site_id,
+        ], $extra);
+    }
+
+    public function test_hari_kerja_khusus_per_karyawan_membuat_sabtu_jadi_hari_kerja(): void
+    {
+        $emp = $this->empGowa();
+        $emp->update(['hari_kerja' => ['1', '2', '3', '4', '5', '6']]);
+
+        $sabtu = collect(RekapPresenter::buildRekap($emp->fresh(), 2026, 9)['harian'])
+            ->firstWhere('iso', self::AKHIR_PEKAN);
+
+        $this->assertTrue($sabtu['is_hari_kerja']);
+        $this->assertFalse($sabtu['is_weekend']);
+    }
+
+    public function test_karyawan_tanpa_pengecualian_tetap_ikut_hari_kerja_umum(): void
+    {
+        $emp = $this->empGowa();
+        $this->assertNull($emp->hari_kerja);
+
+        $sabtu = collect(RekapPresenter::buildRekap($emp, 2026, 9)['harian'])
+            ->firstWhere('iso', self::AKHIR_PEKAN);
+
+        $this->assertFalse($sabtu['is_hari_kerja']);
+        $this->assertTrue($sabtu['is_weekend']);
+    }
+
+    public function test_super_admin_bisa_mengatur_hari_kerja_khusus_karyawan(): void
+    {
+        $emp = $this->empGowa();
+
+        // Sengaja tidak urut dan ada duplikat.
+        $this->asAdmin($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->put("/super-admin/employees/{$emp->id}", $this->payloadKaryawan($emp, [
+                'hariKerja' => ['6', '1', '1', '2', '3', '4', '5'],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['1', '2', '3', '4', '5', '6'], $emp->fresh()->hari_kerja);
+    }
+
+    public function test_karyawan_bisa_dikembalikan_ke_hari_kerja_umum(): void
+    {
+        $emp = $this->empGowa();
+        $emp->update(['hari_kerja' => ['1', '2', '3', '4', '5', '6']]);
+
+        $this->asAdmin($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->put("/super-admin/employees/{$emp->id}", $this->payloadKaryawan($emp, [
+                'hariKerja' => null,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($emp->fresh()->hari_kerja);
+    }
+
+    public function test_hari_kerja_khusus_kosong_ditolak(): void
+    {
+        $emp = $this->empGowa();
+
+        $this->asAdmin($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->put("/super-admin/employees/{$emp->id}", $this->payloadKaryawan($emp, [
+                'hariKerja' => [],
+            ]))
+            ->assertSessionHasErrors('hariKerja');
+
+        $this->assertNull($emp->fresh()->hari_kerja);
+    }
+
+    public function test_formulir_karyawan_tanpa_hari_kerja_tidak_menghapus_pengecualian_lama(): void
+    {
+        $emp = $this->empGowa();
+        $emp->update(['hari_kerja' => ['1', '2', '3', '4', '5', '6']]);
+
+        // Pemanggil lama (tanpa field hariKerja) tidak boleh menghapus setelan.
+        $this->asAdmin($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->put("/super-admin/employees/{$emp->id}", $this->payloadKaryawan($emp))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['1', '2', '3', '4', '5', '6'], $emp->fresh()->hari_kerja);
+    }
+
+    public function test_hari_kerja_khusus_ikut_dihitung_di_kuota_cuti(): void
+    {
+        Holiday::query()->delete();
+
+        $emp = $this->empGowa();
+        $biasa = CutiKuota::hariKerjaPerTahun('2026-09-14', '2026-09-19');
+
+        $emp->update(['hari_kerja' => ['1', '2', '3', '4', '5', '6']]);
+        $khusus = CutiKuota::hariKerjaPerTahun('2026-09-14', '2026-09-19', null, $emp->fresh());
+
+        // 2026-09-14 (Senin) … 2026-09-19 (Sabtu): 5 hari kerja untuk karyawan
+        // biasa, 6 hari untuk karyawan dengan hari kerja khusus.
+        $this->assertSame([2026 => 5], $biasa);
+        $this->assertSame([2026 => 6], $khusus);
     }
 }

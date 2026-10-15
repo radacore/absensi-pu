@@ -97,7 +97,7 @@ export default function Settings() {
                                     );
                                 })}
                             </div>
-                            <p className="mt-2 text-xs text-[#64748B]">Berlaku langsung untuk absensi, jatah cuti, dan rekap presensi.</p>
+                            <p className="mt-2 text-xs text-[#64748B]">Berlaku langsung untuk absensi, jatah cuti, dan rekap presensi. Ini aturan umum — karyawan tertentu boleh dikecualikan lewat menu Karyawan ("Ikut hari kerja umum" dilepas).</p>
                         </div>
                     </div>
                     <p className="text-xs text-[#64748B]">Timezone Asia/Makassar • Tepat waktu ≤ jam_masuk + kelonggaran → on_time</p>

@@ -13,6 +13,7 @@ use App\Models\ShiftSchedule;
 use App\Models\ToleranceClaim;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * Presenter data master admin → bentuk yang dipakai UI mock (camelCase).
@@ -77,6 +78,10 @@ class AdminPresenter
             'foto' => $e->foto_url ?: self::DEFAULT_AVATAR,
             // K4: penanda pekerja shift hanya per orang.
             'isShift' => (bool) $e->is_shift,
+            // B3: hari kerja khusus per orang (null = ikut pengaturan umum).
+            'hariKerja' => is_array($e->hari_kerja) && $e->hari_kerja !== []
+                ? array_map('strval', $e->hari_kerja)
+                : null,
         ];
     }
 
@@ -165,6 +170,9 @@ class AdminPresenter
                 'catatan_pulang' => $a->catatan_pulang ?? '',
                 // Label shift terjadwal (null untuk karyawan non-shift).
                 'shift' => $shiftLabels[$a->employee_id.'|'.$tgl] ?? null,
+                // F2: perlu pembeda agar UI bisa menulis "di luar jadwal"
+                // hanya untuk pekerja shift.
+                'is_shift' => (bool) ($emp?->is_shift),
             ];
         })->values()->all();
     }
@@ -173,7 +181,7 @@ class AdminPresenter
      * Label shift untuk sekumpulan baris absensi, diambil sekali jalan supaya
      * daftar absensi admin tidak menembak satu query per baris.
      *
-     * @param  \Illuminate\Support\Collection<int, Attendance>  $rows
+     * @param  Collection<int, Attendance>  $rows
      * @return array<string, string|null>
      */
     private static function shiftLabelsFor($rows): array
@@ -187,9 +195,12 @@ class AdminPresenter
             return [];
         }
 
+        // `tanggal` di-cast `date` sehingga tersimpan sebagai "Y-m-d 00:00:00";
+        // whereIn dengan tanggal polos tidak akan cocok, jadi pakai rentang.
         $schedules = ShiftSchedule::with('pattern')
             ->whereIn('employee_id', $employeeIds)
-            ->whereIn('tanggal', $tanggal)
+            ->whereDate('tanggal', '>=', min($tanggal))
+            ->whereDate('tanggal', '<=', max($tanggal))
             ->get();
 
         $out = [];
@@ -204,16 +215,18 @@ class AdminPresenter
      * Label hari non-kerja untuk tanggal tertentu, atau null kalau hari kerja.
      *
      * Non-kerja = bukan anggota `hari_kerja` (ISO-8601: 1=Senin … 7=Minggu)
-     * ATAU tanggalnya terdaftar di tabel `holidays`.
+     * ATAU tanggalnya terdaftar di tabel `holidays`. Bila `$employee` diisi dan
+     * punya hari kerja sendiri (B3), itu yang dipakai.
      */
-    public static function nonWorkDayLabel(AttendanceSetting $s, Carbon $date): ?string
+    public static function nonWorkDayLabel(AttendanceSetting $s, Carbon $date, ?Employee $employee = null): ?string
     {
         $holiday = Holiday::whereDate('tanggal', $date->toDateString())->first();
         if ($holiday) {
             return 'Hari libur: '.$holiday->nama;
         }
 
-        if (! in_array((string) $date->dayOfWeekIso, $s->hariKerjaList(), true)) {
+        $hariKerja = $employee?->hariKerjaList($s) ?? $s->hariKerjaList();
+        if (! in_array((string) $date->dayOfWeekIso, $hariKerja, true)) {
             return 'Bukan hari kerja ('.$date->locale('id')->isoFormat('dddd').')';
         }
 

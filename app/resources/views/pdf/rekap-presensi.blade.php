@@ -246,6 +246,7 @@
                 <th style="width: 58px;">Masuk</th>
                 <th style="width: 58px;">Pulang</th>
                 <th>Keterangan</th>
+                <th style="width: 168px;">Catatan pekerjaan</th>
             </tr>
         </thead>
         <tbody>
@@ -274,6 +275,7 @@
                     <td class="mono">{{ $h['jam_masuk'] }}</td>
                     <td class="mono">{{ $h['jam_pulang'] }}</td>
                     <td>{{ $h['catatan'] ?: '—' }}</td>
+                    <td>{{ $h['catatan_pulang'] ?: '—' }}</td>
                 </tr>
             @endforeach
         </tbody>

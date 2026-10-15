@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\User;
+use App\Support\RekapPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -164,5 +165,93 @@ class AttendanceCatatanTest extends TestCase
                 ->where('rekap.detailHari', fn ($hari) => collect($hari)->contains(
                     fn ($d) => ($d['pulang']['catatan'] ?? null) === $catatan
                 )));
+    }
+
+    // ── D5: admin boleh mengoreksi catatan pekerjaan ──
+
+    public function test_admin_bisa_mengoreksi_catatan_pekerjaan(): void
+    {
+        $me = $this->karyawan();
+        $this->absenMasukHariIni($me);
+        $this->absenPulang($me, ['catatan_pulang' => 'Salah tulis'])->assertSessionHasNoErrors();
+
+        $row = $this->rowHariIni($me);
+
+        $this->actingAs($this->superAdmin(), 'web')
+            ->put("/super-admin/attendances/{$row->id}/catatan", ['catatan_pulang' => 'Pengecekan pompa selesai'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Pengecekan pompa selesai', $row->fresh()->catatan_pulang);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'attendance.catatan_update', 'subject_id' => $row->id]);
+    }
+
+    public function test_karyawan_tidak_bisa_mengoreksi_catatan_lewat_rute_admin(): void
+    {
+        $me = $this->karyawan();
+        $this->absenMasukHariIni($me);
+        $this->absenPulang($me, ['catatan_pulang' => 'Catatan asli'])->assertSessionHasNoErrors();
+
+        $row = $this->rowHariIni($me);
+
+        $this->actingAs($me, 'employee')
+            ->put("/super-admin/attendances/{$row->id}/catatan", ['catatan_pulang' => 'Diubah karyawan'])
+            ->assertRedirect('/super-admin/login');
+
+        $this->assertSame('Catatan asli', $row->fresh()->catatan_pulang);
+    }
+
+    public function test_admin_wilayah_tidak_bisa_mengoreksi_catatan_luar_wilayahnya(): void
+    {
+        $lain = Employee::where('region_id', 1)->firstOrFail();
+
+        $row = Attendance::create([
+            'employee_id' => $lain->id,
+            'work_date' => now('Asia/Makassar')->toDateString(),
+            'clock_in_at' => '07:00:00',
+            'clock_out_at' => '16:00:00',
+            'status' => 'on_time',
+            'lat_in' => 0, 'lng_in' => 0, 'distance_in_m' => 0,
+            'site_id' => $lain->site_id,
+            'region_id' => $lain->region_id,
+            'catatan_pulang' => 'Catatan asli',
+        ]);
+
+        $admin = User::where('role', 'admin_wilayah')->where('region_id', 2)->firstOrFail();
+
+        $this->actingAs($admin, 'web')
+            ->put("/admin/attendances/{$row->id}/catatan", ['catatan_pulang' => 'Diubah admin wilayah lain'])
+            ->assertForbidden();
+
+        $this->assertSame('Catatan asli', $row->fresh()->catatan_pulang);
+    }
+
+    public function test_koreksi_catatan_kosong_ditolak(): void
+    {
+        $me = $this->karyawan();
+        $this->absenMasukHariIni($me);
+
+        $row = $this->rowHariIni($me);
+
+        $this->actingAs($this->superAdmin(), 'web')
+            ->put("/super-admin/attendances/{$row->id}/catatan", ['catatan_pulang' => '   '])
+            ->assertSessionHasErrors('catatan_pulang');
+    }
+
+    // ── D8: catatan pekerjaan ikut ke rekap bulanan ──
+
+    public function test_catatan_pekerjaan_ikut_ke_rekap_harian(): void
+    {
+        $me = $this->karyawan();
+        $this->absenMasukHariIni($me);
+        $catatan = 'Pengecekan pompa dan pembersihan saluran';
+        $this->absenPulang($me, ['catatan_pulang' => $catatan])->assertSessionHasNoErrors();
+
+        $hariIni = now('Asia/Makassar')->toDateString();
+        [$tahun, $bulan] = array_map('intval', explode('-', now('Asia/Makassar')->format('Y-m')));
+
+        $hari = collect(RekapPresenter::buildRekap($me->fresh(), $tahun, $bulan)['harian'])
+            ->firstWhere('iso', $hariIni);
+
+        $this->assertSame($catatan, $hari['catatan_pulang']);
     }
 }

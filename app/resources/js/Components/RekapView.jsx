@@ -175,6 +175,7 @@ export default function RekapView({ rekap, onChangeBulan, backHref, pdfHref, csv
                                 <th className="text-left px-3 py-2 w-24">Jam masuk</th>
                                 <th className="text-left px-3 py-2 w-24">Jam pulang</th>
                                 <th className="text-left px-3 py-2">Catatan</th>
+                                <th className="text-left px-3 py-2 w-56">Catatan pekerjaan</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#F1F5F9]">
@@ -190,6 +191,7 @@ export default function RekapView({ rekap, onChangeBulan, backHref, pdfHref, csv
                                     <td className="px-3 py-2 font-mono text-[#0F172A]">{h.jam_masuk}</td>
                                     <td className="px-3 py-2 font-mono text-[#0F172A]">{h.jam_pulang}</td>
                                     <td className="px-3 py-2 text-xs text-[#475569]">{h.catatan || '—'}</td>
+                                    <td className="px-3 py-2 text-xs text-[#475569] whitespace-pre-wrap break-words">{h.catatan_pulang || '—'}</td>
                                 </tr>
                             ))}
                         </tbody>

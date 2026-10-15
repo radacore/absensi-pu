@@ -29,6 +29,8 @@ class EmployeeController extends Controller
         return Inertia::render('Admin/Employees', [
             'regions' => AdminPresenter::regionsFor($scope),
             'employees' => AdminPresenter::employeesFor($scope),
+            // B3: hari kerja umum dipakai sebagai acuan/preset di formulir.
+            'settings' => AdminPresenter::settingsFor(),
         ]);
     }
 
@@ -62,7 +64,7 @@ class EmployeeController extends Controller
         $this->assertSameRegion($region);
         $this->assertSiteInRegion($region, (int) $data['office_location_id']);
 
-        $employee->update([
+        $payload = [
             'nik' => $data['nik'],
             'nip' => $data['nip'] ?: null,
             'name' => $data['nama'],
@@ -74,7 +76,15 @@ class EmployeeController extends Controller
             'region_id' => $region->id,
             'site_id' => $data['office_location_id'],
             'is_shift' => (bool) ($data['isShift'] ?? false),
-        ]);
+        ];
+
+        // B3: hanya diubah bila memang dikirim, supaya pemanggil lama tidak
+        // menghapus pengecualian hari kerja yang sudah diatur.
+        if (array_key_exists('hariKerja', $data)) {
+            $payload['hari_kerja'] = $this->hariKerjaPayload($data);
+        }
+
+        $employee->update($payload);
 
         Audit::log(
             'employee.update',
@@ -152,7 +162,28 @@ class EmployeeController extends Controller
             // Penanda pekerja shift (K4: per orang). Opsional supaya pemanggil
             // lama tetap valid.
             'isShift' => ['sometimes', 'boolean'],
+            // B3: hari kerja khusus per orang. Null/kosong = ikut pengaturan umum.
+            'hariKerja' => ['sometimes', 'nullable', 'array', 'min:1'],
+            'hariKerja.*' => ['in:1,2,3,4,5,6,7'],
         ]);
+    }
+
+    /**
+     * B3: hari kerja khusus karyawan, tersimpan urut tanpa duplikat.
+     * Kosong/null → null, yang berarti ikut pengaturan umum.
+     */
+    private function hariKerjaPayload(array $data): ?array
+    {
+        $hari = $data['hariKerja'] ?? null;
+
+        if (! is_array($hari) || $hari === []) {
+            return null;
+        }
+
+        $hari = array_values(array_unique(array_map('strval', $hari)));
+        sort($hari);
+
+        return $hari;
     }
 
     private function createFromPayload(array $data): Employee
@@ -173,6 +204,7 @@ class EmployeeController extends Controller
             'region_id' => $region->id,
             'site_id' => $data['office_location_id'],
             'is_shift' => (bool) ($data['isShift'] ?? false),
+            'hari_kerja' => $this->hariKerjaPayload($data),
             'password' => $data['nik'],
             'must_change_password' => true,
         ]);

@@ -87,7 +87,7 @@ class CutiKuota
     public static function hariKerjaPerTahunUntuk(?Employee $employee, string $mulai, string $selesai, ?AttendanceSetting $settings = null): array
     {
         if (! $employee?->is_shift) {
-            return self::hariKerjaPerTahun($mulai, $selesai, $settings);
+            return self::hariKerjaPerTahun($mulai, $selesai, $settings, $employee);
         }
 
         $awal = Carbon::parse($mulai, self::TZ)->startOfDay();
@@ -123,9 +123,12 @@ class CutiKuota
     /**
      * Hari kerja pada rentang, dipecah per tahun kalender.
      *
+     * Bila `$employee` diisi dan punya hari kerja sendiri (B3), itu yang
+     * dipakai; kalau tidak, mengikuti pengaturan umum.
+     *
      * @return array<int,int> tahun => jumlah hari kerja
      */
-    public static function hariKerjaPerTahun(string $mulai, string $selesai, ?AttendanceSetting $settings = null): array
+    public static function hariKerjaPerTahun(string $mulai, string $selesai, ?AttendanceSetting $settings = null, ?Employee $employee = null): array
     {
         $awal = Carbon::parse($mulai, self::TZ)->startOfDay();
         $akhir = Carbon::parse($selesai, self::TZ)->startOfDay();
@@ -134,7 +137,7 @@ class CutiKuota
         }
 
         $settings ??= AttendanceSetting::first();
-        $hariKerja = $settings?->hariKerjaList() ?? AttendanceSetting::HARI_KERJA_DEFAULT;
+        $hariKerja = $employee?->hariKerjaList($settings) ?? $settings?->hariKerjaList() ?? AttendanceSetting::HARI_KERJA_DEFAULT;
 
         $libur = Holiday::query()
             ->whereBetween('tanggal', [$awal->toDateString(), $akhir->toDateString()])

@@ -108,6 +108,8 @@ function adminMasterRoutes(string $prefix, string $role, string $label): void
         Route::get('/', [DashboardController::class, 'index'])->name("{$label}.dashboard");
         Route::get('/attendances', [AttendanceController::class, 'index'])->name("{$label}.attendances");
         Route::delete('/attendances/{attendance}', [AttendanceController::class, 'destroy'])->name("{$label}.attendances.destroy");
+        // D5: admin boleh mengoreksi catatan pekerjaan yang sudah tersimpan.
+        Route::put('/attendances/{attendance}/catatan', [AttendanceController::class, 'updateCatatan'])->name("{$label}.attendances.catatan");
         Route::get('/cuti', [AdminCutiController::class, 'index'])->name("{$label}.cuti");
         Route::get('/cuti/{id}', [AdminCutiController::class, 'show'])->name("{$label}.cuti.detail");
         Route::put('/cuti/{cuti}/approve', [AdminCutiController::class, 'approve'])->name("{$label}.cuti.approve");

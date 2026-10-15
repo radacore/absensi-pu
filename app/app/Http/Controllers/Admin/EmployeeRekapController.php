@@ -119,15 +119,17 @@ class EmployeeRekapController extends Controller
             $tulis(['Total hadir', $m['total']]);
             $tulis([]);
 
-            $tulis(['Tanggal', 'Hari', 'Jam masuk', 'Jam pulang', 'Keterangan']);
+            // Kolom Shift hanya muncul untuk pekerja shift, sama seperti di
+            // layar dan di PDF, supaya berkas tidak berbeda isi.
+            $isShift = (bool) $k['is_shift'];
+            $tulis(array_merge(['Tanggal', 'Hari'], $isShift ? ['Shift'] : [], ['Jam masuk', 'Jam pulang', 'Keterangan', 'Catatan pekerjaan']));
             foreach ($rekap['harian'] as $hari) {
-                $tulis([
-                    $hari['iso'],
-                    $hari['hari'],
-                    $hari['jam_masuk'],
-                    $hari['jam_pulang'],
-                    (string) ($hari['catatan'] ?? ''),
-                ]);
+                $shift = $hari['is_libur_jadwal'] ? 'Libur' : ($hari['shift'] ?? 'Belum dijadwalkan');
+                $tulis(array_merge(
+                    [$hari['iso'], $hari['hari']],
+                    $isShift ? [$shift] : [],
+                    [$hari['jam_masuk'], $hari['jam_pulang'], (string) ($hari['catatan'] ?? ''), (string) ($hari['catatan_pulang'] ?? '')],
+                ));
             }
 
             fclose($out);

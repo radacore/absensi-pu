@@ -8,6 +8,10 @@ import { getBase, OWN_REGION, WILAYAH_LIST as wilayahList, getSitesForWilayah, g
 const statusLabel = { on_time: 'Tepat waktu', late: 'Terlambat', excused_love: 'Toleransi', early_leave: 'Pulang awal' };
 const statusTone = { on_time: 'bg-[#ECFDF5] text-[#065F46]', late: 'bg-[#FFF7E6] text-[#92400E]', excused_love: 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30', early_leave: 'bg-[#FEF2F2] text-[#991B1B]' };
 
+// F2: pekerja non-shift tidak punya jadwal; pekerja shift yang absen di luar
+// jadwalnya ditandai supaya tidak terbaca sebagai "tanpa shift".
+const shiftLabel = (r) => (r.shift ? r.shift : r.is_shift ? 'Di luar jadwal' : '—');
+
 export default function Attendances() {
     const { url, props } = usePage();
     const { regions: regionsProp, attendances: attendancesProp, settings } = props;
@@ -22,6 +26,14 @@ export default function Attendances() {
     const [status, setStatus] = useState('Semua');
     const [tgl, setTgl] = useState(() => new Date().toISOString().slice(0, 10));
     const [detail, setDetail] = useState(null);
+    // D5: koreksi catatan pekerjaan oleh admin.
+    const [editCatatan, setEditCatatan] = useState(false);
+    const [draftCatatan, setDraftCatatan] = useState('');
+
+    useEffect(() => {
+        setEditCatatan(false);
+        setDraftCatatan('');
+    }, [detail]);
 
     useEffect(() => {
         if (siteFilter === 'Semua') return;
@@ -49,10 +61,10 @@ export default function Attendances() {
 
     const handleExport = () => {
         if (filtered.length === 0) { toast.error('Tidak ada data untuk diekspor'); return; }
-        const header = ['Nama', 'Email', 'Wilayah', 'Titik', 'Tgl', 'Datang', 'Pulang', 'Status', 'Jarak(m)', 'Catatan'];
+        const header = ['Nama', 'Email', 'Wilayah', 'Titik', 'Tgl', 'Datang', 'Pulang', 'Shift', 'Status', 'Jarak(m)', 'Catatan'];
         const rows = filtered.map((r) => {
             const hit = siteById(r.office_location_id, regionsData);
-            return [r.nama, r.email, r.wilayah, hit?.site.nama_lokasi ?? '', r.tgl, r.datang, r.pulang, r.status, String(r.jarak), r.catatan_pulang ?? ''];
+            return [r.nama, r.email, r.wilayah, hit?.site.nama_lokasi ?? '', r.tgl, r.datang, r.pulang, shiftLabel(r), r.status, String(r.jarak), r.catatan_pulang ?? ''];
         });
         const csv = [header, ...rows].map((a) => a.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -77,6 +89,16 @@ export default function Attendances() {
         router.delete(`${base}/attendances/${id}`, {
             preserveScroll: true,
             onSuccess: () => setDetail(null),
+        });
+    };
+
+    // D5: simpan koreksi catatan pekerjaan (karyawan sendiri tidak bisa).
+    const simpanCatatan = () => {
+        const teks = draftCatatan.trim();
+        if (!teks) { toast.error('Catatan pekerjaan tidak boleh kosong'); return; }
+        router.put(`${base}/attendances/${detail.id}/catatan`, { catatan_pulang: teks }, {
+            preserveScroll: true,
+            onSuccess: () => { setEditCatatan(false); setDetail(null); toast.success('Catatan pekerjaan diperbarui'); },
         });
     };
 
@@ -128,7 +150,7 @@ export default function Attendances() {
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-[#F8FAFC] text-xs font-medium text-[#64748B]"><tr><th className="text-left px-4 py-3">Karyawan</th><th className="text-left px-4 py-3">Waktu</th><th className="text-left px-4 py-3">Wilayah</th><th className="text-left px-4 py-3">Titik Proyek</th><th className="text-left px-4 py-3">Jarak</th><th className="text-left px-4 py-3">Status</th><th className="px-4 py-3"></th></tr></thead>
+                            <thead className="bg-[#F8FAFC] text-xs font-medium text-[#64748B]"><tr><th className="text-left px-4 py-3">Karyawan</th><th className="text-left px-4 py-3">Waktu</th><th className="text-left px-4 py-3">Shift</th><th className="text-left px-4 py-3">Wilayah</th><th className="text-left px-4 py-3">Titik Proyek</th><th className="text-left px-4 py-3">Jarak</th><th className="text-left px-4 py-3">Status</th><th className="px-4 py-3"></th></tr></thead>
                             <tbody className="divide-y divide-[#F1F5F9]">
                                 {filtered.map((r) => {
                                     const hit = siteById(r.office_location_id, regionsData);
@@ -137,6 +159,7 @@ export default function Attendances() {
                                         <tr key={r.id} className="hover:bg-[#F8FAFC]/50">
                                             <td className="px-4 py-3"><div className="flex items-center gap-3"><img src={r.foto} alt={r.nama} className="w-8 h-8 rounded-full object-cover" /><div><p className="font-medium text-[#0F172A]">{r.nama}</p><p className="text-xs text-[#64748B]">{r.email}</p></div></div></td>
                                             <td className="px-4 py-3 text-xs"><span className="font-medium text-[#0F172A]">{r.datang}</span> → <span className="text-[#64748B]">{r.pulang ? r.pulang : '—'}</span></td>
+                                            <td className="px-4 py-3 text-xs text-[#1E3A8A]">{shiftLabel(r)}</td>
                                             <td className="px-4 py-3 text-xs"><span className="bg-[#F1F5F9] px-2 py-1 rounded-full">{r.wilayah}</span></td>
                                             <td className="px-4 py-3 text-xs">
                                                 {hit ? (
@@ -195,12 +218,26 @@ export default function Attendances() {
                                         <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Koordinat absen</p><p className="font-mono text-xs text-[#0F172A]">{Number(detail.lat).toFixed(4)}, {Number(detail.lng).toFixed(4)}</p></div>
                                         <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Jarak ke titik assigned</p><p className={`font-medium ${hit && inRadius ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{detail.jarak} m {hit ? `/${hit.site.radius}m • ${inRadius ? 'Dalam' : 'Di luar'}` : ''}</p></div>
                                     </div>
-                                    {detail.catatan_pulang && (
-                                        <div className="bg-[#F8FAFC] rounded-xl p-3">
+                                    <div className="bg-[#F8FAFC] rounded-xl p-3">
+                                        <div className="flex items-center justify-between gap-2">
                                             <p className="text-xs text-[#64748B]">Catatan pekerjaan saat pulang</p>
-                                            <p className="text-sm text-[#0F172A] mt-1 whitespace-pre-wrap break-words">{detail.catatan_pulang}</p>
+                                            {!editCatatan && detail.pulang && (
+                                                <button type="button" onClick={() => { setDraftCatatan(detail.catatan_pulang ?? ''); setEditCatatan(true); }} className="text-xs font-medium text-[#1E3A8A] bg-[#EFF6FF] px-2.5 py-1 rounded-lg shrink-0">Ubah</button>
+                                            )}
                                         </div>
-                                    )}
+                                        {editCatatan ? (
+                                            <div className="mt-2 space-y-2">
+                                                <textarea value={draftCatatan} onChange={(e) => setDraftCatatan(e.target.value)} maxLength={500} rows={3} className="w-full rounded-xl border border-[#E2E8F0] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                                                <p className="text-right text-[11px] text-[#64748B]">{draftCatatan.length}/500</p>
+                                                <div className="flex gap-2">
+                                                    <button type="button" onClick={simpanCatatan} className="flex-1 bg-[#1E3A8A] text-white rounded-xl py-2 text-sm font-semibold">Simpan catatan</button>
+                                                    <button type="button" onClick={() => setEditCatatan(false)} className="flex-1 bg-[#F1F5F9] text-[#334155] rounded-xl py-2 text-sm font-semibold">Batal</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-[#0F172A] mt-1 whitespace-pre-wrap break-words">{detail.catatan_pulang || '—'}</p>
+                                        )}
+                                    </div>
                                     {hit && (
                                         <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className="flex items-center justify-between bg-[#EFF6FF] rounded-xl p-3 hover:bg-[#DBEAFE]">
                                             <span><p className="text-sm font-medium text-[#1E3A8A]">{hit.site.nama_lokasi}</p><p className="text-xs text-[#64748B]">{hit.region.name} • {hit.site.lat.toFixed(4)}, {hit.site.lng.toFixed(4)} • {hit.site.radius}m</p></span>

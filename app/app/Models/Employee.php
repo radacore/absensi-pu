@@ -29,6 +29,8 @@ class Employee extends Authenticatable
         'must_change_password',
         // Penanda pekerja shift (K4: per orang saja).
         'is_shift',
+        // B3: hari kerja khusus per orang (null = ikut pengaturan umum).
+        'hari_kerja',
     ];
 
     protected $hidden = [
@@ -42,7 +44,25 @@ class Employee extends Authenticatable
             'password' => 'hashed',
             'must_change_password' => 'boolean',
             'is_shift' => 'boolean',
+            'hari_kerja' => 'array',
         ];
+    }
+
+    /**
+     * Hari kerja karyawan ini (ISO-8601: 1 = Senin … 7 = Minggu).
+     *
+     * B3: karyawan tertentu boleh punya hari kerja sendiri (mis. libur
+     * bergeser). Bila belum diatur, ikut pengaturan umum.
+     */
+    public function hariKerjaList(?AttendanceSetting $settings = null): array
+    {
+        $own = $this->hari_kerja;
+
+        if (is_array($own) && $own !== []) {
+            return array_map('strval', $own);
+        }
+
+        return $settings?->hariKerjaList() ?? AttendanceSetting::HARI_KERJA_DEFAULT;
     }
 
     public function region(): BelongsTo

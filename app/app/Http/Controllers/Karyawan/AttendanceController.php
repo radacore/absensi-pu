@@ -65,7 +65,7 @@ class AttendanceController extends Controller
         // Info gerbang hari libur → dipakai UI untuk mematikan tombol absen.
         // Pekerja shift tidak terkena gerbang ini (mereka bekerja menurut jadwal).
         $liburLabel = ($settings && $settings->absen_libur_aktif && ! $isShift)
-            ? AdminPresenter::nonWorkDayLabel($settings, $now)
+            ? AdminPresenter::nonWorkDayLabel($settings, $now, $me)
             : null;
         $absenLibur = [
             'aktif' => (bool) ($settings?->absen_libur_aktif),
@@ -193,7 +193,7 @@ class AttendanceController extends Controller
         $liburLabel = null;
         if (! $shift) {
             $liburLabel = ($settings && $settings->absen_libur_aktif)
-                ? AdminPresenter::nonWorkDayLabel($settings, $now)
+                ? AdminPresenter::nonWorkDayLabel($settings, $now, $me)
                 : null;
 
             if ($liburLabel !== null && ($settings->absen_libur_mode ?: 'tolak') === 'tolak') {

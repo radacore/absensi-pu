@@ -9,6 +9,7 @@ use App\Models\Leave;
 use App\Models\ShiftPattern;
 use App\Models\ShiftSchedule;
 use App\Models\User;
+use App\Support\AdminPresenter;
 use App\Support\RekapPdf;
 use App\Support\RekapPresenter;
 use App\Support\TrenJamSvg;
@@ -218,6 +219,100 @@ class RekapPdfTest extends TestCase
         $this->assertStringContainsString('Libur', $html);
         $this->assertStringContainsString('Belum dijadwalkan', $html);
         $this->assertStringContainsString('Pola kerja', $html);
+    }
+
+    // ── CSV rekap (kolom shift seragam dengan layar & PDF) ──
+
+    public function test_csv_rekap_pekerja_shift_memuat_kolom_shift(): void
+    {
+        $e = $this->karyawan(2);
+        $this->jadikanShift($e, ['2026-10-05' => 1, '2026-10-08' => null]);
+
+        $csv = $this->actingAs($this->superAdmin(), 'web')
+            ->get("/super-admin/employees/{$e->id}/rekap/unduh?bulan=".self::BULAN)
+            ->streamedContent();
+
+        $this->assertStringContainsString('Tanggal;Hari;Shift;"Jam masuk";"Jam pulang";Keterangan;"Catatan pekerjaan"', $csv);
+        $this->assertStringContainsString('Pagi', $csv);
+        $this->assertStringContainsString('Libur', $csv);
+    }
+
+    public function test_csv_rekap_non_shift_tidak_memuat_kolom_shift(): void
+    {
+        $e = $this->karyawan(2);
+        $this->absen($e, '2026-10-05', '07:25:00', '16:05:00');
+
+        $csv = $this->actingAs($this->superAdmin(), 'web')
+            ->get("/super-admin/employees/{$e->id}/rekap/unduh?bulan=".self::BULAN)
+            ->streamedContent();
+
+        $this->assertStringContainsString('Tanggal;Hari;"Jam masuk";"Jam pulang";Keterangan;"Catatan pekerjaan"', $csv);
+        $this->assertStringNotContainsString('Tanggal;Hari;Shift', $csv);
+    }
+
+    // ── D8: catatan pekerjaan ikut ke rekap bulanan ──
+
+    public function test_template_pdf_memuat_catatan_pekerjaan(): void
+    {
+        $e = $this->karyawan(2);
+        $catatan = 'Pengecekan pompa dan pembersihan saluran';
+        $this->absen($e, '2026-10-05', '07:25:00', '16:05:00', ['catatan_pulang' => $catatan]);
+
+        $html = View::make('pdf.rekap-presensi', RekapPdf::data(RekapPresenter::buildRekap($e, 2026, 10)))->render();
+
+        $this->assertStringContainsString('Catatan pekerjaan', $html);
+        $this->assertStringContainsString($catatan, $html);
+    }
+
+    public function test_csv_rekap_memuat_catatan_pekerjaan(): void
+    {
+        $e = $this->karyawan(2);
+        $catatan = 'Pengecekan pompa dan pembersihan saluran';
+        $this->absen($e, '2026-10-05', '07:25:00', '16:05:00', ['catatan_pulang' => $catatan]);
+
+        $csv = $this->actingAs($this->superAdmin(), 'web')
+            ->get("/super-admin/employees/{$e->id}/rekap/unduh?bulan=".self::BULAN)
+            ->streamedContent();
+
+        $this->assertStringContainsString($catatan, $csv);
+    }
+
+    // ── F2: label shift pada daftar absensi admin ──
+
+    public function test_daftar_absensi_admin_memuat_label_shift(): void
+    {
+        $e = $this->karyawan(2);
+        $this->jadikanShift($e, ['2026-10-05' => 1]);
+        $this->absen($e, '2026-10-05', '07:25:00', '16:05:00');
+
+        $this->actingAs($this->superAdmin(), 'web')
+            ->get('/super-admin/attendances')
+            ->assertOk()
+            ->assertInertia(fn ($p) => $p
+                ->component('Admin/Attendances')
+                ->where('attendances', fn ($rows) => collect($rows)->contains(
+                    fn ($r) => $r['tgl'] === '2026-10-05' && $r['shift'] === 'Pagi' && $r['is_shift'] === true
+                )));
+    }
+
+    public function test_daftar_absensi_admin_membedakan_pekerja_shift_tanpa_jadwal_dan_non_shift(): void
+    {
+        $shift = $this->karyawan(2);
+        $this->jadikanShift($shift, []);
+        $this->absen($shift, '2026-10-06', '07:25:00', '16:05:00');
+
+        $nonShift = Employee::where('region_id', 2)->where('id', '!=', $shift->id)->whereNotNull('site_id')->firstOrFail();
+        $this->absen($nonShift, '2026-10-07', '07:25:00', '16:05:00');
+
+        $rows = collect(AdminPresenter::attendancesFor(null));
+
+        $barisShift = $rows->firstWhere('tgl', '2026-10-06');
+        $this->assertNull($barisShift['shift'], 'Pekerja shift tanpa jadwal tidak punya label shift.');
+        $this->assertTrue($barisShift['is_shift']);
+
+        $barisNonShift = $rows->firstWhere('tgl', '2026-10-07');
+        $this->assertNull($barisNonShift['shift']);
+        $this->assertFalse($barisNonShift['is_shift']);
     }
 
     // ── Rekap sadar shift ───────────────────────────────────

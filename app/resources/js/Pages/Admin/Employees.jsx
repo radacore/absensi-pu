@@ -5,9 +5,13 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { getBase, OWN_REGION, REGION_LIST as regionsList, siteById } from './_shared';
 
+// B3: hari kerja per orang memakai nomor ISO-8601 (1 = Senin … 7 = Minggu),
+// sama seperti pengaturan umum.
+const HARI_LIST = [['1', 'Senin'], ['2', 'Selasa'], ['3', 'Rabu'], ['4', 'Kamis'], ['5', 'Jumat'], ['6', 'Sabtu'], ['7', 'Minggu']];
+
 export default function Employees() {
     const { url, props } = usePage();
-    const { regions, employees } = props;
+    const { regions, employees, settings } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     const regionsData = regions;
@@ -26,6 +30,8 @@ export default function Employees() {
         region: isWilayah ? OWN_REGION : regionsList[1],
         office_location_id: null,
         isShift: false,
+        // null = ikut hari kerja umum.
+        hariKerja: null,
     });
 
     // keep form office_location_id valid when region changes
@@ -57,12 +63,12 @@ export default function Employees() {
         const r = regionsData.find((x) => x.name === defaultRegion);
         const firstSiteId = r?.locations?.[0]?.id ?? null;
         setEditing(null);
-        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', region: defaultRegion, office_location_id: firstSiteId, isShift: false });
+        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', region: defaultRegion, office_location_id: firstSiteId, isShift: false, hariKerja: null });
         setPhoto(null); setPreview(null); setOpen(true);
     };
     const openEdit = (e) => {
         setEditing(e);
-        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, region:e.region, office_location_id: e.office_location_id ?? null, isShift: !!e.isShift });
+        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, region:e.region, office_location_id: e.office_location_id ?? null, isShift: !!e.isShift, hariKerja: Array.isArray(e.hariKerja) ? e.hariKerja.map(String) : null });
         setPreview(e.foto); setPhoto(null); setOpen(true);
     };
     const close = () => setOpen(false);
@@ -81,6 +87,7 @@ export default function Employees() {
         if (!regionObj) { toast.error('Wilayah tidak ditemukan'); return; }
         const ok = regionObj.locations.some((s) => s.id === Number(form.office_location_id));
         if (!ok) { toast.error('Titik tidak sesuai wilayah'); return; }
+        if (form.hariKerja !== null && form.hariKerja.length === 0) { toast.error('Pilih minimal satu hari kerja, atau centang "Ikut hari kerja umum"'); return; }
         if (!editing) {
             if (list.some((x)=>x.nik===form.nik)) { toast.error('NIK sudah terdaftar'); return; }
             if (list.some((x)=>x.email===form.email)) { toast.error('Email sudah terdaftar'); return; }
@@ -90,6 +97,7 @@ export default function Employees() {
             jabatan: form.jabatan, unit: form.unit, status: form.status,
             region: form.region, office_location_id: Number(form.office_location_id),
             isShift: !!form.isShift,
+            hariKerja: form.hariKerja,
         };
         if (editing) {
             if (isWilayah && editing.region !== OWN_REGION) { toast.error('Tidak bisa mengedit karyawan luar wilayah'); return; }
@@ -179,7 +187,7 @@ export default function Employees() {
                                                 <div className="flex items-center gap-3">
                                                     <img src={e.foto} alt={e.nama} className="w-8 h-8 rounded-full object-cover" />
                                                     <div>
-                                                        <p className="font-medium text-[#0F172A]">{e.nama}{e.isShift && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#E0E7FF] text-[#3730A3] px-2 py-0.5 rounded-full">Shift</span>}</p>
+                                                        <p className="font-medium text-[#0F172A]">{e.nama}{e.isShift && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#E0E7FF] text-[#3730A3] px-2 py-0.5 rounded-full">Shift</span>}{Array.isArray(e.hariKerja) && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#FFF7E6] text-[#92400E] px-2 py-0.5 rounded-full">Hari kerja khusus</span>}</p>
                                                         <p className="text-xs text-[#64748B]">{e.gol} • {e.unit} • {e.status}</p>
                                                         <p className="text-xs text-[#64748B]">{e.email}</p>
                                                     </div>
@@ -300,6 +308,25 @@ export default function Employees() {
                                                 <span className="block text-xs text-[#64748B] mt-0.5">Centang bila karyawan ini bekerja giliran (pagi/siang/malam). Absensinya mengikuti jadwal shift, bukan jam kantor biasa.</span>
                                             </span>
                                         </label>
+                                    </div>
+                                    <div className="col-span-2 rounded-xl bg-[#F8FAFC] px-3 py-3">
+                                        <label className="flex items-start gap-3 cursor-pointer">
+                                            <input type="checkbox" checked={form.hariKerja === null} onChange={(e)=>setForm({...form, hariKerja: e.target.checked ? null : (settings?.hariKerja ?? ['1','2','3','4','5']).map(String)})} className="mt-0.5 w-4 h-4 accent-[#0F172A]" />
+                                            <span>
+                                                <span className="text-sm font-medium text-[#0F172A]">Ikut hari kerja umum</span>
+                                                <span className="block text-xs text-[#64748B] mt-0.5">Hari kerja umum saat ini: {(settings?.hariKerja ?? ['1','2','3','4','5']).map((d)=>HARI_LIST.find((h)=>h[0]===String(d))?.[1] ?? d).join(', ')}. Lepas centang bila karyawan ini punya hari kerja sendiri (mis. libur bergeser).</span>
+                                            </span>
+                                        </label>
+                                        {form.hariKerja !== null && (
+                                            <div className="mt-3 flex flex-wrap gap-1.5 pl-7">
+                                                {HARI_LIST.map(([k, label]) => {
+                                                    const on = form.hariKerja.includes(k);
+                                                    return (
+                                                        <button key={k} type="button" onClick={()=>setForm({...form, hariKerja: on ? form.hariKerja.filter((x)=>x!==k) : [...form.hariKerja, k].sort()})} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${on ? 'bg-[#1E3A8A] text-white border-[#1E3A8A]' : 'bg-white text-[#334155] border-[#E2E8F0]'}`}>{label}</button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex gap-2 pt-2">
