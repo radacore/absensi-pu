@@ -1,0 +1,146 @@
+name: Deploy
+
+# Deploy otomatis ke VPS, tetapi HANYA setelah workflow "CI" selesai.
+# Dipisah dari CI supaya CI tetap hermetis (tanpa kredensial server) dan
+# deploy tidak pernah jalan atas kode yang gagal tes.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # Tombol "Run workflow" di tab Actions, untuk deploy ulang tanpa push
+  # (mis. setelah memperbaiki sesuatu langsung di server).
+  workflow_dispatch:
+
+# Kredensial server hanya dipakai di job ini.
+permissions:
+  contents: read
+
+# Jangan pernah ada dua deploy bersamaan, dan jangan batalkan deploy yang
+# sedang jalan: membatalkan di tengah `migrate` bisa meninggalkan skema separuh.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ke VPS
+    runs-on: ubuntu-latest
+
+    # Lewati bila dipicu oleh CI yang gagal. (`workflow_dispatch` selalu lolos.)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Siapkan kunci SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Kunci host server dipin pada kunjungan pertama. Bila fingerprint-nya
+          # berubah (server di-install ulang), job ini gagal dan kamu harus
+          # memperbarui secret VPS_KNOWN_HOSTS — itu memang yang diinginkan.
+          if [ -n "${{ secrets.VPS_KNOWN_HOSTS }}" ]; then
+            printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "${VPS_PORT:-22}" -H "$VPS_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          fi
+
+      - name: Jalankan deploy di VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_APP_URL: ${{ secrets.VPS_APP_URL }}
+        run: |
+          set -euo pipefail
+
+          # Skrip dikirim lewat stdin, bukan ditulis ke disk di server, supaya
+          # tidak ikut tertimpa saat repo di-reset. Di sisi server: `set -e`
+          # + `trap` menjamin aplikasi selalu dinyalakan kembali.
+          ssh -i ~/.ssh/deploy_key \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              -o ConnectTimeout=20 \
+              -p "${VPS_PORT:-22}" \
+              "${VPS_USER}@${VPS_HOST}" \
+              "APP_URL_CHECK='${VPS_APP_URL}' bash -s" <<'DEPLOY_SCRIPT'
+          set -euo pipefail
+
+          REPO_DIR=/var/www/absensi
+          APP_DIR="$REPO_DIR/app"
+          BRANCH=main
+
+          cd "$REPO_DIR"
+
+          # Apa pun yang terjadi, aplikasi harus menyala lagi.
+          restore() { php "$APP_DIR/artisan" up || true; }
+          trap restore EXIT
+
+          echo "::group::1/9 Aktifkan mode pemeliharaan"
+          php "$APP_DIR/artisan" down --retry=15 || true
+          echo "::endgroup::"
+
+          echo "::group::2/9 Ambil kode terbaru"
+          git fetch --prune origin
+          # .env tidak ikut tertimpa karena diabaikan git.
+          git reset --hard "origin/$BRANCH"
+          git --no-pager log --oneline -1
+          echo "::endgroup::"
+
+          cd "$APP_DIR"
+
+          echo "::group::3/9 Composer"
+          composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+          echo "::endgroup::"
+
+          echo "::group::4/9 Build aset"
+          # Wajib: tanpa ini manifest Vite tidak ada dan setiap halaman 500.
+          npm ci
+          npm run build
+          echo "::endgroup::"
+
+          echo "::group::5/9 Migrasi basis data"
+          # --force diperlukan karena APP_ENV=production.
+          php artisan migrate --force
+          echo "::endgroup::"
+
+          echo "::group::6/9 Cache produksi"
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          echo "::endgroup::"
+
+          echo "::group::7/9 Hak akses"
+          chown -R www-data:www-data storage bootstrap/cache
+          echo "::endgroup::"
+
+          echo "::group::8/9 Muat ulang PHP-FPM & queue worker"
+          sudo systemctl reload php8.4-fpm
+          php artisan queue:restart
+          echo "::endgroup::"
+
+          echo "::group::9/9 Nyalakan kembali & uji cepat"
+          php artisan up
+          trap - EXIT
+          # ${VAR:-} supaya `set -u` tidak mematikan deploy saat uji cepat
+          # dilewati (secret VPS_APP_URL belum diisi).
+          if [ -n "${APP_URL_CHECK:-}" ]; then
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$APP_URL_CHECK" || echo 000)
+            case "$CODE" in
+              2*|3*) echo "Uji cepat lolos: HTTP $CODE" ;;
+              *)     echo "Uji cepat GAGAL: HTTP $CODE — periksa /var/log/nginx/error.log"; exit 1 ;;
+            esac
+          fi
+          echo "::endgroup::"
+
+          echo "Deploy selesai: $(git -C "$REPO_DIR" rev-parse --short HEAD)"
+          DEPLOY_SCRIPT

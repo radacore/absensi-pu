@@ -22,12 +22,13 @@ Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pus
 6. [Konfigurasi `.env`](#konfigurasi-env)
 7. [Konfigurasi Nginx](#konfigurasi-nginx)
 8. [Queue Worker & Scheduler](#queue-worker--scheduler)
-9. [Basis Data: MySQL / MariaDB](#basis-data-mysql--mariadb)
-10. [Testing](#testing)
-11. [Jebakan & Catatan Penting](#jebakan--catatan-penting)
-12. [Troubleshooting](#troubleshooting)
-13. [Keamanan](#keamanan)
-14. [Struktur Repositori](#struktur-repositori)
+9. [Deploy Otomatis (GitHub Actions → VPS)](#deploy-otomatis-github-actions--vps)
+10. [Basis Data: MySQL / MariaDB](#basis-data-mysql--mariadb)
+11. [Testing](#testing)
+12. [Jebakan & Catatan Penting](#jebakan--catatan-penting)
+13. [Troubleshooting](#troubleshooting)
+14. [Keamanan](#keamanan)
+15. [Struktur Repositori](#struktur-repositori)
 
 ---
 
@@ -472,6 +473,96 @@ systemctl status absensi-worker
 
 ---
 
+## Deploy Otomatis (GitHub Actions → VPS)
+
+Setelah disiapkan, **push ke `main` langsung tayang di VPS** tanpa perlu `git pull` manual. Deploy hanya berjalan bila workflow **CI** selesai **sukses**, jadi kode yang gagal tes tidak pernah masuk produksi.
+
+Berkasnya: **[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)**
+
+### Alur
+
+```
+git push origin main
+   └─ CI (tes 8.4 + build aset)
+        ├─ gagal → deploy DILEWATI (VPS tidak tersentuh)
+        └─ sukses → Deploy: SSH ke VPS
+                     1. artisan down (retry 15 detik)
+                     2. git fetch + git reset --hard origin/main
+                     3. composer install --no-dev
+                     4. npm ci && npm run build      ← wajib, lihat catatan
+                     5. php artisan migrate --force
+                     6. config:cache / route:cache / view:cache
+                     7. chown storage & bootstrap/cache
+                     8. reload php8.4-fpm + queue:restart
+                     9. artisan up + uji cepat HTTP
+```
+
+### Yang perlu disiapkan sekali
+
+**1. User deploy di VPS** (jangan pakai `root`, jangan pakai `www-data`):
+
+```bash
+adduser --disabled-password --gecos "" deploy
+usermod -aG www-data deploy
+```
+
+Beri hak sudo **hanya** untuk memuat ulang PHP-FPM — lewat `visudo -f /etc/sudoers.d/deploy`:
+
+```
+deploy ALL=(ALL) NOPASSWD: /bin/systemctl reload php8.4-fpm
+```
+
+Beri akses tulis ke direktori aplikasi:
+
+```bash
+chown -R deploy:www-data /var/www/absensi
+chmod -R 775 /var/www/absensi/app/storage /var/www/absensi/app/bootstrap/cache
+```
+
+**2. Kunci SSH khusus deploy** (jangan pakai kunci pribadimu):
+
+```bash
+# di VPS, sebagai user deploy
+ssh-keygen -t ed25519 -C "github-deploy" -f ~/.ssh/github_deploy -N ""
+cat ~/.ssh/github_deploy.pub >> ~/.ssh/authorized_keys
+cat ~/.ssh/github_deploy          # tempel isinya ke secret VPS_SSH_KEY
+```
+
+**3. Secret di GitHub** → repo → Settings → Secrets and variables → Actions:
+
+| Secret | Wajib? | Isi |
+| :--- | :--- | :--- |
+| `VPS_HOST` | ✅ | IP atau domain server |
+| `VPS_USER` | ✅ | `deploy` |
+| `VPS_SSH_KEY` | ✅ | isi **privat** key `github_deploy` |
+| `VPS_PORT` | — | default `22` |
+| `VPS_KNOWN_HOSTS` | disarankan | isi `~/.ssh/known_hosts` hasil `ssh-keyscan` |
+| `VPS_APP_URL` | disarankan | mis. `https://absensi.example.go.id` — dipakai uji cepat |
+
+Untuk mengisi `VPS_KNOWN_HOSTS`: `ssh-keyscan -H <host>` di VPS, salin keluarannya. Bila dikosongkan, alur akan melakukan `ssh-keyscan` sendiri (kurang aman, tapi tetap berjalan).
+
+### Sifat yang perlu diketahui
+
+- **`.env` tidak pernah tertimpa** — `git reset --hard` hanya menyentuh berkas yang dilacak git, dan `.env` diabaikan git.
+- **Perubahan manual berkas *yang dilacak git* akan hilang.** Ini konsekuensi `git reset --hard` yang memang dipilih. Untuk mengubah konfigurasi, ubah `.env` (aman) atau ubah di repo lokal lalu push.
+- **`migrate --force` berjalan otomatis.** Migrasi yang menghapus kolom akan langsung mengenai produksi tanpa konfirmasi. Sebelum push yang berisi migrasi berisiko, sebaiknya uji dulu di salinan basis data.
+- **Aplikasi selalu dinyalakan kembali.** Skrip memakai `trap ... EXIT`, jadi bila deploy gagal di langkah mana pun `artisan up` tetap dijalankan — situs tidak tertinggal di mode pemeliharaan.
+- **Gagal sebelum `migrate` = basis data tidak tersentuh.** Urutan langkahnya disengaja: aset dibangun sebelum migrasi, sehingga kegagalan build tidak meninggalkan skema yang sudah berubah.
+- **Deploy tidak akan tumpang tindih** (`concurrency: deploy-production`), dan deploy yang sedang jalan tidak dibatalkan agar `migrate` tidak terputus di tengah.
+
+### Deploy ulang tanpa push
+
+Tab **Actions → Deploy → Run workflow**. Berguna bila ingin menyegarkan aset atau menjalankan ulang migrasi tanpa perubahan kode.
+
+### Membatalkan/melewatkan deploy
+
+- Ubah `if:` pada job `deploy` menjadi `false`, atau hapus/rename `.github/workflows/deploy.yml`.
+- Untuk sekali jalan (mis. sedang memperbaiki server langsung): jangan push ke `main`, gunakan branch lain untuk menyimpan pekerjaan.
+
+> **Catatan keamanan:** runner **self-hosted** sengaja **tidak** dipakai di repo ini. Repositori ini publik, dan runner self-hosted pada repo publik dapat dijalankan oleh pull request dari pihak luar.
+
+---
+
 ## Basis Data: MySQL / MariaDB
 
 Aplikasi **sudah berjalan penuh di MySQL/MariaDB**. Ini bukan lagi target — statusnya sudah diverifikasi langsung terhadap server yang hidup.
@@ -754,6 +845,7 @@ sul proyek/                      # akar repo (git root)
 │   ├── vite.config.js           # Tailwind v4 + React + PWA
 │   └── .env.example
 ├── .github/workflows/ci.yml     # tes + build aset
+├── .github/workflows/deploy.yml # deploy otomatis ke VPS setelah CI hijau
 ├── docs/activity-diagrams/
 ├── docs/laporan-simulasi.md
 ├── docs/laporan-simulasi-sebulan.md
