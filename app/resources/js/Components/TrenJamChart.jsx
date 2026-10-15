@@ -119,6 +119,13 @@ export default function TrenJamChart({ tren, mode, settings }) {
         return out;
     })();
 
+    // Label yang berimpit dengan garis acuan (mis. 16:00 untuk jam pulang)
+    // dilewati supaya angka yang sama tidak tercetak dua kali bertumpuk.
+    const labelAcuan = !isShift
+        ? (isMasuk ? [settings.jamMasukMin, settings.batasToleransiMin] : [settings.jamPulangMin])
+        : [];
+    const yLabelsTampil = yLabels.filter((yl) => !labelAcuan.some((a) => a >= yMin && a <= yMax && Math.abs(yFor(yl.min) - yFor(a)) < 8));
+
     // X-axis labels (tanggal 1, 7, 14, 21, 28, lastDay)
     const xLabels = [1, 7, 14, 21, 28, lastDay].filter((d, i, arr) => arr.indexOf(d) === i && d <= lastDay);
 
@@ -134,7 +141,7 @@ export default function TrenJamChart({ tren, mode, settings }) {
                     </g>
                 ))}
 
-                {yLabels.map((yl) => (
+                {yLabelsTampil.map((yl) => (
                     <text key={`yl-${yl.min}`} x={PAD_L - 4} y={yFor(yl.min) + 3} fontSize="10" fill="#64748B" textAnchor="end">{yl.txt ?? minToLabel(yl.min)}</text>
                 ))}
 

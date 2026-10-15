@@ -77,7 +77,7 @@ class RekapPresensiTest extends TestCase
 
         $rekap = RekapPresenter::buildRekap($emp, $year, $month);
 
-        $this->assertSame(2 + 2, $rekap['distribusi']['hadir'], 'hadir = 2 attendance + 2 dinas');
+        $this->assertSame(2, $rekap['distribusi']['hadir'], 'hadir = 2 attendance (dinas dihitung terpisah)');
         $this->assertSame(2, $rekap['distribusi']['cuti']);
         $this->assertSame(2, $rekap['distribusi']['dinas']);
         $this->assertSame('September', $rekap['periode']['namaBulan']);
@@ -88,8 +88,9 @@ class RekapPresensiTest extends TestCase
         $this->assertSame(1, $rekap['metrikHadir']['tepat_waktu']); // 07:25 <= 07:30
         $this->assertSame(0, $rekap['metrikHadir']['toleransi_terlambat']); // tidak ada di 07:31-07:45
         $this->assertSame(1, $rekap['metrikHadir']['terlambat']); // 07:50 > 07:45
-        // total di metrikHadir sama dengan hadir di distribusi (attendance + dinas)
-        $this->assertSame(4, $rekap['metrikHadir']['total']);
+        // total di metrikHadir sama dengan hadir di distribusi (hanya absensi;
+        // hari dinas punya barisnya sendiri di distribusi)
+        $this->assertSame(2, $rekap['metrikHadir']['total']);
     }
 
     public function test_rekap_presenter_hari_kerja_tanpa_absen_dan_cuti_dihitung_tanpa_keterangan(): void

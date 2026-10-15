@@ -99,6 +99,9 @@ export default function RekapView({ rekap, onChangeBulan, backHref, pdfHref, csv
                             <MetrikRow label={`Tepat waktu (≤${s.jamMasuk})`} value={m.tepat_waktu} tone="ok" />
                             <MetrikRow label={`Toleransi terlambat (${s.jamMasuk}–${s.batasToleransi})`} value={m.toleransi_terlambat} tone="warn" />
                             <MetrikRow label={`Terlambat (>${s.batasToleransi})`} value={m.terlambat} tone="err" />
+                            {m.tanpa_jam_masuk > 0 && (
+                                <MetrikRow label="Hadir tanpa jam masuk" value={m.tanpa_jam_masuk} tone="warn" />
+                            )}
                             <MetrikRow label="Total kehadiran" value={m.total} tone="total" />
                         </MetrikGroup>
                         <MetrikGroup title="Lainnya">
@@ -342,9 +345,9 @@ function KartuHari({ h, detail }) {
                                 <p><strong>Jenis:</strong> {detail.masuk.jenis_absen}</p>
                                 <p><strong>Jam:</strong> <span className="font-mono">{detail.masuk.jam}</span></p>
                                 <p><strong>Timezone:</strong> {detail.masuk.timezone}</p>
-                                <p><strong>Koordinat:</strong> <span className="font-mono">{detail.masuk.koordinat}</span></p>
+                                <p><strong>Koordinat:</strong> <span className="font-mono">{detail.masuk.koordinat ?? '—'}</span></p>
                                 <p><strong>Lokasi:</strong> {detail.masuk.lokasi}</p>
-                                <p className="text-[#64748B]"><strong>Radius:</strong> {detail.masuk.radius} m dari titik</p>
+                                <p className="text-[#64748B]"><strong>Radius:</strong> {detail.masuk.radius != null ? `${detail.masuk.radius} m dari titik` : '—'}</p>
                                 <p className="text-[#64748B]"><strong>Unit Kerja:</strong> {detail.masuk.unit_kerja}</p>
                             </div>
                         </div>
@@ -363,9 +366,9 @@ function KartuHari({ h, detail }) {
                                 <p><strong>Jenis:</strong> {detail.pulang.jenis_absen}</p>
                                 <p><strong>Jam:</strong> <span className="font-mono">{detail.pulang.jam}</span></p>
                                 <p><strong>Timezone:</strong> {detail.pulang.timezone}</p>
-                                <p><strong>Koordinat:</strong> <span className="font-mono">{detail.pulang.koordinat}</span></p>
+                                <p><strong>Koordinat:</strong> <span className="font-mono">{detail.pulang.koordinat ?? '—'}</span></p>
                                 <p><strong>Lokasi:</strong> {detail.pulang.lokasi}</p>
-                                <p className="text-[#64748B]"><strong>Radius:</strong> {detail.pulang.radius} m dari titik</p>
+                                <p className="text-[#64748B]"><strong>Radius:</strong> {detail.pulang.radius != null ? `${detail.pulang.radius} m dari titik` : '—'}</p>
                                 <p className="text-[#64748B]"><strong>Unit Kerja:</strong> {detail.pulang.unit_kerja}</p>
                                 <p className="break-words"><strong>Catatan pekerjaan:</strong> {detail.pulang.catatan || '—'}</p>
                             </div>

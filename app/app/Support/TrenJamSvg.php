@@ -24,7 +24,9 @@ class TrenJamSvg
 
     private const PAD_R = 12;
 
-    private const PAD_T = 12;
+    // Atas diperlebar supaya judul grafik ("Tren jam masuk/pulang") tidak
+    // bertumpuk dengan label jam paling atas pada sumbu-Y.
+    private const PAD_T = 26;
 
     private const PAD_B = 28;
 
@@ -121,9 +123,29 @@ class TrenJamSvg
             }
         }
 
-        // Label sumbu-Y
+        // Label sumbu-Y. Label yang berimpit dengan garis acuan (jarak < 8 px,
+        // mis. jam pulang standar 16:00) dilewati supaya di PDF tidak tercetak
+        // dua label angka yang sama bertumpuk.
+        $labelAcuan = [];
+        if (! $isShift) {
+            $labelAcuan = $isMasuk
+                ? [(int) ($settings['jamMasukMin'] ?? 0), (int) ($settings['batasToleransiMin'] ?? 0)]
+                : [(int) ($settings['jamPulangMin'] ?? 0)];
+        }
+
         foreach (self::labelY($yMin, $yMax) as $min) {
-            $out[] = sprintf('<text x="%d" y="%.1f" font-size="10" fill="#64748B" text-anchor="end">%s</text>', self::PAD_L - 4, $yFor($min) + 3, self::label($min));
+            $yLabel = $yFor($min);
+            $berimpit = false;
+            foreach ($labelAcuan as $acuan) {
+                if ($acuan >= $yMin && $acuan <= $yMax && abs($yLabel - $yFor($acuan)) < 8) {
+                    $berimpit = true;
+                    break;
+                }
+            }
+            if ($berimpit) {
+                continue;
+            }
+            $out[] = sprintf('<text x="%d" y="%.1f" font-size="10" fill="#64748B" text-anchor="end">%s</text>', self::PAD_L - 4, $yLabel + 3, self::label($min));
         }
 
         // Label sumbu-X

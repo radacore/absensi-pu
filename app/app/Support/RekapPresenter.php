@@ -137,6 +137,10 @@ class RekapPresenter
         $tepatWaktu = 0;
         $toleransiCount = 0;
         $terlambat = 0;
+        // Baris hadir tanpa jam masuk (mis. hanya absen pulang yang tercatat).
+        // Dihitung terpisah supaya rincian zona selalu berjumlah sama dengan
+        // "Total kehadiran" — tanpa ini selisihnya terlihat seperti salah hitung.
+        $tanpaJamMasuk = 0;
 
         $harian = [];
         $keterlambatan = [];
@@ -219,9 +223,13 @@ class RekapPresenter
                 $catatan = 'Cuti '.$cutiDates[$dateKey]['jenis'];
                 $cutiCount++;
             } elseif ($isDinas) {
+                // Dinas TIDAK menambah "hadir". Kalau ditambahkan, hari itu
+                // terhitung dua kali (sekali sebagai dinas, sekali sebagai
+                // kehadiran) sehingga donat distribusi bisa berjumlah lebih
+                // banyak daripada jumlah hari kerja, dan baris "Total
+                // kehadiran" tidak sama dengan penjumlahan zona jam masuk.
                 $catatan = 'Dinas: '.$dinasDates[$dateKey]['tujuan'];
                 $dinasCount++;
-                $hadirCount++;
             } elseif ($att) {
                 $jamMasukStr = $att->clock_in_at ? Carbon::parse($att->clock_in_at)->format('H:i') : '—';
                 $jamPulangStr = $att->clock_out_at ? Carbon::parse($att->clock_out_at)->format('H:i') : '—';
@@ -263,6 +271,11 @@ class RekapPresenter
                         ];
                         $catatan = "Terlambat {$menitTerlambat} menit";
                     }
+                } else {
+                    // Hadir tapi jam masuknya tidak tercatat (mis. hanya absen
+                    // pulang). Tetap masuk hitungan kehadiran, tapi tidak bisa
+                    // ditempatkan di zona tepat/toleransi/terlambat.
+                    $tanpaJamMasuk++;
                 }
 
                 if ($isShift && $shiftKe !== null) {
@@ -417,6 +430,9 @@ class RekapPresenter
                 'tepat_waktu' => $tepatWaktu,
                 'toleransi_terlambat' => $toleransiCount,
                 'terlambat' => $terlambat,
+                // Hadir tanpa jam masuk (hanya absen pulang). Ditampilkan
+                // supaya zona + baris ini tepat berjumlah 'total'.
+                'tanpa_jam_masuk' => $tanpaJamMasuk,
                 'total' => $totalKehadiran,
             ],
             'dispensasi' => array_map(
@@ -450,13 +466,19 @@ class RekapPresenter
 
         $masuk = null;
         if ($att->clock_in_at) {
+            // Baris sintetis dari klaim toleransi tidak punya koordinat
+            // (lat/lng null). Menampilkan "0.000000, 0.000000" terbaca seperti
+            // absen dari Teluk Guinea, jadi ditandai sebagai isian manual.
+            $adaKoordinat = $att->lat_in !== null && $att->lng_in !== null;
             $masuk = [
-                'jenis_absen' => 'WFO',
+                'jenis_absen' => $adaKoordinat ? 'WFO' : 'Isian manual',
                 'jam' => Carbon::parse($att->clock_in_at)->format('H:i:s'),
                 'lokasi' => $siteName,
                 'timezone' => 'Asia/Makassar',
-                'koordinat' => sprintf('%.6f, %.6f', (float) $att->lat_in, (float) $att->lng_in),
-                'radius' => (int) ($att->distance_in_m ?? 0),
+                'koordinat' => $adaKoordinat
+                    ? sprintf('%.6f, %.6f', (float) $att->lat_in, (float) $att->lng_in)
+                    : null,
+                'radius' => $adaKoordinat ? (int) ($att->distance_in_m ?? 0) : null,
                 'nama_lokasi_aktif' => $siteName,
                 'koordinat_lokasi_aktif' => sprintf('%.6f, %.6f', $siteLat, $siteLng),
                 'unit_kerja' => $unitKerja,
@@ -466,13 +488,28 @@ class RekapPresenter
 
         $pulang = null;
         if ($att->clock_out_at) {
+            $adaKoordinat = $att->lat_out !== null && $att->lng_out !== null;
+            // Jarak pulang dihitung dari koordinat pulang ke titik kantor.
+            // Sebelumnya kolom ini memakai distance_in_m (jarak masuk), jadi
+            // kartu "Absen Pulang" bisa menampilkan angka yang salah.
+            $radiusPulang = null;
+            if ($adaKoordinat && $emp->site) {
+                $radiusPulang = AdminPresenter::haversineM(
+                    (float) $att->lat_out,
+                    (float) $att->lng_out,
+                    (float) $siteLat,
+                    (float) $siteLng
+                );
+            }
             $pulang = [
-                'jenis_absen' => 'WFO',
+                'jenis_absen' => $adaKoordinat ? 'WFO' : 'Isian manual',
                 'jam' => Carbon::parse($att->clock_out_at)->format('H:i:s'),
                 'lokasi' => $siteName,
                 'timezone' => 'Asia/Makassar',
-                'koordinat' => sprintf('%.6f, %.6f', (float) ($att->lat_out ?? 0), (float) ($att->lng_out ?? 0)),
-                'radius' => (int) ($att->distance_in_m ?? 0),
+                'koordinat' => $adaKoordinat
+                    ? sprintf('%.6f, %.6f', (float) $att->lat_out, (float) $att->lng_out)
+                    : null,
+                'radius' => $radiusPulang,
                 'nama_lokasi_aktif' => $siteName,
                 'koordinat_lokasi_aktif' => sprintf('%.6f, %.6f', $siteLat, $siteLng),
                 'unit_kerja' => $unitKerja,

@@ -45,6 +45,10 @@
         .kv .v { text-align: right; font-family: DejaVu Sans Mono, monospace; }
         table.data th { background: #F8FAFC; border: 1px solid #E2E8F0; padding: 4px 5px; text-align: left; font-size: 8px; color: #475569; }
         table.data td { border: 1px solid #E2E8F0; padding: 3.5px 5px; }
+        /* Tabel rekap harian punya 31 baris; padding dirapatkan supaya
+           sebulan penuh muat dalam satu halaman (tidak menyisakan satu baris
+           yatim di halaman berikutnya). */
+        table.data-harian td { padding: 2.2px 5px; }
         table.data tbody tr:nth-child(even) td { background: #FCFDFE; }
         .row-off td { background: #F8FAFC !important; color: #94A3B8; }
         .row-cut td { background: #FEF3C7 !important; }
@@ -188,6 +192,9 @@
                             <tr><td>Toleransi ({{ $s['jamMasuk'] }}–{{ $s['batasToleransi'] }})</td><td class="v">{{ $m['toleransi_terlambat'] }}</td></tr>
                             <tr><td>Terlambat (&gt; {{ $s['batasToleransi'] }})</td><td class="v">{{ $m['terlambat'] }}</td></tr>
                         @endif
+                        @if (($m['tanpa_jam_masuk'] ?? 0) > 0)
+                            <tr><td>Hadir tanpa jam masuk</td><td class="v">{{ $m['tanpa_jam_masuk'] }}</td></tr>
+                        @endif
                         <tr class="bold"><td>Total kehadiran</td><td class="v">{{ $m['total'] }}</td></tr>
                     </table>
                 </div>
@@ -292,7 +299,7 @@
             &ldquo;Belum dijadwalkan&rdquo; berarti Admin Wilayah belum menyusun jadwal untuk hari itu.
         </p>
     @endif
-    <table class="data">
+    <table class="data data-harian">
         <thead>
             <tr>
                 <th style="width: 78px;">Tanggal</th>
@@ -434,8 +441,8 @@
                                                             <tr><td class="dk">Jam</td><td class="mono">{{ $b['jam'] }}</td></tr>
                                                             <tr><td class="dk">Lokasi</td><td>{{ $b['lokasi'] ?: '—' }}</td></tr>
                                                             <tr><td class="dk">Timezone</td><td>{{ $b['timezone'] }}</td></tr>
-                                                            <tr><td class="dk">Koordinat</td><td class="mono">{{ $b['koordinat'] }}</td></tr>
-                                                            <tr><td class="dk">Radius</td><td>{{ $b['radius'] }} m dari titik kantor</td></tr>
+                                                            <tr><td class="dk">Koordinat</td><td class="mono">{{ $b['koordinat'] ?: '—' }}</td></tr>
+                                                            <tr><td class="dk">Radius</td><td>{{ $b['radius'] !== null ? $b['radius'].' m dari titik kantor' : '—' }}</td></tr>
                                                             <tr><td class="dk">Unit Kerja</td><td>{{ $b['unit_kerja'] ?: '—' }}</td></tr>
                                                             @if ($arah === 'pulang')
                                                                 <tr><td class="dk">Catatan</td><td>{{ $b['catatan'] ?: '—' }}</td></tr>

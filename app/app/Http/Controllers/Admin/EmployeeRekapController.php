@@ -116,6 +116,9 @@ class EmployeeRekapController extends Controller
             $tulis(['Tepat waktu', $m['tepat_waktu']]);
             $tulis(['Toleransi terlambat', $m['toleransi_terlambat']]);
             $tulis(['Terlambat', $m['terlambat']]);
+            if (($m['tanpa_jam_masuk'] ?? 0) > 0) {
+                $tulis(['Hadir tanpa jam masuk', $m['tanpa_jam_masuk']]);
+            }
             $tulis(['Total hadir', $m['total']]);
             $tulis([]);
 
