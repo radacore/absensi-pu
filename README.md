@@ -536,8 +536,11 @@ cat ~/.ssh/github_deploy          # tempel isinya ke secret VPS_SSH_KEY
 | `VPS_USER` | ✅ | `deploy` |
 | `VPS_SSH_KEY` | ✅ | isi **privat** key `github_deploy` |
 | `VPS_PORT` | — | default `22` |
+| `VPS_REPO_DIR` | — | lokasi repo di server; default `/var/www/absensi` |
 | `VPS_KNOWN_HOSTS` | disarankan | isi `~/.ssh/known_hosts` hasil `ssh-keyscan` |
-| `VPS_APP_URL` | disarankan | mis. `https://absensi.example.go.id` — dipakai uji cepat |
+| `VPS_APP_URL` | disarankan | mis. `https://siappomjen.id/karyawan/login` — dipakai uji cepat |
+
+> **`VPS_REPO_DIR`** diisi **folder akar repo** (yang berisi `README.md` dan `app/`), bukan folder `app/`. Contoh: bila aplikasi ada di `/root/absensi-pu`, isi `/root/absensi-pu`.
 
 Untuk mengisi `VPS_KNOWN_HOSTS`: `ssh-keyscan -H <host>` di VPS, salin keluarannya. Bila dikosongkan, alur akan melakukan `ssh-keyscan` sendiri (kurang aman, tapi tetap berjalan).
 
@@ -558,6 +561,26 @@ Tab **Actions → Deploy → Run workflow**. Berguna bila ingin menyegarkan aset
 
 - Ubah `if:` pada job `deploy` menjadi `false`, atau hapus/rename `.github/workflows/deploy.yml`.
 - Untuk sekali jalan (mis. sedang memperbaiki server langsung): jangan push ke `main`, gunakan branch lain untuk menyimpan pekerjaan.
+
+### Bila kunci deploy bocor
+
+Kunci privat `github_deploy` memberi akses masuk ke server. Bila isinya pernah tersalin ke tempat yang tidak aman (chat, tiket, log, tangkapan layar), **anggap kunci itu sudah tidak sah** dan ganti:
+
+```bash
+# di VPS, sebagai user deploy
+ssh-keygen -t ed25519 -C "github-deploy-$(date +%Y%m%d)" -f ~/.ssh/github_deploy -N ""
+
+# keluarkan kunci lama dari authorized_keys, lalu tambahkan yang baru
+sed -i "\#$(cut -d' ' -f2 ~/.ssh/github_deploy.old.pub 2>/dev/null || true)#d" ~/.ssh/authorized_keys || true
+cat ~/.ssh/github_deploy.pub >> ~/.ssh/authorized_keys
+
+# tunjukkan kunci BARU untuk diperbarui sebagai secret VPS_SSH_KEY
+cat ~/.ssh/github_deploy
+```
+
+Setelah secret diperbarui, hapus kunci lama dari `~/.ssh/authorized_keys`. Kunci yang sudah bocor sebaiknya **dicabut**, bukan hanya ditimpa.
+
+> **Jangan** menempelkan kunci privat ke dalam percakapan, tiket, atau dokumen. Kunci privat tidak pernah perlu ditampilkan untuk disalin — cara yang aman adalah menyalinnya langsung dari berkas di server ke kolom secret, atau memakai `gh secret set VPS_SSH_KEY < ~/.ssh/github_deploy` dari dalam server.
 
 > **Catatan keamanan:** runner **self-hosted** sengaja **tidak** dipakai di repo ini. Repositori ini publik, dan runner self-hosted pada repo publik dapat dijalankan oleh pull request dari pihak luar.
 

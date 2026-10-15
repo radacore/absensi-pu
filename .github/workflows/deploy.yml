@@ -78,6 +78,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
           VPS_APP_URL: ${{ secrets.VPS_APP_URL }}
+          VPS_REPO_DIR: ${{ secrets.VPS_REPO_DIR }}
         run: |
           set -euo pipefail
 
@@ -90,10 +91,10 @@ jobs:
               -o ConnectTimeout=20 \
               -p "${VPS_PORT:-22}" \
               "${VPS_USER}@${VPS_HOST}" \
-              "APP_URL_CHECK='${VPS_APP_URL}' bash -s" <<'DEPLOY_SCRIPT'
+              "APP_URL_CHECK='${VPS_APP_URL}' VPS_REPO_DIR='${VPS_REPO_DIR}' bash -s" <<'DEPLOY_SCRIPT'
           set -euo pipefail
 
-          REPO_DIR=/var/www/absensi
+          REPO_DIR="${VPS_REPO_DIR:-/var/www/absensi}"
           APP_DIR="$REPO_DIR/app"
           BRANCH=main
 
