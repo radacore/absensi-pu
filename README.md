@@ -486,7 +486,7 @@ Aplikasi **sudah berjalan penuh di MySQL/MariaDB**. Ini bukan lagi target — st
 | Storage engine | `php artisan db:table employees` | **InnoDB**, kolasi `utf8mb4_unicode_ci` |
 | Skema dari nol | `php artisan migrate:fresh --seed` | 35 berkas migrasi + 8 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
 | Data ikut masuk | query `JOIN` | `employees` × `regions` mengembalikan relasi yang benar |
-| Tes (SQLite in-memory, 15 Okt 2026) | `php artisan test` | **327 tes: 322 lulus, 5 di-skip, 1991 assertions** — jalankan ulang di `absensi_pu_test` untuk angka MySQL |
+| Tes (SQLite in-memory, 15 Okt 2026) | `php artisan test` | **327 tes: 322 lulus, 0 gagal, 5 di-skip, 1991 assertions** — di MySQL `absensi_pu_test`: **324 lulus, 0 gagal, 3 di-skip** |
 | Smoke test HTTP | `php artisan serve` + `curl` | `/`, `/karyawan/login`, `/admin/login`, `/super-admin/login` → **200** |
 
 Konfigurasi `.env` yang aktif:
@@ -635,7 +635,11 @@ Berkas uji yang relevan:
 | `tests/Feature/ShiftKerjaTest.php` | Shift kerja: penanda `is_shift`, durasi 24 ÷ jumlah shift, jadwal mingguan, absen mengikuti shift, lintas tengah malam, hari libur nasional, cakupan pola, kuota cuti pekerja shift |
 | `tests/Feature/RekapPdfTest.php` | Ekspor PDF rekap: otorisasi per peran & per wilayah, rekap shift-aware (shift, hari libur jadwal, belum dijadwalkan), isi PDF, grafik tren versi PHP, jejak audit |
 
-**CI:** `.github/workflows/ci.yml` menjalankan `php artisan test` pada PHP 8.3 & 8.4 (SQLite in-memory) sekaligus `npm run build` untuk menangkap JSX yang rusak — `vite build` adalah satu-satunya pemeriksa JS di proyek ini karena tidak ada ESLint.
+**CI:** `.github/workflows/ci.yml` menjalankan `php artisan test` pada **PHP 8.4** (SQLite in-memory) di job `test`, dan `npm run build` di job `build-assets` terpisah untuk menangkap JSX yang rusak — `vite build` adalah satu-satunya pemeriksa JS di proyek ini karena tidak ada ESLint.
+
+> PHP 8.3 **tidak lagi diuji di CI**: `composer.lock` mengunci Symfony 8.x yang mensyaratkan `php >= 8.4.1`, sehingga `composer install` di 8.3 selalu gagal. Batas minimum di `composer.json` (`^8.3`) sengaja dibiarkan agar lock tetap bisa dipasang di 8.3 bila Symfony diturunkan.
+>
+> Job `test` **tidak** membangun aset, sedangkan `public/build/` diabaikan git. Karena itu `tests/TestCase.php` memanggil `withoutVite()` — tanpa ini setiap render halaman Inertia gagal 500 (`ViteManifestNotFoundException`) dan memunculkan puluhan kegagalan palsu. Tes tidak memeriksa manifest maupun tag `@vite`, jadi cakupan pemeriksaan tidak berkurang.
 
 **Simulasi HTTP sungguhan** — `app/scripts/simulasi-http.sh` (65 skenario) menembak `php artisan serve` lewat HTTP, jadi middleware, CSRF, sesi, Inertia, MySQL, dan **bucket S3 sungguhan** semuanya ikut teruji. Cara menjalankan ada di komentar kepala skrip. Lihat [`docs/laporan-simulasi.md`](docs/laporan-simulasi.md).
 
@@ -694,6 +698,10 @@ Berkas uji yang relevan:
 > ```
 >
 > Hasil terakhir (15 Okt 2026, SQLite in-memory): **327 tes — 322 lulus / 0 gagal / 5 di-skip (1991 assertions)** pada suite lengkap, **76 lulus / 2 di-skip** pada `FullSimulationTest`, **49 lulus** pada `ShiftKerjaTest`, **4 lulus (147 assertions)** pada `SimulasiSatuBulanTest`, dan **68/68** pada simulasi HTTP.
+>
+> Di MySQL (`absensi_pu_test`) hasilnya **324 lulus / 0 gagal / 3 di-skip** — selisih 2 tes adalah tes yang di-skip di SQLite (prasyarat MySQL & duplikat tanggal libur), bukan kegagalan.
+>
+> **CI hijau** (15 Okt 2026): job `test` PHP 8.4 → **322 lulus, 5 di-skip (1992 assertions)**; job `build-assets` → `npm run build` sukses.
 
 Sudah aman dan terverifikasi: nama berkas dibuat server (anti path traversal), tidak ada header yang bisa disuntik (anti CRLF), berkas PHP yang disamarkan `.pdf` ditolak (pemeriksaan isi, bukan ekstensi), objek privat tidak bisa diakses anonim (`403`), dan `X-Content-Type-Options: nosniff`.
 
