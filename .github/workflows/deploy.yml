@@ -139,7 +139,25 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::7/9 Hak akses"
-          chown -R www-data:www-data storage bootstrap/cache
+          # Dipakai bersama user deploy (pemilik) dan www-data (grup). Jangan
+          # pakai chown: itu butuh root, dan user deploy sengaja tidak diberi
+          # hak itu. Cukup bit tulis grup + setgid agar berkas baru hasil
+          # deploy mewarisi grup www-data. chmod di sini berjalan sebagai
+          # pemilik, jadi tidak perlu sudo.
+          for d in storage bootstrap/cache; do
+            [ -d "$d" ] || continue
+            find "$d" -type d -exec chmod g+ws {} + 2>/dev/null || true
+            find "$d" -type f -exec chmod g+w {} + 2>/dev/null || true
+          done
+
+          # Peringatan (bukan kegagalan) bila grup direktori aplikasi bukan
+          # www-data — biasanya berarti pemiliknya belum disetel saat pasang.
+          grup=$(stat -c '%G' . 2>/dev/null || echo tidak-diketahui)
+          if [ "$grup" != "www-data" ]; then
+            echo "PERINGATAN: grup direktori aplikasi adalah '$grup', bukan 'www-data'."
+            echo "www-data mungkin tidak bisa menulis. Perbaiki di server:"
+            echo "  sudo chgrp -R www-data '$REPO_DIR'"
+          fi
           echo "::endgroup::"
 
           echo "::group::8/9 Muat ulang PHP-FPM & queue worker"

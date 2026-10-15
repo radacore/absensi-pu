@@ -306,10 +306,16 @@ npm run build      # menghasilkan app/public/build/ + service worker PWA
 
 ### 10. Hak akses
 
+Direktori aplikasi dimiliki user **deploy** dengan **grup www-data**, lalu bit tulis grup dinyalakan. Cara ini membuat **deploy dan PHP-FPM sama-sama bisa menulis** tanpa perlu root:
+
 ```bash
-chown -R www-data:www-data /var/www/absensi/app/storage /var/www/absensi/app/bootstrap/cache
-chmod -R 775 /var/www/absensi/app/storage /var/www/absensi/app/bootstrap/cache
+chown -R deploy:www-data /var/www/absensi
+chmod -R g+ws /var/www/absensi/app/storage /var/www/absensi/app/bootstrap/cache
 ```
+
+> **Mengapa bukan `chown www-data`?** Bila `storage/` dimiliki `www-data`, langkah deploy berikutnya (`git reset`, `artisan config:cache`) gagal karena user `deploy` tidak bisa menulis di sana — dan memakai `sudo` untuk itu berarti memberi `deploy` hak root penuh. Pola `deploy:www-data` + `g+w` lebih aman.
+>
+> Bit **setgid** (`g+s`, bagian dari `g+ws`) membuat berkas baru yang dibuat di dalam direktori itu otomatis mewarisi grup `www-data`, sehingga berkas hasil deploy tetap bisa dibaca PHP-FPM.
 
 ### 11. Cache produksi
 
@@ -492,7 +498,7 @@ git push origin main
                      4. npm ci && npm run build      ← wajib, lihat catatan
                      5. php artisan migrate --force
                      6. config:cache / route:cache / view:cache
-                     7. chown storage & bootstrap/cache
+                     7. hak akses storage & bootstrap/cache (g+w + setgid)
                      8. reload php8.4-fpm + queue:restart
                      9. artisan up + uji cepat HTTP
 ```
@@ -503,7 +509,7 @@ git push origin main
 
 ```bash
 adduser --disabled-password --gecos "" deploy
-usermod -aG www-data deploy
+usermod -aG www-data deploy      # wajib: dipakai untuk hak tulis bersama
 ```
 
 Beri hak sudo **hanya** untuk memuat ulang PHP-FPM — lewat `visudo -f /etc/sudoers.d/deploy`:
@@ -512,12 +518,16 @@ Beri hak sudo **hanya** untuk memuat ulang PHP-FPM — lewat `visudo -f /etc/sud
 deploy ALL=(ALL) NOPASSWD: /bin/systemctl reload php8.4-fpm
 ```
 
+> Baris sudo **hanya satu** itu cukup. Worker antrean diberi tahu lewat `php artisan queue:restart` (memakai berkas penanda di `storage/`), jadi tidak perlu hak `systemctl restart`. Bila kamu lebih suka `sudo systemctl restart absensi-worker`, tambahkan satu baris serupa — tapi itu menambah permukaan hak root tanpa manfaat nyata.
+
 Beri akses tulis ke direktori aplikasi:
 
 ```bash
 chown -R deploy:www-data /var/www/absensi
-chmod -R 775 /var/www/absensi/app/storage /var/www/absensi/app/bootstrap/cache
+chmod -R g+ws /var/www/absensi/app/storage /var/www/absensi/app/bootstrap/cache
 ```
+
+> `usermod -aG www-data deploy` **wajib**. Tanpa itu `deploy` bukan anggota grup pemilik direktori, sehingga langkah 7 deploy tidak bisa memberi bit tulis grup dan PHP-FPM kehilangan akses tulis ke `storage/`. Pastikan dengan `id -nG deploy` — keluarannya harus memuat `www-data`.
 
 **2. Kunci SSH khusus deploy** (jangan pakai kunci pribadimu):
 
