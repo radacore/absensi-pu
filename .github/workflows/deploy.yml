@@ -33,6 +33,24 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
 
     steps:
+      - name: Periksa secret wajib
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          hilang=""
+          for n in VPS_HOST VPS_USER VPS_SSH_KEY; do
+            if [ -z "${!n:-}" ]; then hilang="$hilang $n"; fi
+          done
+          if [ -n "$hilang" ]; then
+            echo "::error::Secret belum diisi:$hilang"
+            echo "Tambahkan di Settings → Secrets and variables → Actions."
+            echo "Panduan penyiapannya ada di README, bagian 'Deploy Otomatis'."
+            exit 1
+          fi
+          echo "Secret wajib tersedia."
+
       - name: Siapkan kunci SSH
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
