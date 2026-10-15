@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Lembar Keputusan — Penyempurnaan Sistem Absensi</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 14mm 15mm; }
+
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  html { font-size: 10.5pt; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+    color: #1E293B;
+    line-height: 1.55;
+    font-size: 10.5pt;
+  }
+
+  /* ── Kop / Judul ───────────────────────────────────────── */
+  .kop {
+    border-top: 4px solid #0F172A;
+    padding-top: 14px;
+    margin-bottom: 18px;
+  }
+  .kop .eyebrow {
+    font-size: 8pt;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #64748B;
+    font-weight: 700;
+  }
+  .kop h1 {
+    font-size: 19pt;
+    line-height: 1.2;
+    margin: 6px 0 4px;
+    letter-spacing: -0.015em;
+    color: #0F172A;
+  }
+  .kop .sub {
+    font-size: 11pt;
+    color: #475569;
+    margin: 0;
+  }
+
+  /* ── Tabel meta ────────────────────────────────────────── */
+  table.meta {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 22px;
+    font-size: 9.5pt;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+  }
+  table.meta td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #E2E8F0;
+    vertical-align: top;
+  }
+  table.meta tr:last-child td { border-bottom: 0; }
+  table.meta td.k {
+    width: 132px;
+    color: #64748B;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ── Blok peringatan / sorotan ─────────────────────────── */
+  .sorot {
+    border: 1px solid #CBD5E1;
+    border-left: 4px solid #0D9488;
+    background: #F0FDFA;
+    padding: 12px 16px;
+    margin: 0 0 22px;
+  }
+  .sorot .judul {
+    font-weight: 700;
+    font-size: 9.5pt;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #0F766E;
+    margin-bottom: 6px;
+  }
+  .sorot ol { margin: 0; padding-left: 20px; }
+  .sorot li { margin-bottom: 3px; }
+
+  /* ── Bagian ────────────────────────────────────────────── */
+  h2.bagian {
+    font-size: 12.5pt;
+    color: #0F172A;
+    margin: 26px 0 4px;
+    padding-left: 11px;
+    border-left: 4px solid #0F172A;
+    line-height: 1.3;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  h2.bagian .no {
+    color: #64748B;
+    font-weight: 700;
+    margin-right: 4px;
+  }
+  p.pengantar-bagian {
+    margin: 0 0 12px;
+    padding-left: 15px;
+    color: #475569;
+    font-size: 9.8pt;
+    font-style: italic;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* ── Butir keputusan ───────────────────────────────────── */
+  .butir {
+    margin: 0 0 13px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .butir .tanya {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .butir .kode {
+    flex: 0 0 auto;
+    font-weight: 700;
+    color: #0F172A;
+    font-variant-numeric: tabular-nums;
+    min-width: 26px;
+  }
+  .butir .teks { flex: 1 1 auto; }
+  .butir .opsi {
+    margin: 3px 0 0 34px;
+    color: #475569;
+    font-size: 9.5pt;
+  }
+  .butir .kenapa {
+    margin: 3px 0 0 34px;
+    color: #64748B;
+    font-size: 9pt;
+  }
+  .butir .kenapa::before { content: "Konteks: "; font-weight: 600; color: #94A3B8; }
+
+  /* Rekomendasi kami — kotak yang ditandai */
+  .rekom {
+    margin: 6px 0 0 34px;
+    padding: 7px 11px;
+    background: #F0FDFA;
+    border: 1px solid #99F6E4;
+    border-left: 3px solid #0D9488;
+    font-size: 9.6pt;
+    color: #0F766E;
+  }
+  .rekom b { color: #115E59; }
+  .rekom::before {
+    content: "Rekomendasi kami";
+    display: block;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #14B8A6;
+    margin-bottom: 2px;
+  }
+
+  /* Baris setuju / koreksi */
+  .cek {
+    margin: 5px 0 0 34px;
+    font-size: 9.3pt;
+    color: #475569;
+    display: flex;
+    gap: 18px;
+    align-items: baseline;
+  }
+  .cek .kotak {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 1.4px solid #475569;
+    vertical-align: -1px;
+    margin-right: 5px;
+  }
+  .cek .koreksi { flex: 1 1 auto; border-bottom: 1px dotted #94A3B8; }
+
+  /* ── Tabel keputusan ringkas ───────────────────────────── */
+  table.putus {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    margin: 8px 0 6px;
+  }
+  table.putus th {
+    text-align: left;
+    background: #0F172A;
+    color: #fff;
+    padding: 6px 10px;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+  }
+  table.putus td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #E2E8F0;
+    vertical-align: top;
+  }
+  table.putus tr:nth-child(even) td { background: #F8FAFC; }
+  table.putus td.kode { font-weight: 700; color: #0F172A; white-space: nowrap; width: 44px; }
+  table.putus td.arah { color: #0F766E; font-weight: 600; }
+
+  /* ── Isian angka ───────────────────────────────────────── */
+  .isian {
+    margin: 8px 0 0 34px;
+    font-size: 9.5pt;
+  }
+  .isian table { border-collapse: collapse; }
+  .isian td { padding: 4px 10px 4px 0; vertical-align: bottom; }
+  .isian .garis {
+    border-bottom: 1px dotted #94A3B8;
+    min-width: 150px;
+    height: 16px;
+    display: inline-block;
+  }
+
+  /* ── Penutup ───────────────────────────────────────────── */
+  .penutup {
+    margin-top: 26px;
+    border-top: 1px solid #E2E8F0;
+    padding-top: 14px;
+    font-size: 9.8pt;
+    color: #334155;
+  }
+  .ttd { margin-top: 26px; font-size: 9.5pt; }
+  .ttd .kolom { display: inline-block; width: 46%; vertical-align: top; }
+  .ttd .garis { margin-top: 52px; border-top: 1px solid #94A3B8; padding-top: 4px; color: #475569; }
+
+  .catatan-kaki {
+    margin-top: 22px;
+    padding-top: 10px;
+    border-top: 1px dashed #CBD5E1;
+    font-size: 8.5pt;
+    color: #94A3B8;
+  }
+  .pindah-halaman { break-before: page; page-break-before: always; }
+</style>
+</head>
+<body>
+
+<div class="kop">
+  <div class="eyebrow">Lembar Keputusan Pengguna</div>
+  <h1>Penyempurnaan Sistem Absensi — Mohon Disetujui atau Dikoreksi</h1>
+  <p class="sub">Untuk mempercepat pekerjaan, kami tidak lagi menunggu semua pertanyaan dijawab. Setiap hal yang belum diputuskan sudah kami beri <strong>usulan</strong>. Bila Bapak/Ibu tidak menuliskan koreksi, kami jalankan usulan tersebut.</p>
+</div>
+
+<table class="meta">
+  <tr><td class="k">Kepada</td><td>Penanggung Jawab / Pengguna Sistem Absensi<br><span style="color:#94A3B8">(nama: ……………………………………………………)</span></td></tr>
+  <tr><td class="k">Dari</td><td>Rahmat Dani S<br><span style="color:#94A3B8">Tim Pengembang Aplikasi Absensi</span></td></tr>
+  <tr><td class="k">Perihal</td><td>Keputusan atas hal-hal yang masih menggantung: hari kerja yang berbeda per orang, perhitungan jatah cuti, catatan pekerjaan saat absen pulang, dan laporan yang menampilkan shift</td></tr>
+  <tr><td class="k">Tanggal</td><td>……………… ……………………… 2026</td></tr>
+</table>
+
+<div class="sorot">
+  <div class="judul">Cara memakai lembar ini</div>
+  <ol>
+    <li>Bagian <strong>1</strong> hanya kabar — hal-hal yang tadinya kami tanyakan <strong>sudah kami putuskan sendiri sebagai pilihan di aplikasi</strong>, sehingga tidak perlu lagi menunggu jawaban. Bila Bapak/Ibu kurang setuju, cukup ditulis di Bagian 4.</li>
+    <li>Bagian <strong>2</strong> perlu ditandai: <strong>setujui</strong> usulan kami, atau tuliskan koreksinya pada garis yang tersedia.</li>
+    <li>Bagian <strong>3</strong> hanya satu angka yang kami butuhkan.</li>
+  </ol>
+</div>
+
+<h2 class="bagian"><span class="no">1.</span> Yang Sudah Kami Putuskan Sendiri — Tidak Perlu Dijawab</h2>
+<p class="pengantar-bagian">Tiga pertanyaan berikut tadinya kami tanyakan, tetapi tidak perlu lagi menahan pekerjaan. Ketiganya kami jadikan <strong>pilihan di halaman Pengaturan</strong>, sehingga bila Bapak/Ibu ingin mengubahnya, cukup diubah dari aplikasi — tanpa perlu kami ubah programnya.</p>
+
+<table class="putus">
+  <thead>
+    <tr><th style="width:44px">Kode</th><th>Hal yang tadinya ditanyakan</th><th>Keputusan yang kami ambil</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="kode">K5</td>
+      <td>Pola shift ditetapkan di mana: untuk seluruh kantor, per wilayah, atau per lokasi kerja?</td>
+      <td class="arah">Ketiganya disediakan sebagai pilihan. Bawaannya: yang paling khusus yang berlaku (aturan lokasi menang atas wilayah, wilayah menang atas seluruh kantor). Bila satu lokasi perlu pola berbeda dari kantor pusat, hal itu sudah bisa.</td>
+    </tr>
+    <tr>
+      <td class="kode">P1</td>
+      <td>Apakah jumlah pegawai jaga di setiap lokasi cukup untuk menutup 24 jam?</td>
+      <td class="arah">Sistem kini <strong>menghitung sendiri</strong> dan menampilkan peringatan pada halaman penjadwalan bila ada jam yang belum terisi di suatu lokasi. Sifatnya hanya petunjuk — tidak pernah menahan penyimpanan jadwal. Jadi jawaban atas pertanyaan ini tidak lagi diperlukan; sistem yang menunjukkan.</td>
+    </tr>
+    <tr>
+      <td class="kode">P3</td>
+      <td>Bagaimana jatah cuti tahunan dihitung untuk karyawan shift?</td>
+      <td class="arah">Tersedia isian jatah tersendiri untuk karyawan shift. Bawaannya <strong>mengikuti kuota umum</strong> seperti sekarang, sehingga tidak ada perubahan bagi yang tidak diatur. Untuk karyawan shift, cuti dihitung dari <strong>jadwal shifnya sendiri</strong> — hari yang tidak dijadwalkan bertugas tidak mengurangi jatah.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 class="bagian"><span class="no">2.</span> Mohon Disetujui atau Dikoreksi</h2>
+<p class="pengantar-bagian">Semua hal di bawah sudah <strong>berjalan</strong> dengan usulan kami sebagai bawaannya. Bila sudah sesuai, cukup tandai “Setuju”. Bila belum, tuliskan koreksinya pada garis yang tersedia.</p>
+
+<h3 style="font-size:11pt;color:#0F172A;margin:20px 0 6px;">2.1 Hari kerja yang berbeda per orang</h3>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">B3</span><span class="teks">Apakah Senin–Jumat tetap aturan umum, dengan pengecualian untuk orang atau regu tertentu?</span></div>
+  <div class="opsi">Saat ini hari kerja seragam untuk semua orang (Senin–Jumat) dan hanya bisa diubah secara menyeluruh. Karyawan shift sudah memiliki jalur sendiri, karena hari kerjanya mengikuti jadwal shift, bukan Senin–Jumat.</div>
+  <div class="kenapa">pilihan ini menentukan apakah kami perlu menambah pengaturan hari kerja khusus untuk orang tertentu.</div>
+  <div class="rekom">Tetap <b>Senin–Jumat sebagai aturan umum</b>, ditambah kemungkinan <b>pengecualian per orang atau per regu</b>. Di lapangan hampir selalu ada petugas yang hari liburnya bergeser, sehingga menyediakan pengecualian lebih aman daripada memaksa seragam.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">B6</span><span class="teks">Apakah hari libur yang bergeser tetap dihitung sebagai hari kerja untuk keperluan jatah cuti tahunan?</span></div>
+  <div class="opsi">Jatah cuti tahunan dihitung dari jumlah <strong>hari kerja efektif</strong>. Hari yang bukan hari kerja tidak ikut dihitung.</div>
+  <div class="rekom">Hari libur yang bergeser <b>tidak dihitung</b> sebagai hari kerja. Yang dihitung hanya hari kerja efektif — konsisten dengan cara karyawan shift dihitung, yaitu dari jadwal shifnya sendiri. Dengan begitu tidak ada program tambahan yang diperlukan.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<h3 style="font-size:11pt;color:#0F172A;margin:20px 0 6px;">2.2 Catatan pekerjaan saat absen pulang</h3>
+<p style="margin:0 0 10px;padding-left:15px;font-size:9.5pt;color:#475569">Fitur ini sudah kami tambahkan dan sudah berjalan: setiap karyawan <strong>wajib mengisi catatan pekerjaan</strong> saat absen pulang, isinya bebas, minimal 1 dan maksimal 500 karakter, serta tidak dapat diubah lagi setelah tersimpan.</p>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D1</span><span class="teks">Apakah catatan pekerjaan saat absen pulang sudah sesuai?</span></div>
+  <div class="rekom">Ya, <b>sudah sesuai</b>. Cukup diisi dengan cara yang berlaku sekarang.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D2</span><span class="teks">Satu kolom catatan bebas, atau dipisah menjadi beberapa bagian?</span></div>
+  <div class="rekom"><b>Satu kolom bebas</b> seperti sekarang. Memisah menjadi beberapa bagian menambah pekerjaan di sisi karyawan setiap hari tanpa menambah manfaat yang sepadan.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D3</span><span class="teks">Jenis pekerjaan dipilih dari daftar menu, atau diketik bebas?</span></div>
+  <div class="rekom"><b>Diketik bebas</b> seperti sekarang. Memilih dari daftar menu baru bermanfaat bila Bapak/Ibu benar-benar akan <b>merekap jumlah tiap jenis pekerjaan</b>. Bila hanya untuk arsip, daftar menu justru merepotkan karena setiap jenis baru harus didaftarkan lebih dulu.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D4</span><span class="teks">Perlu lampiran pendukung, misalnya foto atau dokumen hasil pekerjaan?</span></div>
+  <div class="rekom"><b>Belum perlu</b>. Absen pulang sudah disertai swafoto. Lampiran tambahan sebaiknya dibuka hanya bila memang ada pekerjaan yang wajib dibuktikan dengan berkas.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D5</span><span class="teks">Catatan yang sudah tersimpan boleh diperbaiki?</span></div>
+  <div class="rekom">Tidak boleh diubah oleh karyawan, tetapi <b>hanya admin yang boleh mengoreksi</b> bila ternyata ada salah tulis. Dengan begitu catatan tetap dapat dipercaya sebagai catatan asli, namun kekeliruan masih bisa dibereskan.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D6</span><span class="teks">Panjang catatan 500 karakter sudah cukup?</span></div>
+  <div class="kenapa">500 karakter setara kurang lebih dua sampai tiga kalimat. Bila dirasa kurang, kami dapat memperpanjangnya.</div>
+  <div class="rekom"><b>Cukup</b> 500 karakter seperti sekarang.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D7</span><span class="teks">Atasan perlu bisa memberi komentar atau tindak lanjut atas catatan tersebut?</span></div>
+  <div class="rekom"><b>Belum perlu</b>. Bila nanti memang ada kebiasaan atasan menanggapi catatan harian, fitur ini dapat ditambahkan kemudian.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">D8</span><span class="teks">Catatan pekerjaan perlu tampil di laporan bulanan juga?</span></div>
+  <div class="opsi">Saat ini catatan sudah tampil di <strong>detail absensi admin</strong>, pada <strong>berkas ekspor daftar absensi</strong>, dan pada <strong>rekap perorangan</strong>. Yang belum: kolom catatan pada <strong>berkas rekap bulanan</strong>. Jadi bila Bapak/Ibu bermaksud agar semua berkas seragam, kami perlu menambahkannya di sana.</div>
+  <div class="rekom"><b>Ya, diseragamkan</b> — tampil juga pada rekap bulanan, agar setiap berkas resmi memuat keterangan yang sama dan tidak ada perbedaan antar-berkas. Pekerjaannya kecil.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<h3 style="font-size:11pt;color:#0F172A;margin:20px 0 6px;">2.3 Laporan dan keterangan shift</h3>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">F2</span><span class="teks">Laporan atau berkas mana yang wajib menampilkan informasi shift dan status WFA/WFO?</span></div>
+  <div class="opsi">Untuk <strong>shift</strong>: sudah tampil sebagai satu kolom pada rekap perorangan — di layar, pada berkas PDF, maupun pada berkas ekspor. Yang belum: kolom shift pada daftar absensi bulanan. Untuk <strong>WFA/WFO</strong>: hal ini belum dapat dijawab karena pilihan bekerja dari luar kantor <strong>belum ada di sistem</strong>. Perjalanan dinas yang sudah ada adalah pengajuan tersendiri, bukan pilihan cara absen.</div>
+  <div class="rekom"><b>Rekap perorangan</b> (layar, PDF, dan berkas ekspor) ditambah <b>kolom shift pada daftar absensi bulanan</b>. Bagian WFA/WFO kami coret sampai fiturnya benar-benar dibangun.</div>
+  <div class="cek"><span><span class="kotak"></span>Setuju</span><span class="koreksi">Koreksi: </span></div>
+</div>
+
+<h2 class="bagian"><span class="no">3.</span> Satu Angka yang Kami Butuhkan</h2>
+<p class="pengantar-bagian">Ini pertanyaan kepegawaian, bukan teknis — dan justru paling menentukan bentuk halaman penjadwalan shift.</p>
+
+<div class="butir">
+  <div class="tanya"><span class="kode">F4</span><span class="teks">Perkiraan jumlah karyawan dan regu yang memakai shift?</span></div>
+  <div class="kenapa">Jadwal shift disusun <strong>secara manual per minggu</strong> oleh Admin Wilayah, karena Bapak/Ibu menolak rotasi otomatis. Bila jumlah karyawan shift banyak, halaman penjadwalan perlu kami lengkapi dengan penyaring per regu dan tombol “salin jadwal minggu lalu” supaya admin tidak menyusun dari nol setiap minggu.</div>
+  <div class="isian">
+    <table>
+      <tr>
+        <td>Jumlah regu</td><td><span class="garis"></span></td>
+        <td style="padding-left:26px">Jumlah karyawan shift</td><td><span class="garis"></span></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<h2 class="bagian"><span class="no">4.</span> Catatan Bebas &amp; Koreksi Tambahan</h2>
+<p class="pengantar-bagian">Bila ada butir di Bagian 1 atau 2 yang belum sesuai, mohon dituliskan di sini dengan menyebutkan kodenya (misalnya “D3: mohon pakai daftar menu”).</p>
+
+<div class="jawab dua" style="margin:0 0 10px;height:30px;border-bottom:0;background:repeating-linear-gradient(to bottom, transparent 0 14px, #CBD5E1 14px 15px);"></div>
+<div class="jawab dua" style="margin:0 0 10px;height:30px;border-bottom:0;background:repeating-linear-gradient(to bottom, transparent 0 14px, #CBD5E1 14px 15px);"></div>
+<div class="jawab dua" style="margin:0 0 10px;height:30px;border-bottom:0;background:repeating-linear-gradient(to bottom, transparent 0 14px, #CBD5E1 14px 15px);"></div>
+<div class="jawab dua" style="margin:0 0 10px;height:30px;border-bottom:0;background:repeating-linear-gradient(to bottom, transparent 0 14px, #CBD5E1 14px 15px);"></div>
+
+<div class="penutup">
+  <p style="margin-top:0"><strong>Yang sudah Bapak/Ibu jawab sebelumnya</strong> — pola shift, perlakuan hari libur nasional bagi karyawan shift, hari libur mingguan yang bergeser, catatan pekerjaan absen pulang, serta apakah pengaturan absensi dipakai sama untuk seluruh wilayah — sudah kami kerjakan dan tidak perlu dijawab ulang di lembar ini.</p>
+  <p style="margin-bottom:0"><strong>Cara mengisi.</strong> Cukup tandai “Setuju” pada tiap butir, atau tuliskan koreksinya. Bila seluruh usulan kami disetujui, Bapak/Ibu dapat langsung menyatakan “setuju seluruhnya” pada catatan bebas di Bagian 4. Anda juga dapat menjawab lewat surel/WhatsApp dengan menyebutkan kode butirnya.</p>
+</div>
+
+<div class="ttd">
+  <div class="kolom">
+    <div>Hormat kami,<br><strong>Rahmat Dani S</strong><br><span style="color:#64748B">Tim Pengembang Aplikasi Absensi</span></div>
+    <div class="garis">Nama &amp; tanda tangan</div>
+  </div>
+  <div class="kolom" style="float:right">
+    <div>Disetujui / dikoreksi oleh,</div>
+    <div class="garis">Nama, jabatan &amp; tanda tangan</div>
+  </div>
+</div>
+
+<div class="catatan-kaki">
+  Lembar ini melengkapi dua dokumen sebelumnya: “Lembar Konfirmasi Kebutuhan Sistem” dan “Lembar Konfirmasi Rancangan Sistem”. Butir A, B, C, D, E, F mengacu pada dokumen pertama; butir K dan P mengacu pada dokumen kedua. Hal-hal yang sifatnya teknis (cara penyimpanan, nama berkas, dan sejenisnya) sengaja tidak dimasukkan ke lembar ini.
+</div>
+
+</body>
+</html>
