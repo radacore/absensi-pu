@@ -84,6 +84,12 @@ class EmployeeController extends Controller
             $payload['hari_kerja'] = $this->hariKerjaPayload($data);
         }
 
+        // F4: sama seperti hari kerja — absen dari pemanggil lama tidak
+        // menghapus regu yang sudah diatur.
+        if (array_key_exists('regu', $data)) {
+            $payload['regu'] = $this->reguPayload($data);
+        }
+
         $employee->update($payload);
 
         Audit::log(
@@ -165,6 +171,8 @@ class EmployeeController extends Controller
             // B3: hari kerja khusus per orang. Null/kosong = ikut pengaturan umum.
             'hariKerja' => ['sometimes', 'nullable', 'array', 'min:1'],
             'hariKerja.*' => ['in:1,2,3,4,5,6,7'],
+            // F4: label regu bebas. Kosong = tanpa regu.
+            'regu' => ['sometimes', 'nullable', 'string', 'max:30'],
         ]);
     }
 
@@ -186,6 +194,16 @@ class EmployeeController extends Controller
         return $hari;
     }
 
+    /**
+     * F4: label regu bebas, tanpa daftar tertutup. Kosong → null (tanpa regu).
+     */
+    private function reguPayload(array $data): ?string
+    {
+        $regu = trim((string) ($data['regu'] ?? ''));
+
+        return $regu === '' ? null : $regu;
+    }
+
     private function createFromPayload(array $data): Employee
     {
         $region = Region::where('name', $data['region'])->firstOrFail();
@@ -205,6 +223,7 @@ class EmployeeController extends Controller
             'site_id' => $data['office_location_id'],
             'is_shift' => (bool) ($data['isShift'] ?? false),
             'hari_kerja' => $this->hariKerjaPayload($data),
+            'regu' => $this->reguPayload($data),
             'password' => $data['nik'],
             'must_change_password' => true,
         ]);

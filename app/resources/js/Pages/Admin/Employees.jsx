@@ -32,7 +32,15 @@ export default function Employees() {
         isShift: false,
         // null = ikut hari kerja umum.
         hariKerja: null,
+        // F4: label regu bebas, kosong = tanpa regu.
+        regu: '',
     });
+
+    // F4: regu yang sudah pernah dipakai, sebagai saran penulisan (bukan daftar tertutup).
+    const reguList = useMemo(
+        () => [...new Set(list.map((e) => e.regu).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+        [list],
+    );
 
     // keep form office_location_id valid when region changes
     const sitesForFormRegion = useMemo(() => {
@@ -63,12 +71,12 @@ export default function Employees() {
         const r = regionsData.find((x) => x.name === defaultRegion);
         const firstSiteId = r?.locations?.[0]?.id ?? null;
         setEditing(null);
-        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', region: defaultRegion, office_location_id: firstSiteId, isShift: false, hariKerja: null });
+        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', region: defaultRegion, office_location_id: firstSiteId, isShift: false, hariKerja: null, regu: '' });
         setPhoto(null); setPreview(null); setOpen(true);
     };
     const openEdit = (e) => {
         setEditing(e);
-        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, region:e.region, office_location_id: e.office_location_id ?? null, isShift: !!e.isShift, hariKerja: Array.isArray(e.hariKerja) ? e.hariKerja.map(String) : null });
+        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, region:e.region, office_location_id: e.office_location_id ?? null, isShift: !!e.isShift, hariKerja: Array.isArray(e.hariKerja) ? e.hariKerja.map(String) : null, regu: e.regu || '' });
         setPreview(e.foto); setPhoto(null); setOpen(true);
     };
     const close = () => setOpen(false);
@@ -98,6 +106,7 @@ export default function Employees() {
             region: form.region, office_location_id: Number(form.office_location_id),
             isShift: !!form.isShift,
             hariKerja: form.hariKerja,
+            regu: form.regu.trim(),
         };
         if (editing) {
             if (isWilayah && editing.region !== OWN_REGION) { toast.error('Tidak bisa mengedit karyawan luar wilayah'); return; }
@@ -187,7 +196,7 @@ export default function Employees() {
                                                 <div className="flex items-center gap-3">
                                                     <img src={e.foto} alt={e.nama} className="w-8 h-8 rounded-full object-cover" />
                                                     <div>
-                                                        <p className="font-medium text-[#0F172A]">{e.nama}{e.isShift && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#E0E7FF] text-[#3730A3] px-2 py-0.5 rounded-full">Shift</span>}{Array.isArray(e.hariKerja) && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#FFF7E6] text-[#92400E] px-2 py-0.5 rounded-full">Hari kerja khusus</span>}</p>
+                                                        <p className="font-medium text-[#0F172A]">{e.nama}{e.isShift && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#E0E7FF] text-[#3730A3] px-2 py-0.5 rounded-full">Shift</span>}{Array.isArray(e.hariKerja) && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#FFF7E6] text-[#92400E] px-2 py-0.5 rounded-full">Hari kerja khusus</span>}{e.regu && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded-full">{e.regu}</span>}</p>
                                                         <p className="text-xs text-[#64748B]">{e.gol} • {e.unit} • {e.status}</p>
                                                         <p className="text-xs text-[#64748B]">{e.email}</p>
                                                     </div>
@@ -299,6 +308,20 @@ export default function Employees() {
                                         <p className="text-xs mt-1">
                                             <span className="text-[#065F46]">✓ Akan absen di {sitesForFormRegion.find((s)=>s.id===Number(form.office_location_id))?.nama_lokasi || '— pilih titik'} — dalam radius baru valid.</span>
                                         </p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="text-xs font-medium text-[#334155]">Regu (opsional)</label>
+                                        <input
+                                            value={form.regu}
+                                            onChange={(e)=>setForm({...form, regu:e.target.value.slice(0,30)})}
+                                            list="daftar-regu"
+                                            placeholder="mis. Regu A — kosongkan bila tidak memakai regu"
+                                            className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10"
+                                        />
+                                        <datalist id="daftar-regu">
+                                            {reguList.map((r) => <option key={r} value={r} />)}
+                                        </datalist>
+                                        <span className="block text-xs text-[#64748B] mt-1">Bebas diisi — jumlah regu tidak dibatasi. Dipakai untuk mengelompokkan dan mengisi jadwal shift satu regu sekaligus di halaman Jadwal Shift.</span>
                                     </div>
                                     <div className="col-span-2 rounded-xl bg-[#F8FAFC] px-3 py-3">
                                         <label className="flex items-start gap-3 cursor-pointer">

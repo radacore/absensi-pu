@@ -41,6 +41,9 @@ class ShiftScheduleController extends Controller
             : $now->copy();
         $senin = $acuan->startOfDay()->startOfWeek(Carbon::MONDAY);
         $hari = collect(range(0, 6))->map(fn ($i) => $senin->copy()->addDays($i)->toDateString())->all();
+        // Senin minggu lalu ikut dibaca supaya admin bisa menyalin jadwal minggu
+        // lalu ke minggu ini (F4) — jadwal berulang tidak perlu diketik ulang.
+        $hariLalu = collect(range(0, 6))->map(fn ($i) => $senin->copy()->subWeek()->addDays($i)->toDateString())->all();
         // Sehari sebelum minggu ini ikut dibaca supaya shift malam yang melewati
         // tengah malam masih terhitung saat memeriksa cakupan 24 jam (P1).
         $sebelum = $senin->copy()->subDay()->toDateString();
@@ -56,7 +59,7 @@ class ShiftScheduleController extends Controller
         $jadwal = [];
         if ($employees->isNotEmpty()) {
             $rows = ShiftSchedule::whereIn('employee_id', $employees->pluck('id')->all())
-                ->whereDate('tanggal', '>=', $sebelum)
+                ->whereDate('tanggal', '>=', $hariLalu[0])
                 ->whereDate('tanggal', '<=', $hari[6])
                 ->get();
 
@@ -65,7 +68,7 @@ class ShiftScheduleController extends Controller
             }
         }
 
-        $list = $employees->map(function (Employee $e) use ($patterns, $jadwal, $hari, $sebelum) {
+        $list = $employees->map(function (Employee $e) use ($patterns, $jadwal, $hari, $hariLalu, $sebelum) {
             $p = $patterns[$e->id] ?? null;
 
             $cells = [];
@@ -82,6 +85,17 @@ class ShiftScheduleController extends Controller
                 ? (int) $jadwal[$keySebelum]
                 : null;
 
+            // Jadwal minggu lalu, sejajar hari demi hari dengan minggu ini,
+            // untuk tombol "Salin minggu lalu" (F4). '' = dulu belum diatur,
+            // null = libur.
+            $cellsLalu = [];
+            foreach ($hariLalu as $tgl) {
+                $key = $e->id.'|'.$tgl;
+                $cellsLalu[] = ! array_key_exists($key, $jadwal)
+                    ? ''
+                    : ($jadwal[$key] === null ? null : (int) $jadwal[$key]);
+            }
+
             return [
                 'id' => $e->id,
                 'nama' => $e->name,
@@ -89,6 +103,7 @@ class ShiftScheduleController extends Controller
                 'regionNama' => $e->region?->name ?? '',
                 'siteId' => $e->site_id,
                 'siteNama' => $e->site?->nama_lokasi ?? '',
+                'regu' => $e->regu ?? '',
                 'polaNama' => $p?->nama ?? '',
                 'jumlahShift' => $p ? (int) $p->jumlah_shift : 0,
                 'durasiMenit' => $p ? $p->durasiMenit() : 0,
@@ -107,6 +122,7 @@ class ShiftScheduleController extends Controller
                         ->all()
                     : [],
                 'cells' => $cells,
+                'cellsLalu' => $cellsLalu,
                 'sebelum' => $sebelumKe,
             ];
         })->values()->all();

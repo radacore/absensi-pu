@@ -1,7 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 
 function getBase(url) {
     if (url.startsWith('/super-admin')) return '/super-admin';
@@ -12,6 +12,9 @@ function getBase(url) {
 
 const HARI = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
+/** Penanda karyawan yang belum diberi regu (regu-nya kosong). */
+const TANPA_REGU = '__tanpa';
+
 function tanggalPendek(iso) {
     const d = new Date(`${iso}T12:00:00`);
     return `${d.getDate()}/${d.getMonth() + 1}`;
@@ -21,6 +24,24 @@ function tanggalPendek(iso) {
 function menitMulai(e, ke) {
     const s = (e.shiftLabels ?? []).find((x) => x.ke === Number(ke));
     return s ? s.mulaiMenit : null;
+}
+
+/** Karyawan yang sudah punya pola shift (selnya bisa diisi). */
+function bisaDiisi(rows) {
+    return rows.filter((e) => e.jumlahShift > 0);
+}
+
+/**
+ * Gabungan pilihan shift satu regu.
+ *
+ * Anggota regu bisa punya pola berbeda (mis. jumlah shift 2 vs 3); pilihan
+ * disatukan supaya isi cepat tetap aman — hanya shift yang benar-benar ada
+ * pada pola seseorang yang muncul.
+ */
+function opsiShift(rows) {
+    const m = new Map();
+    rows.forEach((e) => (e.shiftLabels ?? []).forEach((s) => { if (!m.has(s.ke)) m.set(s.ke, s); }));
+    return [...m.values()].sort((a, b) => a.ke - b.ke);
 }
 
 /**
@@ -64,6 +85,9 @@ export default function JadwalShift() {
 
     // draft: kunci "employeeId|tgl" → '' (belum diatur) | 'libur' | '1'..'4'
     const [draft, setDraft] = useState({});
+    // Penyaring tampilan saja — yang disimpan tetap seluruh karyawan.
+    const [filterLokasi, setFilterLokasi] = useState('Semua');
+    const [filterRegu, setFilterRegu] = useState('Semua');
 
     useEffect(() => {
         const awal = {};
@@ -78,9 +102,53 @@ export default function JadwalShift() {
         setDraft(awal);
     }, [employees, hari]);
 
+    const lokasiOpsi = useMemo(() => {
+        const m = new Map();
+        employees.forEach((e) => {
+            if (e.siteId) m.set(String(e.siteId), e.siteNama || `Lokasi ${e.siteId}`);
+        });
+        return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    }, [employees]);
+
+    const reguOpsi = useMemo(
+        () => [...new Set(employees.map((e) => e.regu).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+        [employees],
+    );
+
+    const tampil = useMemo(
+        () => employees.filter((e) => {
+            if (filterLokasi !== 'Semua' && String(e.siteId) !== filterLokasi) return false;
+            if (filterRegu === 'Semua') return true;
+            return filterRegu === TANPA_REGU ? !e.regu : e.regu === filterRegu;
+        }),
+        [employees, filterLokasi, filterRegu],
+    );
+
+    // Dikelompokkan per regu supaya satu regu bisa diisi sekali klik (F4).
+    const grup = useMemo(() => {
+        const m = new Map();
+        tampil.forEach((e) => {
+            const k = e.regu || TANPA_REGU;
+            if (!m.has(k)) m.set(k, []);
+            m.get(k).push(e);
+        });
+        return [...m.entries()].sort((a, b) => {
+            if (a[0] === TANPA_REGU) return 1;
+            if (b[0] === TANPA_REGU) return -1;
+            return a[0].localeCompare(b[0]);
+        });
+    }, [tampil]);
+
+    const labelGrup = (k) => (k === TANPA_REGU
+        ? (reguOpsi.length ? 'Tanpa regu' : 'Semua pekerja shift')
+        : k);
+
     const jumlahDiisi = useMemo(
-        () => Object.values(draft).filter((v) => v !== '').length,
-        [draft],
+        () => tampil.reduce(
+            (t, e) => t + hari.filter((tgl) => draft[`${e.id}|${tgl}`]).length,
+            0,
+        ),
+        [tampil, hari, draft],
     );
 
     // Cakupan 24 jam per lokasi (P1) — dihitung dari draf yang sedang disusun,
@@ -148,12 +216,48 @@ export default function JadwalShift() {
         setDraft((d) => ({ ...d, [`${empId}|${tgl}`]: val }));
     };
 
-    const isiSepekan = (empId, val) => {
+    // Karyawan tanpa pola belum bisa dijadwalkan — isi cepat melewatinya,
+    // sama seperti selnya yang memang tidak bisa diisi.
+    const isiBanyak = (rows, tgl, val) => {
+        const target = bisaDiisi(rows);
         setDraft((d) => {
             const next = { ...d };
-            hari.forEach((tgl) => { next[`${empId}|${tgl}`] = val; });
+            target.forEach((e) => { next[`${e.id}|${tgl}`] = val; });
             return next;
         });
+    };
+
+    const isiSepekanBanyak = (rows, val) => {
+        const target = bisaDiisi(rows);
+        setDraft((d) => {
+            const next = { ...d };
+            target.forEach((e) => hari.forEach((tgl) => { next[`${e.id}|${tgl}`] = val; }));
+            return next;
+        });
+    };
+
+    /**
+     * Salin jadwal minggu lalu ke minggu ini untuk baris yang sedang tampil.
+     *
+     * Hanya mengubah draf — belum tersimpan sampai tombol Simpan Jadwal ditekan,
+     * jadi admin masih bisa mengoreksi hasilnya.
+     */
+    const salinMingguLalu = () => {
+        const target = bisaDiisi(tampil);
+        if (target.length === 0) return;
+        setDraft((d) => {
+            const next = { ...d };
+            target.forEach((e) => {
+                hari.forEach((tgl, i) => {
+                    const v = (e.cellsLalu ?? [])[i];
+                    next[`${e.id}|${tgl}`] = v === undefined || v === ''
+                        ? ''
+                        : (v === null ? 'libur' : String(v));
+                });
+            });
+            return next;
+        });
+        toast.success(`Jadwal minggu lalu disalin ke ${target.length} baris. Periksa dulu, lalu Simpan Jadwal.`);
     };
 
     const simpan = () => {
@@ -202,6 +306,36 @@ export default function JadwalShift() {
                 )}
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
+                    <div className="px-4 py-3 border-b border-[#F1F5F9] flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs font-medium text-[#334155]">Lokasi</label>
+                            <select value={filterLokasi} onChange={(ev) => setFilterLokasi(ev.target.value)} className="rounded-lg bg-[#F8FAFC] border-0 px-2 py-1.5 text-xs text-[#334155] outline-none">
+                                <option value="Semua">Semua lokasi</option>
+                                {lokasiOpsi.map(([id, nama]) => <option key={id} value={id}>{nama}</option>)}
+                            </select>
+                        </div>
+                        {reguOpsi.length > 0 && (
+                            <div className="flex items-center gap-2">
+                                <label className="text-xs font-medium text-[#334155]">Regu</label>
+                                <select value={filterRegu} onChange={(ev) => setFilterRegu(ev.target.value)} className="rounded-lg bg-[#F8FAFC] border-0 px-2 py-1.5 text-xs text-[#334155] outline-none">
+                                    <option value="Semua">Semua regu</option>
+                                    {reguOpsi.map((r) => <option key={r} value={r}>{r}</option>)}
+                                    <option value={TANPA_REGU}>Tanpa regu</option>
+                                </select>
+                            </div>
+                        )}
+                        <div className="ml-auto flex items-center gap-3">
+                            <span className="text-xs text-[#64748B]">{tampil.length} dari {employees.length} pekerja shift</span>
+                            <button
+                                type="button"
+                                onClick={salinMingguLalu}
+                                title="Isi minggu ini dari jadwal minggu lalu untuk baris yang sedang tampil. Belum tersimpan sampai Simpan Jadwal ditekan."
+                                className="rounded-xl bg-[#F1F5F9] px-3 py-2 text-xs font-semibold text-[#334155]"
+                            >
+                                Salin minggu lalu
+                            </button>
+                        </div>
+                    </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm min-w-[900px]">
                             <thead className="bg-[#F8FAFC] text-xs font-medium text-[#64748B]">
@@ -217,50 +351,93 @@ export default function JadwalShift() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#F1F5F9]">
-                                {employees.map((e) => (
-                                    <tr key={e.id} className="hover:bg-[#F8FAFC]/50">
-                                        <td className="px-4 py-3 sticky left-0 bg-white">
-                                            <p className="font-medium text-[#0F172A]">{e.nama}</p>
-                                            <p className="text-xs text-[#64748B]">{e.polaNama || 'belum ada pola'} • {e.siteNama}</p>
-                                        </td>
-                                        {hari.map((tgl) => {
-                                            const val = draft[`${e.id}|${tgl}`] ?? '';
-                                            return (
+                                {grup.map(([k, rows]) => (
+                                    <Fragment key={k}>
+                                        <tr className="bg-[#F8FAFC]">
+                                            <td className="px-4 py-2 sticky left-0 bg-[#F8FAFC]">
+                                                <p className="text-xs font-semibold text-[#334155]">{labelGrup(k)}</p>
+                                                <p className="text-[11px] text-[#94A3B8]">
+                                                    {rows.length} orang • isi cepat satu regu
+                                                    {bisaDiisi(rows).length < rows.length && ` • ${rows.length - bisaDiisi(rows).length} belum punya pola`}
+                                                </p>
+                                            </td>
+                                            {hari.map((tgl) => (
                                                 <td key={tgl} className="px-1.5 py-2 text-center">
                                                     <select
-                                                        value={val}
+                                                        value=""
+                                                        disabled={bisaDiisi(rows).length === 0}
+                                                        onChange={(ev) => { if (ev.target.value) isiBanyak(rows, tgl, ev.target.value); }}
+                                                        className="w-full rounded-lg border-0 bg-white px-1.5 py-1.5 text-xs text-[#334155] outline-none"
+                                                    >
+                                                        <option value="">Isi…</option>
+                                                        <option value="libur">Libur</option>
+                                                        {opsiShift(rows).map((s) => (
+                                                            <option key={s.ke} value={String(s.ke)}>{s.label}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                            ))}
+                                            <td className="px-2 py-2 text-center">
+                                                <select
+                                                    value=""
+                                                    disabled={bisaDiisi(rows).length === 0}
+                                                    onChange={(ev) => { if (ev.target.value) isiSepekanBanyak(rows, ev.target.value); }}
+                                                    className="w-full rounded-lg border-0 bg-white px-1.5 py-1.5 text-xs text-[#334155] outline-none"
+                                                >
+                                                    <option value="">Isi…</option>
+                                                    <option value="libur">Libur</option>
+                                                    {opsiShift(rows).map((s) => (
+                                                        <option key={s.ke} value={String(s.ke)}>{s.label}</option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        {rows.map((e) => (
+                                            <tr key={e.id} className="hover:bg-[#F8FAFC]/50">
+                                                <td className="px-4 py-3 sticky left-0 bg-white">
+                                                    <p className="font-medium text-[#0F172A]">{e.nama}</p>
+                                                    <p className="text-xs text-[#64748B]">{e.polaNama || 'belum ada pola'} • {e.siteNama}</p>
+                                                </td>
+                                                {hari.map((tgl) => {
+                                                    const val = draft[`${e.id}|${tgl}`] ?? '';
+                                                    return (
+                                                        <td key={tgl} className="px-1.5 py-2 text-center">
+                                                            <select
+                                                                value={val}
+                                                                disabled={e.jumlahShift === 0}
+                                                                onChange={(ev) => setSel(e.id, tgl, ev.target.value)}
+                                                                className={`w-full rounded-lg border-0 px-1.5 py-1.5 text-xs outline-none ${
+                                                                    val === '' ? 'bg-[#F8FAFC] text-[#94A3B8]'
+                                                                        : val === 'libur' ? 'bg-[#F1F5F9] text-[#475569] font-medium'
+                                                                            : 'bg-[#EFF6FF] text-[#1E3A8A] font-semibold'
+                                                                }`}
+                                                            >
+                                                                <option value="">—</option>
+                                                                <option value="libur">Libur</option>
+                                                                {e.shiftLabels.map((s) => (
+                                                                    <option key={s.ke} value={String(s.ke)}>{s.label} {s.mulai}</option>
+                                                                ))}
+                                                            </select>
+                                                        </td>
+                                                    );
+                                                })}
+                                                <td className="px-2 py-2 text-center">
+                                                    <select
+                                                        value=""
                                                         disabled={e.jumlahShift === 0}
-                                                        onChange={(ev) => setSel(e.id, tgl, ev.target.value)}
-                                                        className={`w-full rounded-lg border-0 px-1.5 py-1.5 text-xs outline-none ${
-                                                            val === '' ? 'bg-[#F8FAFC] text-[#94A3B8]'
-                                                                : val === 'libur' ? 'bg-[#F1F5F9] text-[#475569] font-medium'
-                                                                    : 'bg-[#EFF6FF] text-[#1E3A8A] font-semibold'
-                                                        }`}
+                                                        onChange={(ev) => { if (ev.target.value) isiSepekanBanyak([e], ev.target.value); }}
+                                                        className="w-full rounded-lg border-0 bg-[#F8FAFC] px-1.5 py-1.5 text-xs outline-none"
                                                     >
                                                         <option value="">—</option>
                                                         <option value="libur">Libur</option>
                                                         {e.shiftLabels.map((s) => (
-                                                            <option key={s.ke} value={String(s.ke)}>{s.label} {s.mulai}</option>
+                                                            <option key={s.ke} value={String(s.ke)}>{s.label}</option>
                                                         ))}
                                                     </select>
                                                 </td>
-                                            );
-                                        })}
-                                        <td className="px-2 py-2 text-center">
-                                            <select
-                                                value=""
-                                                disabled={e.jumlahShift === 0}
-                                                onChange={(ev) => { if (ev.target.value) isiSepekan(e.id, ev.target.value); }}
-                                                className="w-full rounded-lg border-0 bg-[#F8FAFC] px-1.5 py-1.5 text-xs outline-none"
-                                            >
-                                                <option value="">—</option>
-                                                <option value="libur">Libur</option>
-                                                {e.shiftLabels.map((s) => (
-                                                    <option key={s.ke} value={String(s.ke)}>{s.label}</option>
-                                                ))}
-                                            </select>
-                                        </td>
-                                    </tr>
+                                            </tr>
+                                        ))}
+                                    </Fragment>
                                 ))}
                             </tbody>
                         </table>
@@ -270,8 +447,13 @@ export default function JadwalShift() {
                             Belum ada pekerja shift. Tandai karyawan sebagai pekerja shift dulu di halaman Karyawan.
                         </p>
                     )}
+                    {employees.length > 0 && tampil.length === 0 && (
+                        <p className="text-center text-sm text-[#64748B] py-8">
+                            Tidak ada pekerja shift pada saringan ini.
+                        </p>
+                    )}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
-                        <span>{employees.length} pekerja shift • {jumlahDiisi} sel terisi</span>
+                        <span>{tampil.length} dari {employees.length} pekerja shift • {jumlahDiisi} sel terisi</span>
                         <span>Jadwal disusun manual — tidak ada rotasi otomatis</span>
                     </div>
                 </div>

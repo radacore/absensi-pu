@@ -82,6 +82,8 @@ class AdminPresenter
             'hariKerja' => is_array($e->hari_kerja) && $e->hari_kerja !== []
                 ? array_map('strval', $e->hari_kerja)
                 : null,
+            // F4: label regu bebas ('' = tanpa regu).
+            'regu' => $e->regu ?? '',
         ];
     }
 

@@ -31,6 +31,8 @@ class Employee extends Authenticatable
         'is_shift',
         // B3: hari kerja khusus per orang (null = ikut pengaturan umum).
         'hari_kerja',
+        // F4: label regu bebas (null = tanpa regu).
+        'regu',
     ];
 
     protected $hidden = [

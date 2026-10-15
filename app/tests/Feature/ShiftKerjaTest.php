@@ -738,6 +738,69 @@ class ShiftKerjaTest extends TestCase
                 ->where('hari.6', '2026-10-18'));
     }
 
+    // ── F4: regu bebas & jadwal berulang ────────────────────
+
+    public function test_regu_karyawan_bebas_dan_kosong_berarti_tanpa_regu(): void
+    {
+        $e = $this->karyawan();
+        $payload = [
+            'nik' => $e->nik,
+            'nip' => $e->nip,
+            'nama' => $e->name,
+            'email' => $e->email,
+            'gol' => $e->golongan ?: '-',
+            'jabatan' => $e->jabatan,
+            'unit' => $e->unit_kerja,
+            'status' => $e->status_kepegawaian,
+            'region' => $e->region->name,
+            'office_location_id' => $e->site_id,
+        ];
+
+        $this->actingAs($this->superAdmin(), 'web')
+            ->put("/super-admin/employees/{$e->id}", $payload + ['regu' => 'Regu C Malam'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Regu C Malam', $e->fresh()->regu);
+
+        $this->actingAs($this->superAdmin(), 'web')
+            ->get('/super-admin/employees')
+            ->assertOk()
+            ->assertInertia(fn (Assert $p) => $p
+                ->component('Admin/Employees')
+                ->where('employees', fn ($rows) => collect($rows)->contains(
+                    fn ($r) => $r['id'] === $e->id && $r['regu'] === 'Regu C Malam'
+                )));
+
+        // Dikosongkan = tidak ikut regu mana pun, bukan regu bernama "".
+        $this->actingAs($this->superAdmin(), 'web')
+            ->put("/super-admin/employees/{$e->id}", $payload + ['regu' => ''])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($e->fresh()->regu);
+    }
+
+    public function test_jadwal_shift_membawa_regu_dan_jadwal_minggu_lalu(): void
+    {
+        $e = $this->karyawan();
+        $e->forceFill(['is_shift' => true, 'regu' => 'Regu A'])->save();
+        $p = $this->pola();
+
+        // Senin minggu lalu (2026-10-05): shift 2; Selasa: libur; sisanya belum diatur.
+        ShiftSchedule::create(['employee_id' => $e->id, 'tanggal' => '2026-10-05', 'shift_ke' => 2, 'shift_pattern_id' => $p->id]);
+        ShiftSchedule::create(['employee_id' => $e->id, 'tanggal' => '2026-10-06', 'shift_ke' => null, 'shift_pattern_id' => $p->id]);
+
+        $this->actingAs($this->superAdmin(), 'web')
+            ->get('/super-admin/jadwal-shift')
+            ->assertOk()
+            ->assertInertia(fn (Assert $p) => $p
+                ->component('Admin/JadwalShift')
+                ->where('mingguLalu', '2026-10-05')
+                ->where('employees.0.regu', 'Regu A')
+                ->where('employees.0.cellsLalu.0', 2)
+                ->where('employees.0.cellsLalu.1', null)
+                ->where('employees.0.cellsLalu.2', ''));
+    }
+
     // ── K5: cakupan pola shift bisa dipersempit lewat setelan ──
 
     public function test_cakupan_bertingkat_memakai_pola_paling_spesifik(): void
