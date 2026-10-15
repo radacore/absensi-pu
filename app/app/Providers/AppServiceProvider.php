@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,6 +22,18 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureHttps();
         $this->configureRateLimiting();
+
+        // Fail closed: produksi dengan debug aktif membocorkan kredensial DB
+        // dan isi .env lewat halaman galat. Lebih baik mati terang-terangan
+        // daripada jalan sambil membocorkan. Perintah artisan tetap diizinkan
+        // agar .env masih bisa diperbaiki dari server.
+        if (! $this->app->runningInConsole()
+            && $this->app->environment('production')
+            && config('app.debug')) {
+            throw new RuntimeException(
+                'APP_DEBUG harus false saat APP_ENV=production. Perbaiki .env lalu jalankan: php artisan config:clear'
+            );
+        }
     }
 
     /**

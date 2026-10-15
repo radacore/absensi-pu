@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\AuditLog;
 use App\Models\Employee;
+use App\Models\Leave;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class SecurityTest extends TestCase
@@ -51,7 +53,7 @@ class SecurityTest extends TestCase
 
     public function test_endpoint_login_admin_dan_karyawan_dilindungi_throttle_middleware(): void
     {
-        $routes = \Illuminate\Support\Facades\Route::getRoutes();
+        $routes = Route::getRoutes();
         $loginRoutes = [
             'super-admin/login',
             'admin/login',
@@ -90,7 +92,7 @@ class SecurityTest extends TestCase
     public function test_audit_log_dibuat_saat_approve_cuti_dan_delete_karyawan(): void
     {
         $emp = Employee::first();
-        $cuti = \App\Models\Leave::create([
+        $cuti = Leave::create([
             'employee_id' => $emp->id,
             'jenis' => 'Tahunan',
             'mulai' => now()->addDays(2)->toDateString(),
@@ -125,5 +127,25 @@ class SecurityTest extends TestCase
         $this->actingAs($this->superAdmin())->get('/super-admin/audit-log')
             ->assertOk()
             ->assertInertia(fn ($p) => $p->component('Admin/AuditLog')->has('logs'));
+    }
+
+    public function test_header_keamanan_dasar_selalu_terpasang(): void
+    {
+        $res = $this->get('/karyawan/login');
+
+        $res->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('X-Frame-Options', 'DENY')
+            ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    }
+
+    public function test_csp_hanya_dipasang_saat_debug_mati(): void
+    {
+        $this->get('/karyawan/login')->assertHeaderMissing('Content-Security-Policy');
+
+        config(['app.debug' => false]);
+        $csp = $this->get('/karyawan/login')->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString("script-src 'self'", (string) $csp);
+        $this->assertStringNotContainsString('unsafe-eval', (string) $csp);
     }
 }

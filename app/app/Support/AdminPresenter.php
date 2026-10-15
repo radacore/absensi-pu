@@ -20,7 +20,7 @@ use Illuminate\Support\Collection;
  */
 class AdminPresenter
 {
-    public const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face&auto=format';
+    public const DEFAULT_AVATAR = '/avatar-default.svg';
 
     public static function regionsFor(?int $regionId): array
     {
