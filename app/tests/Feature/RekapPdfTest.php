@@ -3,18 +3,23 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\DinasClaim;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\ShiftPattern;
 use App\Models\ShiftSchedule;
+use App\Models\ToleranceClaim;
 use App\Models\User;
 use App\Support\AdminPresenter;
+use App\Support\DistribusiSvg;
 use App\Support\RekapPdf;
 use App\Support\RekapPresenter;
+use App\Support\SelfieThumb;
 use App\Support\TrenJamSvg;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
@@ -64,7 +69,7 @@ class RekapPdfTest extends TestCase
         return Employee::where('region_id', $regionId)->whereNotNull('site_id')->firstOrFail();
     }
 
-    private function absen(Employee $e, string $tanggal, string $masuk, string $pulang, array $extra = []): Attendance
+    private function absen(Employee $e, string $tanggal, string $masuk, ?string $pulang, array $extra = []): Attendance
     {
         return Attendance::create(array_merge([
             'employee_id' => $e->id,
@@ -444,6 +449,194 @@ class RekapPdfTest extends TestCase
         // Rentang tetap: garis acuan jam masuk & batas toleransi ikut tampil.
         $this->assertStringContainsString('07:30', $svg);
         $this->assertStringContainsString('07:45', $svg);
+    }
+
+    // ── Diagram donat distribusi kehadiran ──────────────────
+
+    public function test_donat_distribusi_digambar_dengan_warna_legenda(): void
+    {
+        $svg = DistribusiSvg::render(['hadir' => 19, 'tanpa_keterangan' => 1, 'dinas' => 2, 'cuti' => 3]);
+
+        $this->assertStringContainsString('<svg', $svg);
+        $this->assertStringContainsString('<path', $svg, 'Potongan donat digambar sebagai busur path.');
+        $this->assertSame(4, substr_count($svg, '<path'), 'Satu busur per kategori.');
+        foreach (['#10B981', '#EF4444', '#3B82F6', '#F59E0B'] as $warna) {
+            $this->assertStringContainsString($warna, $svg);
+        }
+    }
+
+    public function test_donat_distribusi_tanpa_data_tetap_digambar(): void
+    {
+        $svg = DistribusiSvg::render(['hadir' => 0, 'tanpa_keterangan' => 0, 'dinas' => 0, 'cuti' => 0]);
+
+        $this->assertStringContainsString('<svg', $svg, 'Periode tanpa absensi tidak boleh membuat PDF gagal render.');
+    }
+
+    public function test_donat_dikirim_ke_template_sebagai_gambar_data_uri(): void
+    {
+        $e = $this->karyawan(2);
+        $this->absen($e, '2026-10-05', '07:25:00', '16:05:00');
+
+        $data = RekapPdf::data(RekapPresenter::buildRekap($e, 2026, 10));
+
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $data['distribusiSvg']);
+        $this->assertStringContainsString(
+            '<svg',
+            base64_decode(substr($data['distribusiSvg'], strlen('data:image/svg+xml;base64,')))
+        );
+    }
+
+    // ── Grafik tren harus berupa <img>, bukan <svg> inline ──
+    // dompdf membuang bentuk di dalam elemen <svg> yang ditulis langsung di
+    // HTML; grafiknya hanya muncul kalau dikirim sebagai data URI gambar.
+
+    public function test_grafik_tren_dikirim_sebagai_gambar_bukan_svg_inline(): void
+    {
+        $e = $this->karyawan(2);
+        $this->absen($e, '2026-10-05', '07:25:00', '16:05:00');
+
+        $data = RekapPdf::data(RekapPresenter::buildRekap($e, 2026, 10));
+
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $data['trenMasukImg']);
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $data['trenPulangImg']);
+
+        $html = View::make('pdf.rekap-presensi', $data)->render();
+        $this->assertStringContainsString('src="'.$data['trenMasukImg'].'"', $html);
+        $this->assertStringNotContainsString('<svg', $html, 'Elemen <svg> inline akan diabaikan dompdf.');
+    }
+
+    public function test_grafik_tren_kosong_tidak_memaksa_gambar(): void
+    {
+        $e = $this->karyawan(2);
+        $rekap = RekapPresenter::buildRekap($e, 2026, 10);
+
+        $this->assertSame('', TrenJamSvg::dataUri($rekap['tren'], 'masuk', $rekap['settings']));
+    }
+
+    // ── Kartu detail harian di PDF ──────────────────────────
+
+    public function test_template_pdf_memuat_kartu_detail_setiap_jenis_hari(): void
+    {
+        $e = $this->karyawan(2);
+        Holiday::create(['nama' => 'Maulid Nabi', 'tanggal' => '2026-10-26', 'cuti_bersama' => false]);
+        Leave::create([
+            'employee_id' => $e->id, 'jenis' => 'Tahunan',
+            'mulai' => '2026-10-19', 'selesai' => '2026-10-19',
+            'alasan' => 'Keperluan keluarga', 'status' => 'Disetujui',
+            'region_id' => $e->region_id, 'site_id' => $e->site_id,
+        ]);
+        DinasClaim::create([
+            'employee_id' => $e->id, 'nomor_surat' => '2485/SPT/0627/2026',
+            'tanggal_mulai' => '2026-10-13', 'tanggal_selesai' => '2026-10-13',
+            'tanggal_pengajuan' => '2026-10-08', 'keterangan' => 'Monitoring kegiatan',
+            'tujuan' => 'Bone', 'transportasi' => 'Mobil',
+            'pembebanan_anggaran' => 'Kendaraan Sewa', 'status' => 'Disetujui',
+            'region_id' => $e->region_id, 'site_id' => $e->site_id,
+        ]);
+        $this->absen($e, '2026-10-05', '07:25:00', '16:05:00');
+
+        $html = View::make('pdf.rekap-presensi', RekapPdf::data(RekapPresenter::buildRekap($e, 2026, 10)))->render();
+
+        $this->assertStringContainsString('Detail harian', $html);
+        // Kartu dinas lengkap seperti kartu audit.
+        $this->assertStringContainsString('Nomor Surat', $html);
+        $this->assertStringContainsString('2485/SPT/0627/2026', $html);
+        $this->assertStringContainsString('Pembebanan Anggaran', $html);
+        // Kartu cuti & libur.
+        $this->assertStringContainsString('Keperluan keluarga', $html);
+        $this->assertStringContainsString('Libur nasional', $html);
+        // Kartu kehadiran: dua kolom absen + rincian lokasi.
+        $this->assertStringContainsString('Absen Masuk', $html);
+        $this->assertStringContainsString('Absen Pulang', $html);
+        $this->assertStringContainsString('Jenis Absen', $html);
+        $this->assertStringContainsString('Radius', $html);
+    }
+
+    public function test_kartu_detail_harian_memuat_swafoto_terkecilkan(): void
+    {
+        Storage::fake(config('filesystems.uploads.private_disk'));
+        SelfieThumb::lupakan();
+
+        $e = $this->karyawan(2);
+        $path = 'selfie/2026-10-05/masuk.jpg';
+        Storage::disk(config('filesystems.uploads.private_disk'))->put($path, self::jpeg(1200, 1600));
+        $this->absen($e, '2026-10-05', '07:25:00', '16:05:00', ['selfie_url' => $path]);
+
+        $data = RekapPdf::data(RekapPresenter::buildRekap($e, 2026, 10));
+        $hari = collect($data['detailHari'])->firstWhere('iso', '2026-10-05');
+
+        $foto = $hari['masuk']['foto'];
+        $this->assertNotNull($foto, 'Swafoto masuk harus terlampir ke kartu harian.');
+        $this->assertStringStartsWith('data:image/jpeg;base64,', $foto['src']);
+        $this->assertLessThanOrEqual(92, $foto['width'], 'Foto diperkecil agar PDF tidak membengkak.');
+        $this->assertLessThanOrEqual(122, $foto['height']);
+
+        $html = View::make('pdf.rekap-presensi', $data)->render();
+        $this->assertStringContainsString($foto['src'], $html);
+        // Hari tanpa swafoto tetap tercetak dengan penanda, bukan kotak kosong.
+        $this->assertStringContainsString('Tidak ada foto', $html);
+    }
+
+    public function test_swafoto_yang_berkasnya_hilang_tidak_menggagalkan_rekap(): void
+    {
+        Storage::fake(config('filesystems.uploads.private_disk'));
+        SelfieThumb::lupakan();
+
+        $e = $this->karyawan(2);
+        $this->absen($e, '2026-10-05', '07:25:00', '16:05:00', ['selfie_url' => 'selfie/hilang.jpg']);
+
+        $data = RekapPdf::data(RekapPresenter::buildRekap($e, 2026, 10));
+        $hari = collect($data['detailHari'])->firstWhere('iso', '2026-10-05');
+
+        $this->assertNull($hari['masuk']['foto']);
+        $this->assertStringContainsString('Absen Masuk', View::make('pdf.rekap-presensi', $data)->render());
+    }
+
+    public function test_kartu_detail_harian_memuat_dispensasi_yang_menempel(): void
+    {
+        $e = $this->karyawan(2);
+        $att = $this->absen($e, '2026-10-08', '07:25:00', null);
+        $claim = ToleranceClaim::create([
+            'employee_id' => $e->id, 'jenis' => 'lupa_pulang', 'claim_date' => '2026-10-08',
+            'jam' => '16:05:00', 'alasan' => 'Langsung mengikuti rapat dinas',
+            'site_id' => $e->site_id, 'region_id' => $e->region_id, 'status' => 'approved',
+        ]);
+        $att->update(['tolerance_claim_id' => $claim->id]);
+
+        $data = RekapPdf::data(RekapPresenter::buildRekap($e, 2026, 10));
+        $hari = collect($data['detailHari'])->firstWhere('iso', '2026-10-08');
+
+        $this->assertSame('Lupa Absen Pulang', $hari['dispensasi']['jenis']);
+        $this->assertSame('Disetujui', $hari['dispensasi']['status']);
+
+        $html = View::make('pdf.rekap-presensi', $data)->render();
+        $this->assertStringContainsString('Dispensasi', $html);
+        $this->assertStringContainsString('Langsung mengikuti rapat dinas', $html);
+    }
+
+    public function test_detail_hari_membawa_tanggal_iso_dan_id_absensi(): void
+    {
+        $e = $this->karyawan(2);
+        $att = $this->absen($e, '2026-10-05', '07:25:00', '16:05:00');
+
+        $rekap = RekapPresenter::buildRekap($e, 2026, 10);
+        $hari = collect($rekap['detailHari'])->firstWhere('iso', '2026-10-05');
+
+        $this->assertSame($att->id, $hari['attendance_id']);
+        $this->assertNull($hari['dispensasi']);
+    }
+
+    /** JPEG contoh berukuran besar supaya pengecilan benar-benar teruji. */
+    private static function jpeg(int $lebar, int $tinggi): string
+    {
+        $im = imagecreatetruecolor($lebar, $tinggi);
+        imagefilledrectangle($im, 0, 0, $lebar, $tinggi, imagecolorallocate($im, 40, 90, 140));
+        ob_start();
+        imagejpeg($im, null, 90);
+        $bytes = (string) ob_get_clean();
+        imagedestroy($im);
+
+        return $bytes;
     }
 
     // ── Data pendukung ──────────────────────────────────────

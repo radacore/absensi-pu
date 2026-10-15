@@ -204,7 +204,7 @@ export default function RekapView({ rekap, onChangeBulan, backHref, pdfHref, csv
                     <p className="text-xs text-[#64748B] mb-3">Tampilan mengikuti kartu di halaman audit (hari libur, tanpa keterangan, hadir dengan detail masuk/pulang, dinas, cuti).</p>
                     <div className="space-y-3">
                         {rekap.harian.map((h) => {
-                            const detail = rekap.detailHari.find((d2) => d2.tgl.includes(h.tgl.replace(/ Agt /, ' Agustus ')));
+                            const detail = rekap.detailHari.find((d2) => d2.iso === h.iso);
                             return <KartuHari key={h.iso} h={h} detail={detail} />;
                         })}
                     </div>
@@ -332,29 +332,53 @@ function KartuHari({ h, detail }) {
                 {detail.masuk && (
                     <div className="rounded border border-[#E2E8F0] p-2 bg-[#F8FAFC]">
                         <p className="font-semibold text-[#0F172A] mb-1">Absen Masuk</p>
-                        <p><strong>Jenis:</strong> {detail.masuk.jenis_absen}</p>
-                        <p><strong>Jam:</strong> <span className="font-mono">{detail.masuk.jam}</span></p>
-                        <p><strong>Timezone:</strong> {detail.masuk.timezone}</p>
-                        <p><strong>Koordinat:</strong> <span className="font-mono">{detail.masuk.koordinat}</span></p>
-                        <p><strong>Lokasi:</strong> {detail.masuk.lokasi}</p>
-                        <p className="text-[#64748B] mt-1"><strong>Radius:</strong> {detail.masuk.radius} m dari titik</p>
-                        <p className="text-[#64748B]"><strong>Unit Kerja:</strong> {detail.masuk.unit_kerja}</p>
+                        <div className="flex gap-2">
+                            {detail.masuk.selfie_url ? (
+                                <img src={detail.masuk.selfie_url} alt="Swafoto masuk" className="w-24 h-32 object-cover rounded border border-[#E2E8F0] shrink-0" />
+                            ) : (
+                                <div className="w-24 h-32 rounded border border-dashed border-[#E2E8F0] flex items-center justify-center text-[10px] text-[#94A3B8] shrink-0">Tanpa foto</div>
+                            )}
+                            <div className="space-y-0.5 min-w-0">
+                                <p><strong>Jenis:</strong> {detail.masuk.jenis_absen}</p>
+                                <p><strong>Jam:</strong> <span className="font-mono">{detail.masuk.jam}</span></p>
+                                <p><strong>Timezone:</strong> {detail.masuk.timezone}</p>
+                                <p><strong>Koordinat:</strong> <span className="font-mono">{detail.masuk.koordinat}</span></p>
+                                <p><strong>Lokasi:</strong> {detail.masuk.lokasi}</p>
+                                <p className="text-[#64748B]"><strong>Radius:</strong> {detail.masuk.radius} m dari titik</p>
+                                <p className="text-[#64748B]"><strong>Unit Kerja:</strong> {detail.masuk.unit_kerja}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
                 {detail.pulang && (
                     <div className="rounded border border-[#E2E8F0] p-2 bg-[#F8FAFC]">
                         <p className="font-semibold text-[#0F172A] mb-1">Absen Pulang</p>
-                        <p><strong>Jenis:</strong> {detail.pulang.jenis_absen}</p>
-                        <p><strong>Jam:</strong> <span className="font-mono">{detail.pulang.jam}</span></p>
-                        <p><strong>Timezone:</strong> {detail.pulang.timezone}</p>
-                        <p><strong>Koordinat:</strong> <span className="font-mono">{detail.pulang.koordinat}</span></p>
-                        <p><strong>Lokasi:</strong> {detail.pulang.lokasi}</p>
-                        <p className="text-[#64748B] mt-1"><strong>Radius:</strong> {detail.pulang.radius} m dari titik</p>
-                        <p className="text-[#64748B]"><strong>Unit Kerja:</strong> {detail.pulang.unit_kerja}</p>
-                        <p className="mt-1 break-words"><strong>Catatan pekerjaan:</strong> {detail.pulang.catatan || '—'}</p>
+                        <div className="flex gap-2">
+                            {detail.pulang.selfie_url ? (
+                                <img src={detail.pulang.selfie_url} alt="Swafoto pulang" className="w-24 h-32 object-cover rounded border border-[#E2E8F0] shrink-0" />
+                            ) : (
+                                <div className="w-24 h-32 rounded border border-dashed border-[#E2E8F0] flex items-center justify-center text-[10px] text-[#94A3B8] shrink-0">Tanpa foto</div>
+                            )}
+                            <div className="space-y-0.5 min-w-0">
+                                <p><strong>Jenis:</strong> {detail.pulang.jenis_absen}</p>
+                                <p><strong>Jam:</strong> <span className="font-mono">{detail.pulang.jam}</span></p>
+                                <p><strong>Timezone:</strong> {detail.pulang.timezone}</p>
+                                <p><strong>Koordinat:</strong> <span className="font-mono">{detail.pulang.koordinat}</span></p>
+                                <p><strong>Lokasi:</strong> {detail.pulang.lokasi}</p>
+                                <p className="text-[#64748B]"><strong>Radius:</strong> {detail.pulang.radius} m dari titik</p>
+                                <p className="text-[#64748B]"><strong>Unit Kerja:</strong> {detail.pulang.unit_kerja}</p>
+                                <p className="break-words"><strong>Catatan pekerjaan:</strong> {detail.pulang.catatan || '—'}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
+            {detail.dispensasi && (
+                <p className="text-xs text-[#92400E] bg-[#FEF3C7]/60 border border-[#FCD34D] rounded px-2 py-1">
+                    <strong>Dispensasi · {detail.dispensasi.jenis} · {detail.dispensasi.status}:</strong> {detail.dispensasi.alasan}
+                    {detail.dispensasi.note ? ` · Catatan admin: ${detail.dispensasi.note}` : ''}
+                </p>
+            )}
         </div>
     );
 }

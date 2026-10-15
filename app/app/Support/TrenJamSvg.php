@@ -33,6 +33,21 @@ class TrenJamSvg
      * @param  string  $mode  'masuk' | 'pulang'
      * @param  array<string, mixed>  $settings  RekapPresenter['settings']
      */
+    /**
+     * Grafik sebagai data URI — dompdf hanya menggambar SVG lewat atribut
+     * `src` gambar; elemen `<svg>` yang ditulis langsung di HTML diabaikan
+     * (garis dan batangnya hilang tanpa peringatan).
+     *
+     * @param  array<int, array<string, mixed>>  $tren
+     * @param  array<string, mixed>  $settings
+     */
+    public static function dataUri(array $tren, string $mode, array $settings): string
+    {
+        $svg = self::render($tren, $mode, $settings);
+
+        return $svg === '' ? '' : 'data:image/svg+xml;base64,'.base64_encode($svg);
+    }
+
     public static function render(array $tren, string $mode, array $settings): string
     {
         if ($tren === []) {

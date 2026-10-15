@@ -55,6 +55,37 @@
         .footer { border-top: 1px solid #E2E8F0; padding-top: 6px; margin-top: 10px; font-size: 8px; color: #64748B; }
         .sign { margin-top: 18px; font-size: 8px; color: #334155; }
         .sign .line { margin-top: 34px; border-top: 1px solid #94A3B8; width: 150px; }
+
+        /* Legenda diagram donat */
+        table.legenda { width: 100%; border-collapse: collapse; }
+        table.legenda td { padding: 2px 0; font-size: 9px; }
+        table.legenda td.dot { width: 14px; padding-right: 4px; }
+        table.legenda td.dot span { display: block; width: 9px; height: 9px; }
+        table.legenda .v { text-align: right; font-family: DejaVu Sans Mono, monospace; font-weight: bold; }
+
+        /* Kartu detail harian */
+        table.kartu { width: 100%; border-collapse: collapse; border: 1px solid #E2E8F0; border-radius: 4px; margin-bottom: 7px; }
+        table.kartu > tbody > tr > td { padding: 0; }
+        .kartu-h { padding: 5px 7px; border-bottom: 1px solid #E2E8F0; background: #F8FAFC; }
+        .kartu-h .tgl { font-weight: bold; font-size: 9.5px; }
+        .kartu-b { padding: 6px 7px; }
+        .kartu-libur .kartu-h { background: #F1F5F9; color: #475569; }
+        .kartu-cuti .kartu-h { background: #FEF3C7; color: #92400E; }
+        .kartu-dinas .kartu-h { background: #EFF6FF; color: #1E3A8A; }
+        .kartu-alfa .kartu-h { background: #FEE2E2; color: #991B1B; }
+        .kartu-hadir .kartu-h { background: #DCFCE7; color: #065F46; }
+        .chip { display: inline-block; padding: 1px 6px; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 8px; background: #FFFFFF; }
+        table.absen { width: 100%; border-collapse: collapse; }
+        table.absen > tbody > tr > td { vertical-align: top; }
+        .absen-blok { border: 1px solid #E2E8F0; padding: 5px 6px; }
+        .absen-ttl { font-weight: bold; font-size: 9px; margin-bottom: 3px; }
+        .foto { border: 1px solid #E2E8F0; background: #F8FAFC; }
+        .foto-kosong { color: #94A3B8; font-size: 7.5px; text-align: center; padding: 16px 4px; }
+        table.det { width: 100%; border-collapse: collapse; }
+        table.det td { padding: 1.5px 0; vertical-align: top; font-size: 8px; }
+        table.det td.dk { color: #64748B; width: 62px; }
+        .dinas-grid td { padding: 1.5px 6px 1.5px 0; vertical-align: top; font-size: 8.5px; }
+        .dinas-grid td.dk { color: #64748B; width: 96px; }
     </style>
 </head>
 <body>
@@ -115,18 +146,25 @@
                     <h2>Distribusi kehadiran</h2>
                     <table class="grid">
                         <tr>
-                            <td style="padding-right: 5px;"><div class="stat"><p class="n">{{ $d['hadir'] }}</p><p class="l">HADIR</p></div></td>
-                            <td style="padding-right: 5px;"><div class="stat"><p class="n">{{ $d['tanpa_keterangan'] }}</p><p class="l">TANPA KETERANGAN</p></div></td>
-                            <td style="padding-right: 5px;"><div class="stat"><p class="n">{{ $d['dinas'] }}</p><p class="l">DINAS</p></div></td>
-                            <td><div class="stat"><p class="n">{{ $d['cuti'] }}</p><p class="l">CUTI</p></div></td>
+                            <td style="width: 128px; vertical-align: middle;">
+                                <img src="{{ $distribusiSvg }}" width="124" height="124" alt="Distribusi kehadiran">
+                            </td>
+                            <td style="vertical-align: middle;">
+                                <table class="legenda">
+                                    <tr><td class="dot"><span style="background: #10B981;"></span></td><td>Hadir</td><td class="v">{{ $d['hadir'] }}</td></tr>
+                                    <tr><td class="dot"><span style="background: #EF4444;"></span></td><td>Tanpa keterangan</td><td class="v">{{ $d['tanpa_keterangan'] }}</td></tr>
+                                    <tr><td class="dot"><span style="background: #3B82F6;"></span></td><td>Dinas</td><td class="v">{{ $d['dinas'] }}</td></tr>
+                                    <tr><td class="dot"><span style="background: #F59E0B;"></span></td><td>Cuti</td><td class="v">{{ $d['cuti'] }}</td></tr>
+                                </table>
+                                @if ($k['is_shift'])
+                                    <p class="small muted" style="margin-top: 6px;">
+                                        Pekerja shift dinilai dari <span class="bold">jadwal shift</span>, bukan akhir pekan:
+                                        {{ $hariKerjaShift }} hari dijadwalkan masuk, {{ $hariLiburJadwal }} hari libur jadwal pada periode ini.
+                                    </p>
+                                @endif
+                            </td>
                         </tr>
                     </table>
-                    @if ($k['is_shift'])
-                        <p class="small muted" style="margin-top: 6px;">
-                            Pekerja shift dinilai dari <span class="bold">jadwal shift</span>, bukan akhir pekan:
-                            {{ $hariKerjaShift }} hari dijadwalkan masuk, {{ $hariLiburJadwal }} hari libur jadwal pada periode ini.
-                        </p>
-                    @endif
                 </div>
             </td>
         </tr>
@@ -225,6 +263,26 @@
     @endif
 </div>
 
+{{-- ── Rekap tren jam absen ────────────────────────────────────────── --}}
+@if (! empty($trenMasukImg) || ! empty($trenPulangImg))
+<div class="section keep">
+    <h2>Tren jam absen hari kerja</h2>
+    <table class="grid">
+        <tr>
+            @if (! empty($trenMasukImg))
+                <td style="width: 50%; padding-right: 6px;"><div class="box"><img src="{{ $trenMasukImg }}" width="500" height="139" alt="Grafik tren jam masuk"></div></td>
+            @endif
+            @if (! empty($trenPulangImg))
+                <td style="width: 50%;"><div class="box"><img src="{{ $trenPulangImg }}" width="500" height="139" alt="Grafik tren jam pulang"></div></td>
+            @endif
+        </tr>
+    </table>
+    <p class="small muted" style="margin-top: 4px;">
+        Titik pada garis = jam absen hari kerja. Titik di dasar grafik = hari kerja tanpa absen.
+    </p>
+</div>
+@endif
+
 {{-- ── Rekap harian ────────────────────────────────────────────────── --}}
 <div class="section page-break">
     <h2>Rekap harian {{ $p['label'] }}</h2>
@@ -282,25 +340,153 @@
     </table>
 </div>
 
-{{-- ── Rekap tren jam absen ────────────────────────────────────────── --}}
-@if (! empty($trenMasukSvg) || ! empty($trenPulangSvg))
-<div class="section keep">
-    <h2>Tren jam absen hari kerja</h2>
-    <table class="grid">
-        <tr>
-            @if (! empty($trenMasukSvg))
-                <td style="width: 50%; padding-right: 6px;"><div class="box">{!! $trenMasukSvg !!}</div></td>
-            @endif
-            @if (! empty($trenPulangSvg))
-                <td style="width: 50%;"><div class="box">{!! $trenPulangSvg !!}</div></td>
-            @endif
-        </tr>
-    </table>
-    <p class="small muted" style="margin-top: 4px;">
-        Titik pada garis = jam absen hari kerja. Titik di dasar grafik = hari kerja tanpa absen.
+{{-- ── Detail harian (kartu per hari + swafoto) ────────────────────── --}}
+<div class="section page-break">
+    <h2>Detail harian {{ $p['label'] }}</h2>
+    <p class="small muted" style="margin-bottom: 6px;">
+        Satu kartu per hari, mengikuti kartu audit di aplikasi: hari libur, tanpa keterangan, cuti,
+        dinas, dan kehadiran lengkap dengan swafoto masuk &amp; pulang.
     </p>
+
+    @foreach ($harian as $h)
+        @php $d = $detailPerHari[$h['iso']] ?? null; @endphp
+
+        @if ($h['is_cuti'] && $h['cuti'])
+            <table class="kartu keep kartu-cuti">
+                <tr><td class="kartu-h">
+                    <table class="grid"><tr>
+                        <td class="tgl">{{ $h['tgl'] }}</td>
+                        <td class="right"><span class="chip">Cuti {{ $h['cuti']['jenis'] }}</span></td>
+                    </tr></table>
+                </td></tr>
+                <tr><td class="kartu-b">
+                    <table class="det">
+                        <tr><td class="dk">Alasan</td><td>{{ $h['cuti']['alasan'] ?: '—' }}</td></tr>
+                    </table>
+                </td></tr>
+            </table>
+        @elseif ($h['is_dinas'] && $h['dinas'])
+            <table class="kartu keep kartu-dinas">
+                <tr><td class="kartu-h">
+                    <table class="grid"><tr>
+                        <td class="tgl">{{ $h['tgl'] }}</td>
+                        <td class="right"><span class="chip">Dinas</span></td>
+                    </tr></table>
+                </td></tr>
+                <tr><td class="kartu-b">
+                    <table class="grid dinas-grid">
+                        <tr><td class="dk">Nomor Surat</td><td>{{ $h['dinas']['nomor_surat'] ?: '—' }}</td></tr>
+                        <tr><td class="dk">Tanggal Dinas</td><td>{{ $h['dinas']['tanggal_dinas'] ?: '—' }}</td></tr>
+                        <tr><td class="dk">Tanggal Pengajuan</td><td>{{ $h['dinas']['tanggal_pengajuan'] ?: '—' }}</td></tr>
+                        <tr><td class="dk">Tujuan</td><td>{{ $h['dinas']['tujuan'] ?: '—' }}</td></tr>
+                        <tr><td class="dk">Transportasi</td><td>{{ $h['dinas']['transportasi'] ?: '—' }}</td></tr>
+                        <tr><td class="dk">Pembebanan Anggaran</td><td>{{ $h['dinas']['pembebanan_anggaran'] ?: '—' }}</td></tr>
+                        <tr><td class="dk">Keterangan</td><td>{{ $h['dinas']['keterangan'] ?: '—' }}</td></tr>
+                    </table>
+                </td></tr>
+            </table>
+        @elseif ($h['is_tanpa_keterangan'])
+            <table class="kartu keep kartu-alfa">
+                <tr><td class="kartu-h">
+                    <table class="grid"><tr>
+                        <td class="tgl">{{ $h['tgl'] }}</td>
+                        <td class="right"><span class="chip">Tanpa keterangan</span></td>
+                    </tr></table>
+                </td></tr>
+                <tr><td class="kartu-b">
+                    <p class="small">Tidak ada absen masuk &middot; Tidak ada absen pulang.</p>
+                </td></tr>
+            </table>
+        @elseif ($d)
+            <table class="kartu keep kartu-hadir">
+                <tr><td class="kartu-h">
+                    <table class="grid"><tr>
+                        <td class="tgl">{{ $d['tgl'] }}</td>
+                        <td class="right">
+                            <span class="chip">{{ $d['status'] }}</span>
+                            @if ($k['is_shift'] && ! empty($h['shift']))
+                                <span class="chip">Shift {{ $h['shift'] }}@if (! empty($h['shift_jam'])) · {{ $h['shift_jam'] }}@endif</span>
+                            @endif
+                        </td>
+                    </tr></table>
+                </td></tr>
+                <tr><td class="kartu-b">
+                    <table class="absen">
+                        <tr>
+                            @foreach (['masuk' => 'Absen Masuk', 'pulang' => 'Absen Pulang'] as $arah => $judul)
+                                <td style="width: 50%; @if ($arah === 'masuk') padding-right: 5px; @endif">
+                                    <div class="absen-blok">
+                                        <p class="absen-ttl">{{ $judul }}</p>
+                                        @php $b = $d[$arah]; @endphp
+                                        <table class="grid">
+                                            <tr>
+                                                <td style="width: 100px;">
+                                                    @if ($b && ! empty($b['foto']))
+                                                        <img src="{{ $b['foto']['src'] }}" width="{{ $b['foto']['width'] }}" height="{{ $b['foto']['height'] }}" alt="Swafoto {{ $judul }}">
+                                                    @else
+                                                        <div class="foto-kosong" style="width: 92px; height: 122px;">Tidak ada foto</div>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if ($b)
+                                                        <table class="det">
+                                                            <tr><td class="dk">Jenis Absen</td><td>{{ $b['jenis_absen'] }}</td></tr>
+                                                            <tr><td class="dk">Jam</td><td class="mono">{{ $b['jam'] }}</td></tr>
+                                                            <tr><td class="dk">Lokasi</td><td>{{ $b['lokasi'] ?: '—' }}</td></tr>
+                                                            <tr><td class="dk">Timezone</td><td>{{ $b['timezone'] }}</td></tr>
+                                                            <tr><td class="dk">Koordinat</td><td class="mono">{{ $b['koordinat'] }}</td></tr>
+                                                            <tr><td class="dk">Radius</td><td>{{ $b['radius'] }} m dari titik kantor</td></tr>
+                                                            <tr><td class="dk">Unit Kerja</td><td>{{ $b['unit_kerja'] ?: '—' }}</td></tr>
+                                                            @if ($arah === 'pulang')
+                                                                <tr><td class="dk">Catatan</td><td>{{ $b['catatan'] ?: '—' }}</td></tr>
+                                                            @endif
+                                                        </table>
+                                                    @else
+                                                        <p class="small muted">Tidak ada absen {{ $arah }}.</p>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+                            @endforeach
+                        </tr>
+                    </table>
+
+                    @if (! empty($d['dispensasi']))
+                        <p class="small" style="margin-top: 4px;">
+                            <span class="chip">Dispensasi · {{ $d['dispensasi']['jenis'] }} · {{ $d['dispensasi']['status'] }}</span>
+                            @if (! empty($d['dispensasi']['tanggal_pengajuan']))
+                                &middot; Diajukan {{ $d['dispensasi']['tanggal_pengajuan'] }}
+                            @endif
+                            <br>{{ $d['dispensasi']['alasan'] }}
+                            @if (! empty($d['dispensasi']['note'])) &middot; Catatan admin: {{ $d['dispensasi']['note'] }} @endif
+                        </p>
+                    @endif
+                </td></tr>
+            </table>
+        @else
+            <table class="kartu keep kartu-libur">
+                <tr><td class="kartu-h">
+                    <table class="grid"><tr>
+                        <td class="tgl">{{ $h['tgl'] }}</td>
+                        <td class="right">
+                            <span class="chip">
+                                @if ($h['is_holiday'])
+                                    Hari libur nasional{{ ! empty($h['holiday']['nama']) ? ' · '.$h['holiday']['nama'] : '' }}
+                                @elseif ($h['is_libur_jadwal'])
+                                    Libur jadwal shift
+                                @else
+                                    Bukan hari kerja
+                                @endif
+                            </span>
+                        </td>
+                    </tr></table>
+                </td></tr>
+            </table>
+        @endif
+    @endforeach
 </div>
-@endif
 
 {{-- ── Tanda tangan + footer ───────────────────────────────────────── --}}
 <div class="keep">

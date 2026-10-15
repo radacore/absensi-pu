@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Attendance;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
@@ -46,6 +47,8 @@ class RekapPdf
     {
         $s = $rekap['settings'];
 
+        $detail = self::denganSwafoto($rekap['detailHari']);
+
         return [
             'k' => $rekap['karyawan'],
             'p' => $rekap['periode'],
@@ -60,9 +63,50 @@ class RekapPdf
             'adaPulangCepat' => $rekap['ada_pulang_cepat'],
             'logoSrc' => self::logoSrc(),
             'tanggalCetak' => self::tanggalCetak(),
-            'trenMasukSvg' => TrenJamSvg::render($rekap['tren'], 'masuk', $s),
-            'trenPulangSvg' => TrenJamSvg::render($rekap['tren'], 'pulang', $s),
+            'trenMasukImg' => TrenJamSvg::dataUri($rekap['tren'], 'masuk', $s),
+            'trenPulangImg' => TrenJamSvg::dataUri($rekap['tren'], 'pulang', $s),
+            'distribusiSvg' => DistribusiSvg::dataUri($rekap['distribusi']),
+            'detailHari' => $detail,
+            // Detail harian diindeks per tanggal supaya template bisa
+            // mencetak satu kartu per hari tanpa pencarian berulang.
+            'detailPerHari' => collect($detail)->keyBy('iso')->all(),
         ];
+    }
+
+    /**
+     * Lampirkan swafoto (masuk & pulang) ke tiap hari yang punya absensi.
+     *
+     * Swafoto disimpan di disk privat, jadi berkasnya dibaca lewat penyimpanan
+     * aplikasi lalu diperkecil oleh SelfieThumb — bukan lewat URL, karena
+     * dompdf berjalan tanpa sesi login (`isRemoteEnabled => false`).
+     *
+     * @param  array<int, array<string, mixed>>  $detail
+     * @return array<int, array<string, mixed>>
+     */
+    private static function denganSwafoto(array $detail): array
+    {
+        $ids = array_values(array_filter(array_column($detail, 'attendance_id')));
+        if ($ids === []) {
+            return $detail;
+        }
+
+        $baris = Attendance::whereIn('id', $ids)
+            ->get(['id', 'selfie_url', 'selfie_pulang_url'])
+            ->keyBy('id');
+
+        foreach ($detail as &$hari) {
+            $att = $baris->get($hari['attendance_id']);
+            foreach (['masuk' => 'selfie_url', 'pulang' => 'selfie_pulang_url'] as $arah => $kolom) {
+                if ($hari[$arah] === null) {
+                    continue;
+                }
+
+                $hari[$arah]['foto'] = SelfieThumb::untuk($att?->{$kolom});
+            }
+        }
+        unset($hari);
+
+        return $detail;
     }
 
     /**

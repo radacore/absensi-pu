@@ -42,7 +42,8 @@ class RekapPresenter
         $batasToleransiMin = $jamMasukMin + $toleransi;
 
         // Attendance bulan itu
-        $attendances = Attendance::where('employee_id', $emp->id)
+        $attendances = Attendance::with('toleranceClaim')
+            ->where('employee_id', $emp->id)
             ->whereYear('work_date', $year)
             ->whereMonth('work_date', $month)
             ->get()
@@ -476,15 +477,36 @@ class RekapPresenter
                 'koordinat_lokasi_aktif' => sprintf('%.6f, %.6f', $siteLat, $siteLng),
                 'unit_kerja' => $unitKerja,
                 'catatan' => $att->catatan_pulang,
+                'selfie_url' => $att->selfieRouteUrl('pulang'),
             ];
         }
 
+        // Dispensasi (lupa absen) yang menempel pada hari ini — ditampilkan di
+        // kartu detail supaya alasannya terbaca berdampingan dengan absennya.
+        $claim = $att->toleranceClaim;
+        $dispensasi = $claim ? [
+            'jenis' => $claim->jenis === 'lupa_absen' ? 'Lupa Absen Datang' : 'Lupa Absen Pulang',
+            'status' => match ($claim->status) {
+                'approved' => 'Disetujui',
+                'rejected' => 'Ditolak',
+                default => 'Menunggu',
+            },
+            'alasan' => $claim->alasan,
+            'note' => $claim->note,
+            'tanggal_pengajuan' => $claim->created_at?->locale('id')->isoFormat('dddd, D MMMM YYYY'),
+        ] : null;
+
         return [
+            // id absensi: dipakai berkas PDF untuk membaca swafoto dari disk
+            // privat (path-nya tidak ikut dikirim ke peramban).
+            'attendance_id' => $att->id,
+            'iso' => $date->format('Y-m-d'),
             'tgl' => $date->locale('id')->isoFormat('dddd, D MMMM YYYY'),
             'hari' => $hariFull,
             'status' => 'Hadir · '.$zonaLabel,
             'masuk' => $masuk,
             'pulang' => $pulang,
+            'dispensasi' => $dispensasi,
         ];
     }
 }
