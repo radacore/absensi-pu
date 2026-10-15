@@ -178,7 +178,7 @@ class FullSimulationTest extends TestCase
             $this->markTestSkipped("Simulasi lengkap butuh MySQL; driver saat ini: {$driver}.");
         }
 
-        $this->assertSame(21, DB::table('information_schema.tables')
+        $this->assertSame(24, DB::table('information_schema.tables')
             ->where('table_schema', $db)->where('table_type', 'BASE TABLE')->count(),
             'Jumlah tabel tidak sesuai harapan.');
     }
