@@ -15,13 +15,19 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 /**
  * Templat XLSX untuk impor akun karyawan.
  *
- * Kolom NIK dan NIP sengaja berformat Teks. NIK 16 digit dan NIP 18 digit
- * melampaui presisi angka Excel (2^53), sehingga bila kolomnya berformat
- * angka, digit terakhir sudah hilang SEBELUM berkas sampai ke server dan
- * tidak mungkin dipulihkan lagi.
+ * Enam kolom pertama disalin huruf demi huruf dari berkas yang biasa dikirim
+ * PPK (NAMA, NIK/NIP, STATUS PEGAWAI, SATKER, PPK, EMAIL). Tujuannya supaya
+ * berkas lama tidak perlu diubah sama sekali: salin isinya ke templat ini, dan
+ * kolom A–F langsung cocok. Kolom tambahan milik aplikasi diletakkan setelahnya
+ * dan boleh dibiarkan kosong.
  *
- * Templat dibuat sesuai cakupan: admin wilayah hanya melihat wilayahnya
- * sendiri di daftar dropdown dan daftar titik, super admin melihat semuanya.
+ * Kolom NIK/NIP dan NIP sengaja berformat Teks. NIK 16 digit dan NIP 18 digit
+ * melampaui presisi angka Excel (2^53), sehingga bila kolomnya berformat
+ * angka, digit terakhir sudah hilang SEBELUM berkas sampai ke server dan tidak
+ * mungkin dipulihkan lagi.
+ *
+ * Templat dibuat sesuai cakupan: admin wilayah hanya melihat wilayahnya sendiri
+ * di daftar dropdown dan daftar titik, super admin melihat semuanya.
  */
 class KaryawanTemplate
 {
@@ -33,39 +39,52 @@ class KaryawanTemplate
     /**
      * Susunan kolom templat. Urutan menentukan huruf kolom (A, B, C, …).
      *
-     * `wajib` hanya dipakai untuk pewarnaan judul dan teks petunjuk; aturan
-     * yang sebenarnya berlaku ada di KaryawanImpor.
+     * `wajib` dipakai untuk pewarnaan judul, teks petunjuk, dan aturan yang
+     * berlaku di KaryawanImpor. Judul kolom sengaja TIDAK diberi tanda bintang:
+     * satu karakter tambahan saja membuat judulnya tidak lagi sama persis
+     * dengan berkas PPK.
      */
     public const KOLOM = [
-        ['kunci' => 'nik', 'judul' => 'NIK', 'lebar' => 20],
-        ['kunci' => 'nama', 'judul' => 'Nama', 'lebar' => 26],
-        ['kunci' => 'email', 'judul' => 'Email', 'lebar' => 30],
-        ['kunci' => 'wilayah', 'judul' => 'Wilayah', 'lebar' => 28],
-        ['kunci' => 'titik', 'judul' => 'Titik Proyek', 'lebar' => 30],
-        ['kunci' => 'jabatan', 'judul' => 'Jabatan', 'lebar' => 22],
-        ['kunci' => 'unit', 'judul' => 'Unit Kerja', 'lebar' => 22],
-        ['kunci' => 'status', 'judul' => 'Status', 'lebar' => 14],
-        ['kunci' => 'nip', 'judul' => 'NIP', 'lebar' => 22],
-        ['kunci' => 'gol', 'judul' => 'Golongan', 'lebar' => 12],
-        ['kunci' => 'regu', 'judul' => 'Regu', 'lebar' => 14],
-        ['kunci' => 'is_shift', 'judul' => 'Shift', 'lebar' => 10],
-        ['kunci' => 'hari_kerja', 'judul' => 'Hari Kerja', 'lebar' => 22],
-        ['kunci' => 'sandi', 'judul' => 'Sandi Awal', 'lebar' => 16],
+        // ── Enam kolom berkas PPK, disalin persis ──────────────────────
+        ['kunci' => 'nama', 'judul' => 'NAMA', 'lebar' => 30, 'wajib' => true],
+        ['kunci' => 'nik', 'judul' => 'NIK/NIP', 'lebar' => 22, 'wajib' => false],
+        [
+            'kunci' => 'jabatan',
+            'judul' => 'STATUS PEGAWAI (Petugas OP, Tenaga Pendukung, Konsultan Individu, Konsultan Supervisi, Pekarya dll)',
+            'lebar' => 44,
+            'wajib' => true,
+        ],
+        ['kunci' => 'unit', 'judul' => 'SATKER', 'lebar' => 26, 'wajib' => true],
+        ['kunci' => 'ppk', 'judul' => 'PPK', 'lebar' => 24, 'wajib' => false],
+        ['kunci' => 'email', 'judul' => 'EMAIL', 'lebar' => 32, 'wajib' => true],
+
+        // ── Kolom tambahan, boleh dikosongkan ──────────────────────────
+        ['kunci' => 'wilayah', 'judul' => 'Wilayah', 'lebar' => 24, 'wajib' => false],
+        ['kunci' => 'titik', 'judul' => 'Titik Proyek', 'lebar' => 30, 'wajib' => false],
+        ['kunci' => 'nip', 'judul' => 'NIP', 'lebar' => 22, 'wajib' => false],
+        ['kunci' => 'gol', 'judul' => 'Golongan', 'lebar' => 12, 'wajib' => false],
+        ['kunci' => 'status', 'judul' => 'Status Kepegawaian', 'lebar' => 20, 'wajib' => false],
+        ['kunci' => 'regu', 'judul' => 'Regu', 'lebar' => 14, 'wajib' => false],
+        ['kunci' => 'is_shift', 'judul' => 'Shift', 'lebar' => 10, 'wajib' => false],
+        ['kunci' => 'hari_kerja', 'judul' => 'Hari Kerja', 'lebar' => 22, 'wajib' => false],
+        ['kunci' => 'sandi', 'judul' => 'Sandi Awal', 'lebar' => 16, 'wajib' => false],
     ];
 
-    /** Kolom yang wajib diisi, per cakupan. Wilayah tidak wajib bagi admin wilayah. */
-    public static function kolomWajib(?int $scopeRegionId): array
+    /**
+     * Kunci kolom yang harus ada di baris 1 berkas unggahan.
+     *
+     * Wilayah dan Titik Proyek tidak lagi termasuk: keduanya bisa ditentukan
+     * sekaligus untuk seluruh berkas lewat pilihan di halaman impor.
+     */
+    public static function kolomWajib(): array
     {
-        $wajib = ['nik', 'nama', 'email', 'titik', 'jabatan', 'unit', 'status'];
-
-        if ($scopeRegionId === null) {
-            $wajib[] = 'wilayah';
-        }
-
-        return $wajib;
+        return array_values(array_map(
+            fn (array $kolom) => $kolom['kunci'],
+            array_filter(self::KOLOM, fn (array $kolom) => $kolom['wajib'])
+        ));
     }
 
-    /** Huruf kolom untuk sebuah kunci, mis. 'nik' → 'A'. */
+    /** Huruf kolom untuk sebuah kunci, mis. 'nik' → 'B'. */
     public static function huruf(string $kunci): string
     {
         foreach (self::KOLOM as $i => $kolom) {
@@ -87,7 +106,7 @@ class KaryawanTemplate
         $spreadsheet = new Spreadsheet;
         $spreadsheet->removeSheetByIndex(0);
 
-        self::lembarIsian($spreadsheet, $scopeRegionId, $regions);
+        self::lembarIsian($spreadsheet, $regions);
         self::lembarDaftar($spreadsheet, $regions);
         self::lembarPetunjuk($spreadsheet, $scopeRegionId);
 
@@ -104,14 +123,12 @@ class KaryawanTemplate
         $writer->save($path);
     }
 
-    private static function lembarIsian(Spreadsheet $spreadsheet, ?int $scopeRegionId, $regions): void
+    private static function lembarIsian(Spreadsheet $spreadsheet, $regions): void
     {
         $sheet = $spreadsheet->createSheet();
         $sheet->setTitle(self::LEMBAR);
 
-        $wajib = self::kolomWajib($scopeRegionId);
-
-        foreach (self::KOLOM as $i => $kolom) {
+        foreach (self::KOLOM as $kolom) {
             $huruf = self::huruf($kolom['kunci']);
             $sheet->setCellValue("{$huruf}1", $kolom['judul']);
             $sheet->getColumnDimension($huruf)->setWidth($kolom['lebar']);
@@ -119,22 +136,32 @@ class KaryawanTemplate
 
         $akhir = self::huruf(self::KOLOM[array_key_last(self::KOLOM)]['kunci']);
 
-        $judul = $sheet->getStyle("A1:{$akhir}1");
-        $judul->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
-        $judul->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF0F172A');
-        $judul->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-        $judul->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-        $sheet->getRowDimension(1)->setRowHeight(22);
+        // Judul kolom wajib berlatar gelap, kolom opsional berlatar abu muda.
+        // Perbedaan warna inilah pengganti tanda bintang, supaya judulnya tetap
+        // sama persis dengan berkas PPK.
+        foreach (self::KOLOM as $kolom) {
+            $huruf = self::huruf($kolom['kunci']);
+            $gaya = $sheet->getStyle("{$huruf}1");
 
-        // Judul kolom wajib diberi penanda bintang agar jelas mana yang harus diisi.
-        foreach ($wajib as $kunci) {
-            $huruf = self::huruf($kunci);
-            $sheet->setCellValue("{$huruf}1", self::judulKolom($kunci).' *');
+            if ($kolom['wajib']) {
+                $gaya->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+                $gaya->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF0F172A');
+            } else {
+                $gaya->getFont()->setBold(true)->getColor()->setARGB('FF334155');
+                $gaya->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE2E8F0');
+            }
+
+            $gaya->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            $gaya->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $gaya->getAlignment()->setWrapText(true);
         }
+
+        // Judul STATUS PEGAWAI panjang dan memakan dua baris bila dibungkus.
+        $sheet->getRowDimension(1)->setRowHeight(46);
 
         $barisAkhir = self::BARIS_KOSONG + 1;
 
-        // NIK dan NIP sebagai Teks: tanpa ini Excel memotong digit terakhirnya.
+        // NIK/NIP dan NIP sebagai Teks: tanpa ini Excel memotong digit terakhirnya.
         foreach (['nik', 'nip'] as $kunci) {
             $huruf = self::huruf($kunci);
             $sheet->getStyle("{$huruf}2:{$huruf}{$barisAkhir}")
@@ -144,7 +171,7 @@ class KaryawanTemplate
 
         $sheet->getStyle("A2:{$akhir}{$barisAkhir}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
 
-        // Status: daftar tertutup sesuai kolom enum di basis data.
+        // Status kepegawaian: daftar tertutup sesuai kolom enum di basis data.
         self::dropdown($sheet, 'status', $barisAkhir, '"PNS,PPPK,Kontrak,Honorer"');
 
         // Shift: hanya pekerja shift yang perlu mengabsen di luar hari kerja umum.
@@ -163,17 +190,6 @@ class KaryawanTemplate
         $sheet->freezePane('A2');
         $sheet->setAutoFilter("A1:{$akhir}1");
         $sheet->setSelectedCell('A2');
-    }
-
-    private static function judulKolom(string $kunci): string
-    {
-        foreach (self::KOLOM as $kolom) {
-            if ($kolom['kunci'] === $kunci) {
-                return $kolom['judul'];
-            }
-        }
-
-        return $kunci;
     }
 
     private static function dropdown($sheet, string $kunci, int $barisAkhir, string $formula): void
@@ -245,33 +261,37 @@ class KaryawanTemplate
             ['', ''],
             ['1. Isi data pada lembar "Karyawan", mulai baris 2.', 'teks'],
             ['2. Jangan mengubah, menghapus, atau mengurutkan ulang baris judul di baris 1.', 'teks'],
-            ['3. Jangan menambah kolom baru. Kolom yang tidak dipakai boleh dikosongkan.', 'teks'],
-            ['4. Kolom NIK dan NIP sudah diformat sebagai Teks — biarkan begitu.', 'teks'],
+            ['3. Judul kolom berlatar gelap wajib diisi; judul berlatar abu-abu boleh dikosongkan.', 'teks'],
+            ['4. Jangan menambah kolom baru di depan. Kolom tambahan boleh diletakkan paling kanan.', 'teks'],
+            ['5. Kolom NIK/NIP dan NIP sudah diformat sebagai Teks — biarkan begitu.', 'teks'],
             ['   Bila diubah ke format Angka, Excel akan memotong digit terakhir dan data tidak bisa dipulihkan.', 'catatan'],
-            ['5. Nama wilayah dan nama titik harus sama persis dengan daftar di lembar "Daftar".', 'teks'],
-            ['6. Simpan berkas, lalu unggah di menu Karyawan → Impor.', 'teks'],
+            ['6. Nama wilayah dan nama titik harus sama persis dengan daftar di lembar "Daftar".', 'teks'],
+            ['7. Simpan berkas, lalu unggah di menu Karyawan → Impor.', 'teks'],
             ['', ''],
             ['Kolom wajib', 'subjudul'],
-            ['NIK — 16 digit angka.', 'teks'],
-            ['Nama — nama lengkap karyawan.', 'teks'],
-            ['Email — dipakai untuk login, harus belum terdaftar.', 'teks'],
-            ['Titik Proyek — satu karyawan hanya boleh di satu titik.', 'teks'],
-            ['Jabatan, Unit Kerja — sesuai data kepegawaian.', 'teks'],
-            ['Status — PNS, PPPK, Kontrak, atau Honorer.', 'teks'],
+            ['NAMA — nama lengkap karyawan.', 'teks'],
+            ['STATUS PEGAWAI — bebas diisi, mis. "Petugas OP", "Tenaga Pendukung", "Konsultan Individu".', 'teks'],
+            ['SATKER — satuan kerja karyawan, mis. "OP SDA".', 'teks'],
+            ['EMAIL — dipakai untuk login, harus belum terdaftar, dan harus unik.', 'teks'],
             [$wilayahWajib
-                ? 'Wilayah — wajib diisi.'
-                : 'Wilayah — boleh dikosongkan; otomatis memakai wilayah Anda.', 'teks'],
+                ? 'Wilayah & Titik Proyek — boleh dikosongkan bila dipilih di halaman impor.'
+                : 'Wilayah & Titik Proyek — boleh dikosongkan; otomatis memakai wilayah Anda.', 'teks'],
             ['', ''],
             ['Kolom opsional', 'subjudul'],
+            ['NIK/NIP — boleh dikosongkan, dan boleh kurang dari 16 digit. Isi apa adanya.', 'teks'],
+            ['PPK — label PPK karyawan, mis. "PPK OP SDA II". Hanya keterangan.', 'teks'],
             ['NIP, Golongan — boleh dikosongkan.', 'teks'],
+            ['Status Kepegawaian — PNS, PPPK, Kontrak, atau Honorer. Kosong berarti memakai', 'teks'],
+            ['   pilihan "Status kepegawaian bawaan" di halaman impor.', 'catatan'],
             ['Regu — label bebas, mis. "Regu A". Kosongkan bila tidak memakai regu.', 'teks'],
             ['Shift — isi "Ya" bila karyawan bekerja shift, selain itu "Tidak" atau kosongkan.', 'teks'],
             ['Hari Kerja — mis. "1,2,3,4,5" (Senin–Jumat) atau "Senin-Jumat".', 'teks'],
             ['   Kosongkan bila karyawan mengikuti hari kerja umum.', 'catatan'],
-            ['Sandi Awal — kosongkan bila sandi awal ingin disamakan dengan NIK.', 'teks'],
+            ['Sandi Awal — kosongkan bila sandi awal diambil dari NIK atau email.', 'teks'],
             ['', ''],
             ['Catatan', 'subjudul'],
-            ['Sandi awal karyawan baru disamakan dengan NIK dan wajib diganti saat login pertama.', 'catatan'],
+            ['Sandi awal karyawan baru wajib diganti saat login pertama.', 'catatan'],
+            ['Bila NIK kosong, sandi awal otomatis memakai email karyawan.', 'catatan'],
             ['Baris yang gagal tidak akan diimpor; sisanya tetap diproses.', 'catatan'],
         ];
 

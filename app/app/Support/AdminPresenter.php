@@ -63,7 +63,9 @@ class AdminPresenter
 
         return [
             'id' => $e->id,
-            'nik' => $e->nik,
+            'nik' => $e->nik ?? '',
+            // PPK hanya keterangan/label dari berkas PPK; tidak mengatur hak akses.
+            'ppk' => $e->ppk ?? '',
             'nip' => $e->nip ?? '',
             'nama' => $e->name,
             'email' => $e->email ?? '',

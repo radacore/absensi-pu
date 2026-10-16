@@ -1190,7 +1190,7 @@ class FullSimulationTest extends TestCase
         $this->assertDatabaseMissing('employees', ['id' => $baru->id]);
     }
 
-    public function test_admin_menolak_nik_duplikat_dan_nik_bukan_16_digit(): void
+    public function test_admin_menolak_nik_duplikat_dan_nik_berkarakter_aneh(): void
     {
         $region = Region::where('name', 'Kab. Gowa')->firstOrFail();
         $site = $region->sites()->orderBy('id')->firstOrFail();
@@ -1200,9 +1200,18 @@ class FullSimulationTest extends TestCase
             'region' => $region->name, 'office_location_id' => $site->id,
         ];
 
+        // NIK pendek tetap sah: berkas PPK memang begitu.
         $this->asAdmin($this->superAdmin())
             ->from('/super-admin/employees')
-            ->post('/super-admin/employees', $base + ['nik' => '123']) // bukan 16 digit
+            ->post('/super-admin/employees', $base + ['nik' => '123'])
+            ->assertSessionHasNoErrors();
+
+        Employee::where('nik', '123')->delete();
+
+        // Karakter di luar angka/huruf/titik/dash/garis miring tetap ditolak.
+        $this->asAdmin($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->post('/super-admin/employees', $base + ['nik' => 'nik@aneh'])
             ->assertSessionHasErrors('nik');
 
         // NIK milik karyawan yang sudah ada.

@@ -74,7 +74,8 @@ class EmployeeRekapController extends Controller
             meta: ['periode' => $bulan]
         );
 
-        $namaBerkas = 'rekap-presensi-'.$employee->nik.'-'.$bulan.'.csv';
+        // NIK boleh kosong, jadi nama berkas jatuh ke id bila perlu.
+        $namaBerkas = 'rekap-presensi-'.($employee->nik ?: $employee->id).'-'.$bulan.'.csv';
 
         return response()->streamDownload(function () use ($rekap) {
             $out = fopen('php://output', 'w');

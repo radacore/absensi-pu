@@ -43,7 +43,7 @@ class EmployeeController extends Controller
             'employee.create',
             subject: $employee,
             label: $employee->name,
-            description: "Tambah karyawan baru {$employee->name} (NIK {$employee->nik})",
+            description: 'Tambah karyawan baru '.$employee->name.' ('.$this->penanda($employee).')',
             meta: ['region_id' => $employee->region_id, 'site_id' => $employee->site_id]
         );
 
@@ -65,7 +65,7 @@ class EmployeeController extends Controller
         $this->assertSiteInRegion($region, (int) $data['office_location_id']);
 
         $payload = [
-            'nik' => $data['nik'],
+            'nik' => $data['nik'] ?: null,
             'nip' => $data['nip'] ?: null,
             'name' => $data['nama'],
             'email' => $data['email'],
@@ -77,6 +77,12 @@ class EmployeeController extends Controller
             'site_id' => $data['office_location_id'],
             'is_shift' => (bool) ($data['isShift'] ?? false),
         ];
+
+        // PPK dari berkas PPK; hanya ditulis bila memang dikirim supaya
+        // pemanggil lama tidak menghapus label yang sudah ada.
+        if (array_key_exists('ppk', $data)) {
+            $payload['ppk'] = $this->ppkPayload($data);
+        }
 
         // B3: hanya diubah bila memang dikirim, supaya pemanggil lama tidak
         // menghapus pengecualian hari kerja yang sudah diatur.
@@ -129,8 +135,13 @@ class EmployeeController extends Controller
         $scope = $this->scopeRegion();
         abort_if($scope && $employee->region_id !== $scope, 403, 'Karyawan ini di luar cakupan Anda.');
 
+        // NIK kini boleh kosong, jadi sandi jatuh ke email bila NIK tidak ada.
+        // Ini sejalan dengan impor massal yang memakai aturan yang sama.
+        $sandi = $employee->nik ?: $employee->email;
+        $dasar = $employee->nik ? 'NIK' : 'email';
+
         $employee->update([
-            'password' => $employee->nik,
+            'password' => $sandi,
             'must_change_password' => true,
         ]);
 
@@ -138,16 +149,18 @@ class EmployeeController extends Controller
             'employee.reset_password',
             subject: $employee,
             label: $employee->name,
-            description: "Reset kata sandi karyawan {$employee->name} ke NIK",
-            meta: ['nik_length' => strlen($employee->nik)]
+            description: "Reset kata sandi karyawan {$employee->name} ke {$dasar}",
+            meta: ['dasar' => $dasar, 'panjang' => strlen($sandi)]
         );
 
         return back()->with([
-            'success' => "Kata sandi {$employee->name} direset ke NIK. Karyawan wajib ganti kata sandi saat login.",
+            'success' => "Kata sandi {$employee->name} direset ke {$dasar}. Karyawan wajib ganti kata sandi saat login.",
             'reset_password' => [
                 'employee_id' => $employee->id,
                 'nama' => $employee->name,
                 'nik' => $employee->nik,
+                'sandi' => $sandi,
+                'dasar' => $dasar,
             ],
         ]);
     }
@@ -155,7 +168,11 @@ class EmployeeController extends Controller
     private function validateEmployee(Request $request, ?int $ignoreId): array
     {
         return $request->validate([
-            'nik' => ['required', 'digits:16', Rule::unique('employees', 'nik')->ignore($ignoreId)],
+            // NIK/NIP boleh kosong dan boleh kurang dari 16 digit — berkas PPK
+            // memang begitu. Disimpan apa adanya, jadi tidak ada `digits:16`.
+            // Karakter yang diizinkan sama persis dengan yang dipakai impor,
+            // supaya hasil impor selalu bisa disunting ulang lewat formulir ini.
+            'nik' => ['nullable', 'string', 'max:30', 'regex:/^[0-9A-Za-z.\-\/]+$/', Rule::unique('employees', 'nik')->ignore($ignoreId)],
             'nip' => ['nullable', 'string', Rule::unique('employees', 'nip')->ignore($ignoreId)],
             'nama' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', Rule::unique('employees', 'email')->ignore($ignoreId)],
@@ -165,6 +182,8 @@ class EmployeeController extends Controller
             'status' => ['required', 'in:PNS,PPPK,Kontrak,Honorer'],
             'region' => ['required', 'string', 'max:120'],
             'office_location_id' => ['required', 'integer'],
+            // Label PPK dari berkas PPK. Murni keterangan, jadi bebas diisi.
+            'ppk' => ['sometimes', 'nullable', 'string', 'max:150'],
             // Penanda pekerja shift (K4: per orang). Opsional supaya pemanggil
             // lama tetap valid.
             'isShift' => ['sometimes', 'boolean'],
@@ -204,6 +223,25 @@ class EmployeeController extends Controller
         return $regu === '' ? null : $regu;
     }
 
+    /**
+     * Label PPK bebas. Kosong → null (tanpa label).
+     */
+    private function ppkPayload(array $data): ?string
+    {
+        $ppk = trim((string) ($data['ppk'] ?? ''));
+
+        return $ppk === '' ? null : $ppk;
+    }
+
+    /**
+     * Penanda karyawan untuk catatan audit. NIK boleh kosong, jadi email
+     * dipakai sebagai gantinya supaya catatan tidak pernah berakhir "NIK ".
+     */
+    private function penanda(Employee $employee): string
+    {
+        return $employee->nik ?: $employee->email;
+    }
+
     private function createFromPayload(array $data): Employee
     {
         $region = Region::where('name', $data['region'])->firstOrFail();
@@ -211,7 +249,7 @@ class EmployeeController extends Controller
         $this->assertSiteInRegion($region, (int) $data['office_location_id']);
 
         return Employee::create([
-            'nik' => $data['nik'],
+            'nik' => $data['nik'] ?: null,
             'nip' => $data['nip'] ?: null,
             'name' => $data['nama'],
             'email' => $data['email'],
@@ -219,12 +257,14 @@ class EmployeeController extends Controller
             'jabatan' => $data['jabatan'],
             'unit_kerja' => $data['unit'],
             'status_kepegawaian' => $data['status'],
+            'ppk' => $this->ppkPayload($data),
             'region_id' => $region->id,
             'site_id' => $data['office_location_id'],
             'is_shift' => (bool) ($data['isShift'] ?? false),
             'hari_kerja' => $this->hariKerjaPayload($data),
             'regu' => $this->reguPayload($data),
-            'password' => $data['nik'],
+            // NIK boleh kosong → sandi awal jatuh ke email, sama seperti impor.
+            'password' => $data['nik'] ?: $data['email'],
             'must_change_password' => true,
         ]);
     }

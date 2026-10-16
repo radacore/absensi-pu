@@ -18,14 +18,18 @@ use ZipArchive;
  * Mesin impor akun karyawan dari berkas Excel.
  *
  * Alur pemakaian:
- *   1. KaryawanImpor::periksa($path, $scopeRegionId, $mode) → ringkasan + baris
- *      untuk ditampilkan sebagai pratinjau. Tidak menulis apa pun ke basis data.
+ *   1. KaryawanImpor::periksa($path, $scopeRegionId, $mode, $tujuan, $statusDefault)
+ *      → ringkasan + baris untuk ditampilkan sebagai pratinjau. Tidak menulis apa pun.
  *   2. KaryawanImpor::terapkan($path, $scopeRegionId, $opsi) → memeriksa ulang
  *      berkas yang sama lalu menyimpan baris yang lolos, dalam satu transaksi.
  *
  * Berkas diperiksa ulang saat menyimpan, bukan memakai hasil pratinjau yang
  * dikirim balik oleh peramban. Dengan begitu klien tidak pernah bisa menyuruh
  * server menyimpan data yang tidak pernah lolos pemeriksaan.
+ *
+ * Susunan kolom mengikuti berkas yang biasa dikirim PPK: NAMA, NIK/NIP,
+ * STATUS PEGAWAI, SATKER, PPK, EMAIL. NIK boleh kosong dan boleh kurang dari
+ * 16 digit — di lapangan memang begitu, jadi disimpan apa adanya.
  */
 class KaryawanImpor
 {
@@ -38,11 +42,14 @@ class KaryawanImpor
     /** Batas ukuran isi berkas setelah arsip zip dibuka (bita). */
     public const MAX_BITA_MENGEMBANG = 200 * 1024 * 1024;
 
-    /** Mode impor: apa yang terjadi bila NIK-nya sudah terdaftar. */
+    /** Mode impor: apa yang terjadi bila karyawannya sudah terdaftar. */
     public const MODE = ['tambah', 'perbarui', 'gabungan'];
 
     /** Sumber sandi awal untuk karyawan baru. */
-    public const SANDI = ['nik', 'kolom'];
+    public const SANDI = ['nik', 'email', 'kolom'];
+
+    /** Pilihan status kepegawaian yang sah. */
+    public const STATUS_PILIHAN = ['PNS', 'PPPK', 'Kontrak', 'Honorer'];
 
     public const AKSI = ['tambah', 'perbarui', 'lewati', 'gagal'];
 
@@ -52,13 +59,14 @@ class KaryawanImpor
      * proyek", dan "TITIKPROYEK" sama-sama cocok.
      */
     private const ALIAS = [
-        'nik' => ['nik', 'nomorindukkependudukan', 'noindukkependudukan', 'nomorindukkaryawan'],
+        'nik' => ['nik', 'niknip', 'nomorindukkependudukan', 'noindukkependudukan', 'nomorindukkaryawan'],
         'nama' => ['nama', 'namalengkap', 'namakaryawan', 'namapegawai'],
         'email' => ['email', 'surel', 'alamatemail'],
         'nip' => ['nip'],
         'gol' => ['golongan', 'gol', 'golruang'],
-        'jabatan' => ['jabatan'],
-        'unit' => ['unit', 'unitkerja'],
+        'jabatan' => ['jabatan', 'statuspegawai', 'posisi', 'pekerjaan'],
+        'unit' => ['unit', 'unitkerja', 'satker'],
+        'ppk' => ['ppk', 'pejabatpembuatkomitmen'],
         'status' => ['status', 'statuskepegawaian'],
         'wilayah' => ['wilayah', 'kabupaten', 'kabupatenkota', 'kabkota', 'region'],
         'titik' => ['titikproyek', 'titik', 'lokasi', 'namalokasi', 'namatitik', 'titiklokasi'],
@@ -85,26 +93,38 @@ class KaryawanImpor
 
     private const SALAH = ['tidak', 't', 'tdk', 'engga', 'enggak', 'no', 'false', '0', 'non', 'nonshift', 'bukan'];
 
+    /** Tulisan yang dianggap "tidak diisi" pada kolom opsional. */
+    private const KOSONG = ['-', '--', 'n/a', 'na', 'nihil', 'tidakada', 'none', 'null', 'kosong'];
+
+    /** Panjang NIK/NIP yang diterima, mengikuti kolom di basis data. */
+    private const MAKS_NIK = 30;
+
     /**
      * Periksa berkas tanpa menyimpan apa pun.
      *
-     * @return array{ringkasan: array, baris: array}
+     * @param  array{region_id?: ?int, site_id?: ?int}  $tujuan  Wilayah/titik tujuan untuk seluruh berkas.
+     * @return array{ringkasan: array, baris: array, kolom: array}
      */
-    public static function periksa(string $path, ?int $scopeRegionId, string $mode): array
+    public static function periksa(string $path, ?int $scopeRegionId, string $mode, array $tujuan = [], ?string $statusDefault = null): array
     {
-        $analisa = self::analisa($path, $scopeRegionId, ['mode' => $mode]);
+        $analisa = self::analisa($path, $scopeRegionId, [
+            'mode' => $mode,
+            'tujuan' => $tujuan,
+            'status_default' => $statusDefault,
+        ]);
 
         return [
             'ringkasan' => $analisa['ringkasan'],
             'baris' => array_map(self::untukTampilan(...), $analisa['baris']),
+            'kolom' => $analisa['kolom'],
         ];
     }
 
     /**
      * Periksa ulang berkas lalu simpan baris yang lolos, dalam satu transaksi.
      *
-     * @param  array{mode: string, sandi: string, wajib_ganti: bool}  $opsi
-     * @return array{ringkasan: array, baris: array}
+     * @param  array{mode: string, sandi: string, wajib_ganti: bool, tujuan?: array, status_default?: ?string}  $opsi
+     * @return array{ringkasan: array, baris: array, kolom: array}
      */
     public static function terapkan(string $path, ?int $scopeRegionId, array $opsi): array
     {
@@ -112,7 +132,12 @@ class KaryawanImpor
         $sumber = in_array($opsi['sandi'] ?? '', self::SANDI, true) ? $opsi['sandi'] : 'nik';
         $wajibGanti = (bool) ($opsi['wajib_ganti'] ?? true);
 
-        $analisa = self::analisa($path, $scopeRegionId, ['mode' => $mode, 'sandi' => $sumber]);
+        $analisa = self::analisa($path, $scopeRegionId, [
+            'mode' => $mode,
+            'sandi' => $sumber,
+            'tujuan' => $opsi['tujuan'] ?? [],
+            'status_default' => $opsi['status_default'] ?? null,
+        ]);
         $ringkasan = $analisa['ringkasan'];
 
         DB::transaction(function () use ($analisa, $sumber, $wajibGanti) {
@@ -131,34 +156,25 @@ class KaryawanImpor
                         'golongan' => $data['gol'],
                         'jabatan' => $data['jabatan'],
                         'unit_kerja' => $data['unit'],
+                        'ppk' => $data['ppk'],
                         'status_kepegawaian' => $data['status'],
                         'region_id' => $data['region_id'],
                         'site_id' => $data['site_id'],
                         'is_shift' => $data['is_shift'],
                         'hari_kerja' => $data['hari_kerja'],
                         'regu' => $data['regu'],
-                        'password' => $sumber === 'kolom' && $data['sandi'] !== null
-                            ? $data['sandi']
-                            : $data['nik'],
+                        'password' => self::sandiAwal($sumber, $data),
                         'must_change_password' => $wajibGanti,
                     ]);
                 } elseif ($baris['aksi'] === 'perbarui' && $data['employee'] !== null) {
                     // Sandi sengaja tidak diubah saat memperbarui: mengubah data
                     // kepegawaian tidak boleh sekaligus mengunci orang dari akunnya.
-                    $data['employee']->update([
-                        'nip' => $data['nip'],
-                        'name' => $data['nama'],
-                        'email' => $data['email'],
-                        'golongan' => $data['gol'],
-                        'jabatan' => $data['jabatan'],
-                        'unit_kerja' => $data['unit'],
-                        'status_kepegawaian' => $data['status'],
-                        'region_id' => $data['region_id'],
-                        'site_id' => $data['site_id'],
-                        'is_shift' => $data['is_shift'],
-                        'hari_kerja' => $data['hari_kerja'],
-                        'regu' => $data['regu'],
-                    ]);
+                    //
+                    // Hanya kolom yang benar-benar ADA di berkas yang ditulis.
+                    // Kolom yang tidak disertakan sama sekali dibiarkan apa
+                    // adanya, supaya berkas ringkas (mis. hanya NAMA + EMAIL)
+                    // tidak menghapus NIK atau PPK yang sudah tersimpan.
+                    $data['employee']->update(self::isiPerbarui($data, $analisa['kolom']));
                 }
             }
         });
@@ -166,20 +182,83 @@ class KaryawanImpor
         return [
             'ringkasan' => $ringkasan,
             'baris' => array_map(self::untukTampilan(...), $analisa['baris']),
+            'kolom' => $analisa['kolom'],
         ];
+    }
+
+    /**
+     * Susun isi UPDATE dari kolom yang ada di berkas. Kolom yang tidak
+     * disertakan berkas tidak pernah ikut ditulis.
+     */
+    private static function isiPerbarui(array $data, array $adaKolom): array
+    {
+        $peta = [
+            'nik' => 'nik',
+            'nip' => 'nip',
+            'name' => 'nama',
+            'email' => 'email',
+            'golongan' => 'gol',
+            'jabatan' => 'jabatan',
+            'unit_kerja' => 'unit',
+            'ppk' => 'ppk',
+            'status_kepegawaian' => 'status',
+            'region_id' => 'region_id',
+            'site_id' => 'site_id',
+            'is_shift' => 'is_shift',
+            'hari_kerja' => 'hari_kerja',
+            'regu' => 'regu',
+        ];
+
+        $isi = [];
+        foreach ($peta as $kolomDb => $kunci) {
+            if (in_array($kunci, $adaKolom, true)) {
+                $isi[$kolomDb] = $data[$kunci];
+            }
+        }
+
+        return $isi;
+    }
+
+    /** Sandi awal karyawan baru, sesuai sumber yang dipilih admin. */
+    private static function sandiAwal(string $sumber, array $data): string
+    {
+        if ($sumber === 'kolom' && ($data['sandi'] ?? null) !== null) {
+            return $data['sandi'];
+        }
+
+        if ($sumber === 'email') {
+            return $data['email'];
+        }
+
+        // Sumber "nik": NIK dipakai apa adanya. Bila NIK-nya memang kosong,
+        // sandinya jatuh ke email supaya akunnya tetap bisa dibuka.
+        return $data['nik'] ?: $data['email'];
     }
 
     /**
      * Baca berkas, periksa tiap baris, lalu tentukan aksinya.
      *
-     * @return array{ringkasan: array, baris: array}
+     * @return array{ringkasan: array, baris: array, kolom: array}
      */
     private static function analisa(string $path, ?int $scopeRegionId, array $opsi): array
     {
         $spreadsheet = self::muat($path);
         $sheet = $spreadsheet->getSheet(0);
-        $peta = self::petaKolom($sheet, $scopeRegionId);
-        $ctx = self::konteks($scopeRegionId);
+        $peta = self::petaKolom($sheet);
+
+        // Kolom yang benar-benar ada di berkas. Dipakai saat memperbarui agar
+        // kolom yang tidak disertakan tidak ikut dikosongkan.
+        $kolom = array_keys($peta);
+
+        $tujuan = $opsi['tujuan'] ?? [];
+        if (($tujuan['region_id'] ?? null) !== null) {
+            $kolom[] = 'region_id';
+        }
+        if (($tujuan['site_id'] ?? null) !== null) {
+            $kolom[] = 'site_id';
+        }
+
+        $ctx = self::konteks($scopeRegionId, $tujuan);
 
         $mentah = self::bacaSemuaBaris($sheet, $peta);
 
@@ -204,7 +283,7 @@ class KaryawanImpor
             $ringkasan[$baris['aksi']]++;
         }
 
-        return ['ringkasan' => $ringkasan, 'baris' => $hasil];
+        return ['ringkasan' => $ringkasan, 'baris' => $hasil, 'kolom' => $kolom];
     }
 
     /**
@@ -279,26 +358,21 @@ class KaryawanImpor
      *
      * @return array<string, int>
      */
-    private static function petaKolom(Worksheet $sheet, ?int $scopeRegionId): array
+    private static function petaKolom(Worksheet $sheet): array
     {
         $terakhir = Coordinate::columnIndexFromString($sheet->getHighestColumn());
         $peta = [];
 
         for ($kolom = 1; $kolom <= $terakhir; $kolom++) {
-            $judul = self::norm((string) $sheet->getCell(Coordinate::stringFromColumnIndex($kolom).'1')->getValue());
-            if ($judul === '') {
-                continue;
-            }
+            $judul = (string) $sheet->getCell(Coordinate::stringFromColumnIndex($kolom).'1')->getValue();
+            $kunci = self::cocokkanKolom($judul);
 
-            foreach (self::ALIAS as $kunci => $alias) {
-                if (! isset($peta[$kunci]) && in_array($judul, $alias, true)) {
-                    $peta[$kunci] = $kolom;
-                    break;
-                }
+            if ($kunci !== null && ! isset($peta[$kunci])) {
+                $peta[$kunci] = $kolom;
             }
         }
 
-        foreach (KaryawanTemplate::kolomWajib($scopeRegionId) as $kunci) {
+        foreach (KaryawanTemplate::kolomWajib() as $kunci) {
             if (! isset($peta[$kunci])) {
                 throw new KaryawanImporException(
                     'Kolom "'.self::judulKolom($kunci).'" tidak ditemukan di baris 1. '
@@ -310,6 +384,54 @@ class KaryawanImpor
         return $peta;
     }
 
+    /**
+     * Judul kolom berkas → kunci internal, atau null bila tidak dikenali.
+     *
+     * Tiga percobaan, berurutan:
+     *   1. Judul tanpa keterangan dalam tanda kurung harus sama persis dengan
+     *      salah satu alias. "STATUS PEGAWAI (Petugas OP, …)" → "statuspegawai".
+     *   2. Judul utuh sama persis dengan salah satu alias.
+     *   3. Judul tanpa tanda kurung DIAWALI salah satu alias yang cukup panjang
+     *      (minimal 5 huruf), dan yang paling panjang yang dipakai. Ini menolong
+     *      berkas yang judulnya ditambah kata, mis. "Nama Lengkap Pegawai".
+     */
+    private static function cocokkanKolom(string $mentah): ?string
+    {
+        $judul = self::norm($mentah);
+
+        if ($judul === '') {
+            return null;
+        }
+
+        $pokok = self::norm(preg_split('/[\(\[]/u', $mentah, 2)[0] ?? $mentah);
+
+        foreach ([$pokok, $judul] as $calon) {
+            if ($calon === '') {
+                continue;
+            }
+
+            foreach (self::ALIAS as $kunci => $alias) {
+                if (in_array($calon, $alias, true)) {
+                    return $kunci;
+                }
+            }
+        }
+
+        $terbaik = null;
+        $panjang = 4;
+
+        foreach (self::ALIAS as $kunci => $alias) {
+            foreach ($alias as $satu) {
+                if (mb_strlen($satu) > $panjang && str_starts_with($pokok, $satu)) {
+                    $terbaik = $kunci;
+                    $panjang = mb_strlen($satu);
+                }
+            }
+        }
+
+        return $terbaik;
+    }
+
     private static function judulKolom(string $kunci): string
     {
         foreach (KaryawanTemplate::KOLOM as $kolom) {
@@ -319,6 +441,16 @@ class KaryawanImpor
         }
 
         return $kunci;
+    }
+
+    /** Judul kolom yang bisa dibaca manusia, untuk ditampilkan di layar. */
+    public static function labelKolom(string $kunci): string
+    {
+        return match ($kunci) {
+            'region_id' => 'Wilayah',
+            'site_id' => 'Titik Proyek',
+            default => self::judulKolom($kunci),
+        };
     }
 
     /**
@@ -388,10 +520,11 @@ class KaryawanImpor
     }
 
     /**
-     * Data acuan yang dibaca sekali: cakupan wilayah, daftar titik, dan
-     * karyawan yang sudah terdaftar (agar tidak ada satu pun kueri per baris).
+     * Data acuan yang dibaca sekali: cakupan wilayah, daftar titik, wilayah dan
+     * titik tujuan, serta karyawan yang sudah terdaftar (agar tidak ada satu pun
+     * kueri per baris).
      */
-    private static function konteks(?int $scopeRegionId): array
+    private static function konteks(?int $scopeRegionId, array $tujuan): array
     {
         $regions = Region::with('sites')
             ->when($scopeRegionId, fn ($q) => $q->where('id', $scopeRegionId))
@@ -416,12 +549,22 @@ class KaryawanImpor
                 .($namaTitik->count() > 8 ? ', dan '.($namaTitik->count() - 8).' titik lainnya' : '');
         }
 
+        $tujuanRegion = ($tujuan['region_id'] ?? null) !== null
+            ? $regions->firstWhere('id', $tujuan['region_id'])
+            : null;
+
+        $tujuanSite = $tujuanRegion !== null && ($tujuan['site_id'] ?? null) !== null
+            ? $tujuanRegion->sites->firstWhere('id', $tujuan['site_id'])
+            : null;
+
         return [
             'scope' => $scopeRegionId,
             'regionScope' => $scopeRegionId ? $regions->firstWhere('id', $scopeRegionId) : null,
             'petaWilayah' => $petaWilayah,
             'petaTitik' => $petaTitik,
             'saranTitik' => $saranTitik,
+            'tujuanRegion' => $tujuanRegion,
+            'tujuanSite' => $tujuanSite,
         ];
     }
 
@@ -435,22 +578,26 @@ class KaryawanImpor
         $angka = $mentah['angka'];
         $pesan = [];
 
-        // --- NIK: 16 digit, dan tidak boleh lewat format angka Excel ---
-        $nik = '';
+        // --- NIK/NIP: opsional, apa adanya. Boleh kurang dari 16 digit. ---
+        $nik = null;
         $nikMentah = self::rapatkan($n['nik'] ?? '');
-        if ($nikMentah === '') {
-            $pesan[] = 'NIK wajib diisi.';
-        } elseif (self::angkaBermasalah($angka['nik'])) {
-            $pesan[] = 'NIK terbaca sebagai angka oleh Excel, padahal Excel hanya menyimpan 15 angka pertama dengan tepat — '
-                .'digit terakhir NIK bisa sudah berubah. Blok kolom NIK, ubah format sel menjadi Teks, '
-                .'ketik ulang NIK-nya, lalu unggah lagi.';
-        } elseif (! preg_match('/^\d{16}$/', $nikMentah)) {
-            $pesan[] = 'NIK harus 16 digit angka (terbaca: '.$nikMentah.').';
-        } else {
-            $nik = $nikMentah;
+
+        if ($nikMentah !== '' && ! self::penandaKosong($nikMentah)) {
+            if (self::angkaBermasalah($angka['nik'])) {
+                $pesan[] = 'NIK/NIP terbaca sebagai angka oleh Excel, padahal Excel hanya menyimpan 15 angka pertama dengan tepat — '
+                    .'digit terakhirnya bisa sudah berubah. Blok kolom NIK/NIP, ubah format sel menjadi Teks, '
+                    .'ketik ulang isinya, lalu unggah lagi.';
+            } elseif (! preg_match('#^[0-9A-Za-z.\-/]+$#', $nikMentah)) {
+                $pesan[] = 'NIK/NIP hanya boleh berisi angka atau huruf (terbaca: '.$nikMentah.').';
+            } elseif (mb_strlen($nikMentah) > self::MAKS_NIK) {
+                $pesan[] = 'NIK/NIP terlalu panjang, maksimal '.self::MAKS_NIK.' karakter (terbaca: '
+                    .mb_strlen($nikMentah).' karakter).';
+            } else {
+                $nik = $nikMentah;
+            }
         }
 
-        // --- Nama, jabatan, unit kerja ---
+        // --- Nama, jabatan (STATUS PEGAWAI), unit kerja (SATKER) ---
         $nama = self::potong($n['nama'] ?? '', 150);
         if ($nama === '') {
             $pesan[] = 'Nama wajib diisi.';
@@ -458,13 +605,17 @@ class KaryawanImpor
 
         $jabatan = self::potong($n['jabatan'] ?? '', 150);
         if ($jabatan === '') {
-            $pesan[] = 'Jabatan wajib diisi.';
+            $pesan[] = 'Status Pegawai wajib diisi.';
         }
 
         $unit = self::potong($n['unit'] ?? '', 150);
         if ($unit === '') {
-            $pesan[] = 'Unit Kerja wajib diisi.';
+            $pesan[] = 'Satker wajib diisi.';
         }
+
+        // --- PPK: keterangan, tidak dipakai sebagai batas hak akses ---
+        $ppk = self::potong($n['ppk'] ?? '', 150);
+        $ppk = $ppk === '' || self::penandaKosong($ppk) ? null : $ppk;
 
         // --- Email: dipakai untuk login ---
         $email = self::potong($n['email'] ?? '', 255);
@@ -474,15 +625,20 @@ class KaryawanImpor
             $pesan[] = 'Email tidak sah (terbaca: '.$email.').';
         }
 
-        // --- Status kepegawaian ---
+        // --- Status kepegawaian: dari berkas, kalau tidak ada pakai pilihan halaman ---
         $statusMentah = self::potong($n['status'] ?? '', 40);
         $status = self::STATUS[self::norm($statusMentah)] ?? null;
+
         if ($status === null) {
-            $pesan[] = 'Status harus PNS, PPPK, Kontrak, atau Honorer (terbaca: '
+            $status = $opsi['status_default'] ?? null;
+        }
+
+        if ($status === null) {
+            $pesan[] = 'Status kepegawaian harus PNS, PPPK, Kontrak, atau Honorer (terbaca: '
                 .($statusMentah === '' ? 'kosong' : '"'.$statusMentah.'"').').';
         }
 
-        // --- Wilayah ---
+        // --- Wilayah: dari kolom berkas, atau dari pilihan wilayah tujuan ---
         $wilayahMentah = self::potong($n['wilayah'] ?? '', 120);
         $region = null;
 
@@ -492,37 +648,41 @@ class KaryawanImpor
                 $pesan[] = 'Wilayah "'.$wilayahMentah.'" di luar cakupan Anda ('.$region->name.').';
                 $region = null;
             }
-        } elseif ($wilayahMentah === '') {
-            $pesan[] = 'Wilayah wajib diisi.';
-        } else {
+        } elseif ($wilayahMentah !== '') {
             $region = $ctx['petaWilayah'][self::normWilayah($wilayahMentah)]
                 ?? $ctx['petaWilayah'][self::norm($wilayahMentah)]
                 ?? null;
             if ($region === null) {
                 $pesan[] = 'Wilayah "'.$wilayahMentah.'" tidak terdaftar. Lihat daftarnya di lembar "Daftar" pada templat.';
             }
+        } elseif ($ctx['tujuanRegion'] !== null) {
+            $region = $ctx['tujuanRegion'];
+        } else {
+            $pesan[] = 'Wilayah belum ditentukan. Pilih wilayah tujuan impor, atau isi kolom "Wilayah" pada berkas.';
         }
 
-        // --- Titik proyek: harus benar-benar ada di wilayah baris itu ---
+        // --- Titik proyek: dari kolom berkas, atau dari pilihan titik tujuan ---
         $titikMentah = self::potong($n['titik'] ?? '', 150);
         $site = null;
 
         if ($region !== null) {
-            if ($titikMentah === '') {
-                $pesan[] = 'Titik Proyek wajib diisi.';
-            } else {
+            if ($titikMentah !== '') {
                 $site = $ctx['petaTitik'][$region->id][self::norm($titikMentah)] ?? null;
                 if ($site === null) {
                     $pesan[] = 'Titik "'.$titikMentah.'" tidak ada di '.$region->name
                         .'. Yang tersedia: '.$ctx['saranTitik'][$region->id].'.';
                 }
+            } elseif ($ctx['tujuanSite'] !== null) {
+                $site = $ctx['tujuanSite'];
+            } else {
+                $pesan[] = 'Titik Proyek belum ditentukan. Pilih titik tujuan impor, atau isi kolom "Titik Proyek" pada berkas.';
             }
         }
 
         // --- NIP opsional, tapi tidak boleh lewat format angka (18 digit > presisi Excel) ---
         $nipMentah = self::rapatkan($n['nip'] ?? '');
         $nip = null;
-        if ($nipMentah !== '' && $nipMentah !== '-') {
+        if ($nipMentah !== '' && ! self::penandaKosong($nipMentah)) {
             if (self::angkaBermasalah($angka['nip'])) {
                 $pesan[] = 'NIP terbaca sebagai angka oleh Excel sehingga digitnya bisa sudah berubah. '
                     .'Ubah format kolom NIP menjadi Teks, ketik ulang NIP-nya, lalu unggah lagi.';
@@ -535,7 +695,7 @@ class KaryawanImpor
 
         // --- Kolom opsional lain ---
         $gol = self::potong($n['gol'] ?? '', 10);
-        $gol = ($gol === '' || $gol === '-') ? null : $gol;
+        $gol = ($gol === '' || self::penandaKosong($gol)) ? null : $gol;
 
         $regu = self::potong($n['regu'] ?? '', 30);
         $regu = $regu === '' ? null : $regu;
@@ -563,7 +723,7 @@ class KaryawanImpor
             }
         }
 
-        $lengkap = $pesan === [] && $nik !== '' && $region !== null && $site !== null
+        $lengkap = $pesan === [] && $region !== null && $site !== null
             && $nama !== '' && $email !== '' && $status !== null;
 
         return [
@@ -571,13 +731,14 @@ class KaryawanImpor
             'aksi' => $lengkap ? 'tambah' : 'gagal',
             'pesan' => $pesan,
             'tampil' => [
-                'nik' => $nik !== '' ? $nik : $nikMentah,
+                'nik' => $nik ?? $nikMentah,
                 'nama' => $nama !== '' ? $nama : self::potong($n['nama'] ?? '', 150),
                 'email' => $email,
                 'wilayah' => $region?->name ?? $wilayahMentah,
                 'titik' => $site?->nama_lokasi ?? $titikMentah,
                 'jabatan' => $jabatan,
                 'unit' => $unit,
+                'ppk' => $ppk ?? '',
                 'status' => $status ?? $statusMentah,
                 'nip' => $nip,
                 'gol' => $gol,
@@ -593,6 +754,7 @@ class KaryawanImpor
                 'gol' => $gol,
                 'jabatan' => $jabatan,
                 'unit' => $unit,
+                'ppk' => $ppk,
                 'status' => $status,
                 'region_id' => $region->id,
                 'site_id' => $site->id,
@@ -626,7 +788,7 @@ class KaryawanImpor
             }
         }
 
-        $label = ['nik' => 'NIK', 'email' => 'Email', 'nip' => 'NIP'];
+        $label = ['nik' => 'NIK/NIP', 'email' => 'Email', 'nip' => 'NIP'];
 
         foreach ($peta as $kunci => $daftar) {
             foreach ($daftar as $nilai => $indeks) {
@@ -650,6 +812,10 @@ class KaryawanImpor
     /**
      * Bandingkan dengan karyawan yang sudah ada, lalu tentukan aksi tiap baris
      * sesuai mode impor.
+     *
+     * Kunci pencocokan adalah NIK bila barisnya punya NIK; bila NIK-nya kosong,
+     * yang dipakai email. Dengan begitu pegawai yang NIK-nya belum terisi tetap
+     * bisa diperbarui lewat emailnya, bukan malah dibuatkan akun kembar.
      */
     private static function tandaiBentrokDatabase(array &$hasil, string $mode): void
     {
@@ -661,7 +827,9 @@ class KaryawanImpor
             if ($baris['data'] === null) {
                 continue;
             }
-            $nik[] = $baris['data']['nik'];
+            if ($baris['data']['nik'] !== null) {
+                $nik[] = $baris['data']['nik'];
+            }
             $email[] = $baris['data']['email'];
             if ($baris['data']['nip'] !== null) {
                 $nip[] = $baris['data']['nip'];
@@ -678,19 +846,23 @@ class KaryawanImpor
             }
 
             $data = $baris['data'];
-            $tersimpan = $adaNik->get($data['nik']);
+            $pemilikEmail = $adaEmail->get($data['email']);
+            $tersimpan = $data['nik'] !== null
+                ? $adaNik->get($data['nik'])
+                : $pemilikEmail;
 
             // Email dan NIP hanya boleh dipakai satu orang. Kalau pemiliknya
             // orang yang sama (baris ini memang memperbarui dia), itu wajar.
-            $pemilikEmail = $adaEmail->get($data['email']);
             if ($pemilikEmail !== null && $pemilikEmail->id !== $tersimpan?->id) {
-                $hasil[$i]['pesan'][] = 'Email '.$data['email'].' sudah dipakai karyawan lain (NIK '.$pemilikEmail->nik.').';
+                $hasil[$i]['pesan'][] = 'Email '.$data['email'].' sudah dipakai karyawan lain ('
+                    .self::penanda($pemilikEmail).').';
             }
 
             if ($data['nip'] !== null) {
                 $pemilikNip = $adaNip->get($data['nip']);
                 if ($pemilikNip !== null && $pemilikNip->id !== $tersimpan?->id) {
-                    $hasil[$i]['pesan'][] = 'NIP '.$data['nip'].' sudah dipakai karyawan lain (NIK '.$pemilikNip->nik.').';
+                    $hasil[$i]['pesan'][] = 'NIP '.$data['nip'].' sudah dipakai karyawan lain ('
+                        .self::penanda($pemilikNip).').';
                 }
             }
 
@@ -701,10 +873,12 @@ class KaryawanImpor
                 continue;
             }
 
+            $kunciPesan = $data['nik'] !== null ? 'NIK/NIP' : 'Email';
+
             if ($tersimpan === null) {
                 if ($mode === 'perbarui') {
                     $hasil[$i]['aksi'] = 'lewati';
-                    $hasil[$i]['pesan'][] = 'NIK belum terdaftar — dilewati karena mode impor "Perbarui saja".';
+                    $hasil[$i]['pesan'][] = $kunciPesan.' belum terdaftar — dilewati karena mode impor "Perbarui saja".';
                 } else {
                     $hasil[$i]['aksi'] = 'tambah';
                 }
@@ -714,7 +888,7 @@ class KaryawanImpor
 
             if ($mode === 'tambah') {
                 $hasil[$i]['aksi'] = 'lewati';
-                $hasil[$i]['pesan'][] = 'NIK sudah terdaftar — dilewati karena mode impor "Tambah saja".';
+                $hasil[$i]['pesan'][] = $kunciPesan.' sudah terdaftar — dilewati karena mode impor "Tambah saja".';
 
                 continue;
             }
@@ -722,6 +896,16 @@ class KaryawanImpor
             $hasil[$i]['aksi'] = 'perbarui';
             $hasil[$i]['data']['employee'] = $tersimpan;
         }
+    }
+
+    /** Sebutan karyawan yang sudah terdaftar, untuk pesan bentrokan. */
+    private static function penanda(Employee $employee): string
+    {
+        if ($employee->nik) {
+            return 'NIK '.$employee->nik;
+        }
+
+        return 'email '.$employee->email;
     }
 
     /**
@@ -838,6 +1022,15 @@ class KaryawanImpor
     {
         // 1e15 adalah bilangan 16 digit terkecil; di bawah itu aman.
         return $nilai !== null && abs($nilai) >= 1e15;
+    }
+
+    /**
+     * Tulisan yang dipakai pengisi berkas untuk berarti "tidak ada", bukan
+     * sebuah nilai. Dibuang supaya tidak tersimpan sebagai NIK "-".
+     */
+    private static function penandaKosong(string $nilai): bool
+    {
+        return in_array(self::norm($nilai), self::KOSONG, true);
     }
 
     /** Buang spasi dan tanda kutip agar NIK/NIP yang tersalin rapi tetap terbaca. */

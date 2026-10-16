@@ -33,7 +33,10 @@ class RekapPdf
             'isRemoteEnabled' => false,
         ]);
 
-        return $pdf->download('rekap-presensi-'.$rekap['karyawan']['nik'].'-'.$bulan.'.pdf');
+        // NIK kini boleh kosong (kebijakan impor PPK), jadi nama berkas jatuh ke id.
+        $penanda = $rekap['karyawan']['nik'] ?: $rekap['karyawan']['id'];
+
+        return $pdf->download('rekap-presensi-'.$penanda.'-'.$bulan.'.pdf');
     }
 
     /**

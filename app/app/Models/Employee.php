@@ -19,6 +19,8 @@ class Employee extends Authenticatable
         'golongan',
         'jabatan',
         'unit_kerja',
+        // Label PPK dari berkas kepegawaian. Sekadar keterangan, bukan batas hak akses.
+        'ppk',
         'status_kepegawaian',
         'region_id',
         'site_id',

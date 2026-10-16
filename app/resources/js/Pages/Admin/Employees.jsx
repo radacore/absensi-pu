@@ -27,6 +27,8 @@ export default function Employees() {
 
     const [form, setForm] = useState({
         nik: '', nip: '', nama: '', email: '', gol: '-', jabatan: '', unit: '', status: 'PNS',
+        // Label PPK dari berkas PPK; murni keterangan.
+        ppk: '',
         region: isWilayah ? OWN_REGION : regionsList[1],
         office_location_id: null,
         isShift: false,
@@ -71,12 +73,12 @@ export default function Employees() {
         const r = regionsData.find((x) => x.name === defaultRegion);
         const firstSiteId = r?.locations?.[0]?.id ?? null;
         setEditing(null);
-        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', region: defaultRegion, office_location_id: firstSiteId, isShift: false, hariKerja: null, regu: '' });
+        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', ppk:'', region: defaultRegion, office_location_id: firstSiteId, isShift: false, hariKerja: null, regu: '' });
         setPhoto(null); setPreview(null); setOpen(true);
     };
     const openEdit = (e) => {
         setEditing(e);
-        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, region:e.region, office_location_id: e.office_location_id ?? null, isShift: !!e.isShift, hariKerja: Array.isArray(e.hariKerja) ? e.hariKerja.map(String) : null, regu: e.regu || '' });
+        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, ppk:e.ppk||'', region:e.region, office_location_id: e.office_location_id ?? null, isShift: !!e.isShift, hariKerja: Array.isArray(e.hariKerja) ? e.hariKerja.map(String) : null, regu: e.regu || '' });
         setPreview(e.foto); setPhoto(null); setOpen(true);
     };
     const close = () => setOpen(false);
@@ -89,7 +91,9 @@ export default function Employees() {
     const save = () => {
         if (isWilayah && form.region !== OWN_REGION) { toast.error(`Admin Wilayah hanya boleh di ${OWN_REGION}`); return; }
         if (!form.nama.trim() || !form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { toast.error('Nama dan email valid wajib diisi'); return; }
-        if (!/^\d{16}$/.test(form.nik)) { toast.error('NIK harus 16 digit'); return; }
+        // NIK/NIP kini opsional dan boleh kurang dari 16 digit (mengikuti berkas PPK).
+        const nik = String(form.nik ?? '').trim();
+        if (nik !== '' && !/^[0-9A-Za-z.\-/]{1,30}$/.test(nik)) { toast.error('NIK/NIP hanya boleh angka, huruf, titik, strip, atau garis miring (maks. 30)'); return; }
         if (form.office_location_id == null || form.office_location_id === '') { toast.error('Titik proyek wajib dipilih (1 karyawan = 1 titik)'); return; }
         const regionObj = regionsData.find((r) => r.name === form.region);
         if (!regionObj) { toast.error('Wilayah tidak ditemukan'); return; }
@@ -97,12 +101,12 @@ export default function Employees() {
         if (!ok) { toast.error('Titik tidak sesuai wilayah'); return; }
         if (form.hariKerja !== null && form.hariKerja.length === 0) { toast.error('Pilih minimal satu hari kerja, atau centang "Ikut hari kerja umum"'); return; }
         if (!editing) {
-            if (list.some((x)=>x.nik===form.nik)) { toast.error('NIK sudah terdaftar'); return; }
+            if (nik !== '' && list.some((x)=>String(x.nik ?? '')===nik)) { toast.error('NIK sudah terdaftar'); return; }
             if (list.some((x)=>x.email===form.email)) { toast.error('Email sudah terdaftar'); return; }
         }
         const payload = {
-            nik: form.nik, nip: form.nip || '', nama: form.nama, email: form.email, gol: form.gol,
-            jabatan: form.jabatan, unit: form.unit, status: form.status,
+            nik, nip: form.nip || '', nama: form.nama, email: form.email, gol: form.gol,
+            jabatan: form.jabatan, unit: form.unit, status: form.status, ppk: (form.ppk || '').trim(),
             region: form.region, office_location_id: Number(form.office_location_id),
             isShift: !!form.isShift,
             hariKerja: form.hariKerja,
@@ -119,10 +123,11 @@ export default function Employees() {
 
     const handleReset = async (e) => {
         if (isWilayah && e.region !== OWN_REGION) { toast.error('Hanya karyawan di wilayah Anda yang bisa direset'); return; }
+        const dasar = e.nik ? `NIK karyawan (${e.nik})` : 'email karyawan';
         const ok = await confirm({
             title: `Reset kata sandi ${e.nama}?`,
-            description: `${e.email} • ${e.region}. Kata sandi baru akan disamakan dengan NIK karyawan (${e.nik}) dan karyawan wajib menggantinya saat login berikutnya.`,
-            confirmLabel: 'Reset ke NIK',
+            description: `${e.email} • ${e.region}. Kata sandi baru akan disamakan dengan ${dasar} dan karyawan wajib menggantinya saat login berikutnya.`,
+            confirmLabel: e.nik ? 'Reset ke NIK' : 'Reset ke email',
             cancelLabel: 'Batal',
             tone: 'warning',
         });
@@ -188,7 +193,7 @@ export default function Employees() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead className="bg-[#F8FAFC] text-xs font-medium text-[#64748B]">
-                                <tr><th className="text-left px-4 py-3">Karyawan</th><th className="text-left px-4 py-3">NIK / NIP</th><th className="text-left px-4 py-3">Jabatan</th><th className="text-left px-4 py-3">Wilayah</th><th className="text-left px-4 py-3">Titik Proyek</th><th className="px-4 py-3"></th></tr>
+                                <tr><th className="text-left px-4 py-3">Karyawan</th><th className="text-left px-4 py-3">NIK / NIP</th><th className="text-left px-4 py-3">Jabatan</th><th className="text-left px-4 py-3">PPK</th><th className="text-left px-4 py-3">Wilayah</th><th className="text-left px-4 py-3">Titik Proyek</th><th className="px-4 py-3"></th></tr>
                             </thead>
                             <tbody className="divide-y divide-[#F1F5F9]">
                                 {filtered.map((e) => {
@@ -205,8 +210,9 @@ export default function Employees() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3 text-xs"><span className="font-mono text-[#0F172A]">{e.nik}</span><br /><span className="text-[#64748B]">{e.nip || '-'}</span></td>
+                                            <td className="px-4 py-3 text-xs"><span className="font-mono text-[#0F172A]">{e.nik || '—'}</span><br /><span className="text-[#64748B]">{e.nip || '-'}</span></td>
                                             <td className="px-4 py-3 text-xs text-[#334155]">{e.jabatan}</td>
+                                            <td className="px-4 py-3 text-xs text-[#334155]">{e.ppk || '—'}</td>
                                             <td className="px-4 py-3 text-xs"><span className="bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full border border-[#FCB833]/20">{e.region}</span></td>
                                             <td className="px-4 py-3 text-xs">
                                                 {hit ? (
@@ -269,8 +275,9 @@ export default function Employees() {
                                         <input value={form.email} onChange={(e)=>setForm({...form, email:e.target.value})} placeholder="nama@bbws-pj.go.id" type="email" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-medium text-[#334155]">NIK (16 digit)</label>
-                                        <input value={form.nik} onChange={(e)=>setForm({...form, nik:e.target.value.replace(/\D/g,'').slice(0,16)})} placeholder="7371..." className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm font-mono outline-none" />
+                                        <label className="text-xs font-medium text-[#334155]">NIK/NIP (opsional)</label>
+                                        <input value={form.nik ?? ''} onChange={(e)=>setForm({...form, nik:e.target.value.replace(/[^0-9A-Za-z.\-\/]/g,'').slice(0,30)})} placeholder="7371… (boleh dikosongkan)" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm font-mono outline-none" />
+                                        <span className="block text-xs text-[#64748B] mt-1">Boleh kurang dari 16 digit dan boleh dikosongkan — disimpan apa adanya. Dipakai sebagai sandi awal bila diisi.</span>
                                     </div>
                                     <div>
                                         <label className="text-xs font-medium text-[#334155]">NIP (opsional)</label>
@@ -291,6 +298,11 @@ export default function Employees() {
                                     <div>
                                         <label className="text-xs font-medium text-[#334155]">Unit</label>
                                         <input value={form.unit} onChange={(e)=>setForm({...form, unit:e.target.value})} placeholder="Bidang Jalan" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="text-xs font-medium text-[#334155]">PPK (opsional)</label>
+                                        <input value={form.ppk} onChange={(e)=>setForm({...form, ppk:e.target.value.slice(0,150)})} placeholder="mis. PPK OP SDA II" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
+                                        <span className="block text-xs text-[#64748B] mt-1">Label dari berkas PPK. Hanya keterangan — tidak mengatur hak akses.</span>
                                     </div>
                                     <div className="col-span-2">
                                         <label className="text-xs font-medium text-[#334155]">Wilayah {isWilayah && <span className="text-[#64748B]">— terkunci own</span>}</label>

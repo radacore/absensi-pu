@@ -288,7 +288,9 @@ class ImporKaryawanTest extends TestCase
         $berkas = $this->berkas([
             $this->barisValid('7371000000000201', 'Benar Sekali', $gowa),
             $this->barisValid('7371000000000202', 'Wilayah Salah', $gowa, ['wilayah' => 'Kab. Tidak Terdaftar']),
-            $this->barisValid('123', 'Nik Pendek', $gowa),
+            // NIK pendek seperti "123" kini SAH (berkas PPK memang begitu),
+            // jadi yang diuji di sini adalah karakter yang memang terlarang.
+            $this->barisValid('nik@aneh', 'Nik Aneh', $gowa),
             $this->barisValid('7371000000000203', 'Status Salah', $gowa, ['status' => 'CPNS']),
             $this->barisValid('7371000000000204', 'Titik Nyasar', $gowa, ['titik' => $this->titik($bone)->nama_lokasi]),
         ]);
@@ -304,7 +306,7 @@ class ImporKaryawanTest extends TestCase
 
         $pesan = collect($pratinjau['baris'])->flatMap(fn ($b) => $b['pesan'])->implode(' | ');
         $this->assertStringContainsString('tidak terdaftar', $pesan);
-        $this->assertStringContainsString('16 digit', $pesan);
+        $this->assertStringContainsString('hanya boleh berisi angka atau huruf', $pesan);
         $this->assertStringContainsString('PNS, PPPK, Kontrak, atau Honorer', $pesan);
         $this->assertStringContainsString('tidak ada di', $pesan);
     }
@@ -335,17 +337,15 @@ class ImporKaryawanTest extends TestCase
 
     public function test_berkas_tanpa_kolom_wajib_ditolak(): void
     {
-        $gowa = $this->region('Kab. Gowa');
-
-        // Tanpa kolom "Titik Proyek" dan "Status".
-        $judul = ['NIK', 'Nama', 'Email', 'Wilayah', 'Jabatan', 'Unit Kerja'];
+        // Mengikuti gaya berkas PPK, tetapi kolom SATKER dihilangkan. NIK/NIP,
+        // PPK, Wilayah, dan Titik Proyek bukan kolom wajib lagi.
+        $judul = ['NAMA', 'NIK/NIP', 'STATUS PEGAWAI', 'PPK', 'EMAIL'];
         $berkas = $this->berkas([[
+            'nama' => 'Tanpa Satker',
             'nik' => '7371000000000401',
-            'nama' => 'Tanpa Titik',
-            'email' => 'tanpa.titik@uji.test',
-            'wilayah' => $gowa->name,
             'jabatan' => 'Staf',
-            'unit' => 'Bidang Umum',
+            'ppk' => 'PPK BMN',
+            'email' => 'tanpa.satker@uji.test',
         ]], $judul);
 
         $this->actingAs($this->superAdmin())
@@ -354,7 +354,7 @@ class ImporKaryawanTest extends TestCase
             ->assertSessionHasErrors('berkas');
 
         $this->assertStringContainsString(
-            'Titik Proyek',
+            'SATKER',
             session('errors')->first('berkas')
         );
         $this->assertSame(0, Employee::where('nik', '7371000000000401')->count());
@@ -598,7 +598,8 @@ class ImporKaryawanTest extends TestCase
 
         $berkas = $this->berkas([
             $this->barisValid('7371000000001301', 'Baris Benar', $gowa),
-            $this->barisValid('bukan-nik', 'Baris Salah', $gowa),
+            // Karakter terlarang pada NIK; "bukan-nik" justru kini sah.
+            $this->barisValid('nik@aneh', 'Baris Salah', $gowa),
         ]);
 
         $this->actingAs($this->superAdmin())
@@ -620,7 +621,7 @@ class ImporKaryawanTest extends TestCase
         $gowa = $this->region('Kab. Gowa');
 
         $berkas = $this->berkas([
-            $this->barisValid('salah', 'Tidak Ada Yang Benar', $gowa),
+            $this->barisValid('nik@aneh', 'Tidak Ada Yang Benar', $gowa),
         ]);
 
         $this->actingAs($this->superAdmin())
@@ -845,7 +846,12 @@ class ImporKaryawanTest extends TestCase
     {
         $gowa = $this->region('Kab. Gowa');
 
-        $judul = [' nik ', 'NAMA', 'Email', 'wilayah', 'TITIK PROYEK', 'Jabatan', 'unit kerja', 'Status'];
+        // Judul templat yang sama, tetapi huruf besar/kecil dan spasinya diacak.
+        $judul = array_map(
+            fn ($teks) => ' '.strtolower((string) $teks).' ',
+            array_column(KaryawanTemplate::KOLOM, 'judul')
+        );
+
         $berkas = $this->berkas([[
             'nik' => '7371000000001801',
             'nama' => 'Judul Acak',
@@ -985,9 +991,170 @@ class ImporKaryawanTest extends TestCase
         $berkas = $this->berkas([$this->barisValid('7371000000001901', 'Bulat Balik', $gowa)]);
 
         $spreadsheet = IOFactory::createReaderForFile($berkas->getRealPath())->load($berkas->getRealPath());
+        // Kolom A adalah NAMA (mengikuti berkas PPK), jadi NIK/NIP ada di B.
         $this->assertSame(
             '7371000000001901',
-            (string) $spreadsheet->getSheet(0)->getCell('A2')->getValue()
+            (string) $spreadsheet->getSheet(0)->getCell('B2')->getValue()
         );
+    }
+
+    // ── Kesesuaian dengan berkas PPK apa adanya ───────────────────────────
+
+    /**
+     * Penjaga inti revisi ini.
+     *
+     * Berkas PPK yang asli punya enam kolom dengan judul panjang, NIK yang
+     * kadang kosong atau kurang dari 16 digit, dan PPK berspasi di ujung.
+     * Semua itu harus masuk tanpa berkasnya diubah sedikit pun.
+     */
+    public function test_berkas_ppk_apa_adanya_bisa_diimpor(): void
+    {
+        $gowa = $this->region('Kab. Gowa');
+
+        // Judul disalin huruf demi huruf dari berkas PPK.
+        $judul = [
+            'NAMA',
+            'NIK/NIP',
+            'STATUS PEGAWAI (Petugas OP, Tenaga Pendukung, Konsultan Individu, Konsultan Supervisi, Pekarya dll)',
+            'SATKER',
+            'PPK',
+            'EMAIL',
+        ];
+
+        $berkas = $this->berkas([
+            [
+                // NIK kosong, seperti baris "ABDUL RAHIM. T, S.Tr.T".
+                'nama' => 'ABDUL RAHIM. T, S.Tr.T',
+                'nik' => '',
+                'jabatan' => 'SECURITY',
+                'unit' => 'BBWS PJPA EMMY SAELAN',
+                'ppk' => 'PPK BMN ',
+                'email' => 'abdul.rahim@uji.test',
+            ],
+            [
+                // NIK 15 digit, seperti baris "Sry Rusmia, ST".
+                'nama' => 'Sry Rusmia, ST',
+                'nik' => '737114210000009',
+                'jabatan' => 'Konsultan Individu',
+                'unit' => 'Satker OP SDA',
+                'ppk' => 'PPK OP SDA II ',
+                'email' => 'sry.rusmia@uji.test',
+            ],
+        ], $judul);
+
+        $this->actingAs($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->post('/super-admin/employees/impor', [
+                'berkas' => $berkas,
+                'mode' => 'tambah',
+                'sandi' => 'nik',
+                'wajibGanti' => '1',
+                // Berkas PPK tidak memuat wilayah, jadi ditentukan di halaman.
+                'wilayah' => $gowa->name,
+                'titik' => $this->titik($gowa)->id,
+                // Berkas PPK juga tidak punya kolom Status Kepegawaian.
+                'statusDefault' => 'Kontrak',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $hasil = session('importHasil')['ringkasan'];
+        $this->assertSame(2, $hasil['tambah']);
+        $this->assertSame(0, $hasil['gagal']);
+
+        // NIK kosong → disimpan null, sandi awal jatuh ke email.
+        $tanpaNik = Employee::where('email', 'abdul.rahim@uji.test')->firstOrFail();
+        $this->assertNull($tanpaNik->nik);
+        $this->assertSame('ABDUL RAHIM. T, S.Tr.T', $tanpaNik->name);
+        $this->assertSame('SECURITY', $tanpaNik->jabatan);
+        $this->assertSame('BBWS PJPA EMMY SAELAN', $tanpaNik->unit_kerja);
+        $this->assertSame('PPK BMN', $tanpaNik->ppk, 'Spasi di ujung PPK harus dipangkas.');
+        $this->assertSame('Kontrak', $tanpaNik->status_kepegawaian, 'Status bawaan halaman harus terpakai.');
+        $this->assertTrue(Hash::check('abdul.rahim@uji.test', $tanpaNik->password));
+
+        // NIK 15 digit → diterima apa adanya, sandi awal = NIK.
+        $nikPendek = Employee::where('email', 'sry.rusmia@uji.test')->firstOrFail();
+        $this->assertSame('737114210000009', $nikPendek->nik);
+        $this->assertSame('PPK OP SDA II', $nikPendek->ppk);
+        $this->assertTrue(Hash::check('737114210000009', $nikPendek->password));
+    }
+
+    /**
+     * Memperbarui tidak boleh mengosongkan kolom yang tidak ada di berkas.
+     *
+     * Berkas dari PPK sering hanya memuat sebagian kolom. Bila kolom yang tidak
+     * disertakan ikut ditulis, NIK dan PPK yang sudah tersimpan akan terhapus
+     * hanya karena berkasnya ringkas.
+     */
+    public function test_perbarui_tidak_menghapus_kolom_yang_tidak_ada_di_berkas(): void
+    {
+        $gowa = $this->region('Kab. Gowa');
+        $andi = Employee::where('nik', '7371001234567890')->firstOrFail();
+        $andi->update(['ppk' => 'PPK BMN']);
+
+        // Judul kosong pada posisi NIK/NIP dan PPK: kolomnya memang tidak ada.
+        $judul = ['NAMA', '', 'STATUS PEGAWAI', 'SATKER', '', 'EMAIL'];
+        $berkas = $this->berkas([[
+            'nama' => 'Andi Tetap Punya Nik',
+            'jabatan' => 'Kepala Bidang',
+            'unit' => 'Bidang Jalan',
+            'email' => $andi->email,
+        ]], $judul);
+
+        $this->actingAs($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->post('/super-admin/employees/impor', [
+                'berkas' => $berkas,
+                'mode' => 'perbarui',
+                'sandi' => 'nik',
+                'wajibGanti' => '1',
+                'wilayah' => $gowa->name,
+                'titik' => $this->titik($gowa)->id,
+                // Berkas ringkas ini juga tidak punya kolom Status Kepegawaian.
+                'statusDefault' => 'PNS',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $andi->refresh();
+        $this->assertSame('Andi Tetap Punya Nik', $andi->name);
+        $this->assertSame('Kepala Bidang', $andi->jabatan);
+        $this->assertSame('7371001234567890', $andi->nik, 'NIK lama tidak boleh terhapus.');
+        $this->assertSame('PPK BMN', $andi->ppk, 'PPK lama tidak boleh terhapus.');
+    }
+
+    /**
+     * Berkas yang NIK-nya kosong tetap bisa diperbarui lewat email, bukan
+     * malah membuat akun kembar.
+     */
+    public function test_perbarui_menemukan_karyawan_lewat_email_bila_nik_kosong(): void
+    {
+        $gowa = $this->region('Kab. Gowa');
+        $andi = Employee::where('nik', '7371001234567890')->firstOrFail();
+        $jumlahSebelum = Employee::count();
+
+        $judul = ['NAMA', '', 'STATUS PEGAWAI', 'SATKER', 'PPK', 'EMAIL'];
+        $berkas = $this->berkas([[
+            'nama' => 'Andi Lewat Email',
+            'jabatan' => 'Staff Teknik',
+            'unit' => 'Bidang Jalan',
+            'ppk' => 'PPK BMN',
+            'email' => $andi->email,
+        ]], $judul);
+
+        $this->actingAs($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->post('/super-admin/employees/impor', [
+                'berkas' => $berkas,
+                'mode' => 'perbarui',
+                'sandi' => 'nik',
+                'wajibGanti' => '1',
+                'wilayah' => $gowa->name,
+                'titik' => $this->titik($gowa)->id,
+                'statusDefault' => 'PNS',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($jumlahSebelum, Employee::count(), 'Tidak boleh ada akun kembar.');
+        $this->assertSame('Andi Lewat Email', $andi->fresh()->name);
+        $this->assertSame(1, session('importHasil')['ringkasan']['perbarui']);
     }
 }

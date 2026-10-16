@@ -2,15 +2,23 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { getBase, OWN_REGION } from './_shared';
+import { getBase } from './_shared';
 
 const HARI_LABEL = { 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu', 7: 'Minggu' };
 
 const MODE_PILIHAN = [
-    { nilai: 'tambah', judul: 'Tambah saja', ket: 'NIK yang sudah terdaftar dilewati. Data lama tidak pernah diubah.' },
-    { nilai: 'perbarui', judul: 'Perbarui saja', ket: 'Hanya NIK yang sudah terdaftar yang diubah. NIK baru dilewati. Sandi tidak pernah direset.' },
-    { nilai: 'gabungan', judul: 'Tambah & perbarui', ket: 'NIK baru ditambahkan, NIK lama diperbarui. Pilihan paling umum.' },
+    { nilai: 'tambah', judul: 'Tambah saja', ket: 'Karyawan yang NIK/NIP-nya (atau emailnya) sudah terdaftar dilewati. Data lama tidak pernah diubah.' },
+    { nilai: 'perbarui', judul: 'Perbarui saja', ket: 'Hanya karyawan yang sudah terdaftar yang diubah. Yang belum terdaftar dilewati. Sandi tidak pernah direset.' },
+    { nilai: 'gabungan', judul: 'Tambah & perbarui', ket: 'Yang belum ada ditambahkan, yang sudah ada diperbarui. Pilihan paling umum.' },
 ];
+
+const SANDI_PILIHAN = [
+    { nilai: 'nik', judul: 'NIK/NIP', ket: 'Bila NIK kosong, otomatis memakai email.' },
+    { nilai: 'email', judul: 'Email', ket: 'Selalu memakai alamat email karyawan.' },
+    { nilai: 'kolom', judul: 'Kolom "Sandi Awal"', ket: 'Diambil dari berkas, minimal 6 karakter.' },
+];
+
+const STATUS_PILIHAN = ['Kontrak', 'PNS', 'PPPK', 'Honorer'];
 
 const AKSI_GAYA = {
     tambah: { label: 'Ditambahkan', kelas: 'bg-[#ECFDF5] text-[#065F46] border-[#10B981]/20' },
@@ -23,14 +31,15 @@ const JUDUL_CSV = [
     ['baris', 'Baris'],
     ['aksi', 'Hasil'],
     ['pesan', 'Masalah'],
-    ['nik', 'NIK'],
+    ['nik', 'NIK/NIP'],
     ['nama', 'Nama'],
     ['email', 'Email'],
     ['wilayah', 'Wilayah'],
     ['titik', 'Titik Proyek'],
-    ['jabatan', 'Jabatan'],
-    ['unit', 'Unit Kerja'],
-    ['status', 'Status'],
+    ['jabatan', 'Status Pegawai'],
+    ['unit', 'Satker'],
+    ['ppk', 'PPK'],
+    ['status', 'Status Kepegawaian'],
     ['nip', 'NIP'],
     ['gol', 'Golongan'],
     ['regu', 'Regu'],
@@ -73,9 +82,12 @@ function unduhCsv(namaBerkas, baris) {
 
 export default function EmployeeImport() {
     const { url, props } = usePage();
-    const { settings, batas, errors, flash } = props;
+    const { regions, settings, batas, errors, flash } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
+
+    const wilayahDaftar = useMemo(() => regions ?? [], [regions]);
+    const wilayahTetap = isWilayah ? (wilayahDaftar[0]?.name ?? '') : null;
 
     const pratinjau = flash?.importPreview ?? null;
     const hasil = flash?.importHasil ?? null;
@@ -84,6 +96,9 @@ export default function EmployeeImport() {
     const [mode, setMode] = useState('gabungan');
     const [sandi, setSandi] = useState('nik');
     const [wajibGanti, setWajibGanti] = useState(true);
+    const [wilayah, setWilayah] = useState(wilayahTetap ?? '');
+    const [titik, setTitik] = useState('');
+    const [statusDefault, setStatusDefault] = useState('Kontrak');
     const [hanyaMasalah, setHanyaMasalah] = useState(false);
     const [seret, setSeret] = useState(false);
     const [sibuk, setSibuk] = useState(false);
@@ -101,6 +116,16 @@ export default function EmployeeImport() {
             if (inputRef.current) inputRef.current.value = '';
         }
     }, [hasil]);
+
+    // Wilayah admin wilayah bisa berganti setelah prop regions tiba.
+    useEffect(() => {
+        if (wilayahTetap && wilayahTetap !== wilayah) setWilayah(wilayahTetap);
+    }, [wilayahTetap]);
+
+    const titikDaftar = useMemo(
+        () => wilayahDaftar.find((r) => r.name === wilayah)?.locations ?? [],
+        [wilayahDaftar, wilayah],
+    );
 
     const hariKerjaUmum = useMemo(
         () => (settings?.hariKerja ?? ['1', '2', '3', '4', '5']).map((d) => HARI_LABEL[String(d)] ?? d).join(', '),
@@ -134,6 +159,9 @@ export default function EmployeeImport() {
         const data = new FormData();
         data.append('berkas', berkas);
         data.append('mode', mode);
+        data.append('wilayah', wilayah);
+        data.append('titik', titik);
+        data.append('statusDefault', statusDefault);
         if (tujuan === 'impor') {
             data.append('sandi', sandi);
             data.append('wajibGanti', wajibGanti ? '1' : '0');
@@ -158,7 +186,7 @@ export default function EmployeeImport() {
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A] mt-1">Impor Akun Karyawan</h1>
                         <p className="text-sm text-[#64748B]">
                             Tambah atau perbarui banyak akun karyawan sekaligus dari satu berkas Excel.
-                            {isWilayah && ` Hanya untuk wilayah ${OWN_REGION}.`}
+                            {isWilayah && ` Hanya untuk wilayah ${wilayah || '—'}.`}
                         </p>
                     </div>
                 </div>
@@ -170,8 +198,9 @@ export default function EmployeeImport() {
                         <div className="flex-1">
                             <h2 className="text-sm font-semibold text-[#0F172A]">Unduh templat</h2>
                             <p className="text-xs text-[#64748B] mt-0.5">
-                                Templat sudah memuat daftar {isWilayah ? 'titik proyek di wilayah Anda' : 'seluruh wilayah dan titik proyek'} pada lembar <span className="font-medium">Daftar</span>,
-                                lengkap dengan pilihan dropdown. Isi satu karyawan per baris.
+                                Enam kolom pertama templat ini <span className="font-medium">sama persis</span> dengan berkas yang biasa dikirim PPK
+                                (NAMA, NIK/NIP, STATUS PEGAWAI, SATKER, PPK, EMAIL) — isi berkas lama bisa disalin langsung.
+                                Lembar <span className="font-medium">Daftar</span> memuat {isWilayah ? 'titik proyek di wilayah Anda' : 'seluruh wilayah dan titik proyek'}.
                             </p>
                             <a
                                 href={`${base}/employees/impor/templat`}
@@ -180,7 +209,7 @@ export default function EmployeeImport() {
                                 Unduh templat (.xlsx)
                             </a>
                             <p className="text-xs text-[#92400E] bg-[#FFF7E6] border border-[#FCB833]/20 rounded-xl px-3 py-2 mt-3">
-                                Jangan mengubah format kolom <span className="font-semibold">NIK</span> dan <span className="font-semibold">NIP</span>.
+                                Jangan mengubah format kolom <span className="font-semibold">NIK/NIP</span> dan <span className="font-semibold">NIP</span>.
                                 Keduanya sudah disetel sebagai <span className="font-semibold">Teks</span> karena Excel hanya menyimpan 15 angka pertama dengan tepat —
                                 bila diubah jadi angka, digit terakhir NIK bisa berubah tanpa peringatan.
                             </p>
@@ -194,11 +223,54 @@ export default function EmployeeImport() {
                         <span className="shrink-0 w-7 h-7 rounded-full bg-[#0F172A] text-white text-xs font-semibold grid place-items-center">2</span>
                         <div className="flex-1 space-y-4">
                             <div>
-                                <h2 className="text-sm font-semibold text-[#0F172A]">Isi dan unggah</h2>
+                                <h2 className="text-sm font-semibold text-[#0F172A]">Tujuan dan berkas</h2>
                                 <p className="text-xs text-[#64748B] mt-0.5">
-                                    Kolom wajib: NIK, Nama, Email{!isWilayah && ', Wilayah'}, Titik Proyek, Jabatan, Unit Kerja, Status.
-                                    Sisanya opsional. Maksimal {batas?.baris ?? 1000} baris dan {batas?.mb ?? 5} MB per berkas.
+                                    Kolom wajib: NAMA, STATUS PEGAWAI, SATKER, EMAIL. NIK/NIP, PPK, dan kolom lainnya boleh dikosongkan.
+                                    Maksimal {batas?.baris ?? 1000} baris dan {batas?.mb ?? 5} MB per berkas.
                                 </p>
+                            </div>
+
+                            <div className="rounded-2xl bg-[#F8FAFC] p-4 space-y-3">
+                                <p className="text-xs font-semibold text-[#0F172A]">Impor ke</p>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label className="text-xs font-medium text-[#334155]">Wilayah</label>
+                                        {isWilayah ? (
+                                            <p className="mt-1.5 rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm text-[#0F172A]">{wilayah || '—'}</p>
+                                        ) : (
+                                            <select
+                                                value={wilayah}
+                                                onChange={(e) => { setWilayah(e.target.value); setTitik(''); }}
+                                                className="mt-1.5 w-full rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm outline-none"
+                                            >
+                                                <option value="">— Ikut kolom Wilayah di berkas —</option>
+                                                {wilayahDaftar.map((r) => (
+                                                    <option key={r.id} value={r.name}>{r.name}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-[#334155]">Titik proyek</label>
+                                        <select
+                                            value={titik}
+                                            onChange={(e) => setTitik(e.target.value)}
+                                            disabled={!wilayah}
+                                            className="mt-1.5 w-full rounded-xl bg-white border border-[#E2E8F0] px-3 py-2.5 text-sm outline-none disabled:opacity-50"
+                                        >
+                                            <option value="">— Ikut kolom Titik Proyek di berkas —</option>
+                                            {titikDaftar.map((s) => (
+                                                <option key={s.id} value={String(s.id)}>{s.nama_lokasi}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-[#64748B]">
+                                    Dipakai untuk baris yang tidak menyebut wilayah/titiknya sendiri. Bila berkas memuat kolom
+                                    <span className="font-medium"> Wilayah</span> atau <span className="font-medium">Titik Proyek</span> yang terisi, isi kolom itulah yang menang.
+                                </p>
+                                {errors?.wilayah && <p className="text-xs text-[#991B1B]">{errors.wilayah}</p>}
+                                {errors?.titik && <p className="text-xs text-[#991B1B]">{errors.titik}</p>}
                             </div>
 
                             <div
@@ -235,7 +307,7 @@ export default function EmployeeImport() {
                             </div>
 
                             <div>
-                                <p className="text-xs font-medium text-[#334155] mb-1.5">Bila NIK sudah terdaftar</p>
+                                <p className="text-xs font-medium text-[#334155] mb-1.5">Bila karyawannya sudah terdaftar</p>
                                 <div className="grid gap-2 sm:grid-cols-3">
                                     {MODE_PILIHAN.map((m) => (
                                         <label
@@ -250,26 +322,50 @@ export default function EmployeeImport() {
                                         </label>
                                     ))}
                                 </div>
+                                <p className="text-xs text-[#64748B] mt-1.5">
+                                    Pencocokan memakai NIK/NIP bila barisnya punya NIK; bila NIK kosong, dipakai email.
+                                    Saat memperbarui, hanya kolom yang benar-benar ada di berkas yang ditulis — kolom yang tidak
+                                    disertakan dibiarkan apa adanya.
+                                </p>
                             </div>
 
                             <div className="grid gap-3 sm:grid-cols-2">
                                 <div>
-                                    <label className="text-xs font-medium text-[#334155]">Sandi awal karyawan baru</label>
-                                    <select value={sandi} onChange={(e) => setSandi(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
-                                        <option value="nik">Sama dengan NIK</option>
-                                        <option value="kolom">Ambil dari kolom &quot;Sandi Awal&quot;</option>
+                                    <label className="text-xs font-medium text-[#334155]">Status kepegawaian bawaan</label>
+                                    <select
+                                        value={statusDefault}
+                                        onChange={(e) => setStatusDefault(e.target.value)}
+                                        className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none"
+                                    >
+                                        {STATUS_PILIHAN.map((s) => <option key={s} value={s}>{s}</option>)}
                                     </select>
-                                    <span className="block text-xs text-[#64748B] mt-1">Karyawan yang sudah ada tidak pernah diganti sandinya.</span>
+                                    <span className="block text-xs text-[#64748B] mt-1">
+                                        Dipakai bila berkas tidak punya kolom &quot;Status Kepegawaian&quot;. Bila ada, isi kolom itulah yang dipakai.
+                                    </span>
                                 </div>
-                                <div className="rounded-xl bg-[#F8FAFC] px-3 py-3 self-start">
-                                    <label className="flex items-start gap-3 cursor-pointer">
-                                        <input type="checkbox" checked={wajibGanti} onChange={(e) => setWajibGanti(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#0F172A]" />
-                                        <span>
-                                            <span className="text-sm font-medium text-[#0F172A]">Wajib ganti sandi saat login pertama</span>
-                                            <span className="block text-xs text-[#64748B] mt-0.5">Berlaku untuk akun yang baru dibuat pada impor ini.</span>
-                                        </span>
-                                    </label>
+                                <div>
+                                    <label className="text-xs font-medium text-[#334155]">Sandi awal karyawan baru</label>
+                                    <select
+                                        value={sandi}
+                                        onChange={(e) => setSandi(e.target.value)}
+                                        className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none"
+                                    >
+                                        {SANDI_PILIHAN.map((s) => <option key={s.nilai} value={s.nilai}>{s.judul}</option>)}
+                                    </select>
+                                    <span className="block text-xs text-[#64748B] mt-1">
+                                        {SANDI_PILIHAN.find((s) => s.nilai === sandi)?.ket} Karyawan yang sudah ada tidak pernah diganti sandinya.
+                                    </span>
                                 </div>
+                            </div>
+
+                            <div className="rounded-xl bg-[#F8FAFC] px-3 py-3">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" checked={wajibGanti} onChange={(e) => setWajibGanti(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#0F172A]" />
+                                    <span>
+                                        <span className="text-sm font-medium text-[#0F172A]">Wajib ganti sandi saat login pertama</span>
+                                        <span className="block text-xs text-[#64748B] mt-0.5">Berlaku untuk akun yang baru dibuat pada impor ini.</span>
+                                    </span>
+                                </label>
                             </div>
 
                             {galat && (
@@ -320,6 +416,22 @@ export default function EmployeeImport() {
                                         <Chip label="Bermasalah" nilai={pratinjau.ringkasan.gagal} nada="merah" />
                                     </div>
                                 </div>
+
+                                {pratinjau.kolom?.length > 0 && (
+                                    <p className="text-xs text-[#64748B]">
+                                        Kolom yang terbaca dari berkas: <span className="text-[#334155]">{pratinjau.kolom.join(' · ')}</span>
+                                    </p>
+                                )}
+
+                                {ringkasanPpk(pratinjau.baris).length > 0 && (
+                                    <div className="flex flex-wrap gap-2 text-xs">
+                                        {ringkasanPpk(pratinjau.baris).map(([nama, jumlah]) => (
+                                            <span key={nama} className="rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-2.5 py-1 text-[#334155]">
+                                                {nama}: <span className="font-semibold">{jumlah}</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
 
                                 <div className="flex flex-wrap items-center gap-3">
                                     <label className="flex items-center gap-2 text-xs text-[#334155] cursor-pointer">
@@ -395,6 +507,9 @@ export default function EmployeeImport() {
                 {/* Rujukan kolom */}
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <h2 className="text-sm font-semibold text-[#0F172A]">Keterangan kolom</h2>
+                    <p className="text-xs text-[#64748B] mt-0.5">
+                        Empat kolom pertama di bawah ini mengikuti berkas PPK apa adanya. Kolom lain boleh dikosongkan.
+                    </p>
                     <div className="overflow-x-auto mt-3">
                         <table className="w-full text-xs">
                             <thead className="bg-[#F8FAFC] text-[#64748B]">
@@ -405,22 +520,27 @@ export default function EmployeeImport() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#F1F5F9] text-[#334155]">
-                                <BarisKolom nama="NIK" wajib>16 digit angka. Kolom sudah berformat Teks — jangan diubah.</BarisKolom>
-                                <BarisKolom nama="Nama" wajib>Nama lengkap karyawan.</BarisKolom>
-                                <BarisKolom nama="Email" wajib>Dipakai untuk login. Harus unik.</BarisKolom>
-                                <BarisKolom nama="Wilayah" wajib={!isWilayah}>
-                                    {isWilayah ? `Diisi otomatis: ${OWN_REGION}.` : 'Nama wilayah persis seperti pada lembar Daftar.'}
+                                <BarisKolom nama="NAMA" wajib>Nama lengkap karyawan.</BarisKolom>
+                                <BarisKolom nama="NIK/NIP">Boleh dikosongkan dan boleh kurang dari 16 digit. Disimpan apa adanya. Kolom sudah berformat Teks — jangan diubah.</BarisKolom>
+                                <BarisKolom nama="STATUS PEGAWAI" wajib>
+                                    Bebas diisi, mis. &quot;Petugas OP&quot;, &quot;Tenaga Pendukung&quot;, &quot;Konsultan Individu&quot;. Tersimpan sebagai jabatan.
                                 </BarisKolom>
-                                <BarisKolom nama="Titik Proyek" wajib>Harus titik yang benar-benar ada di wilayah baris tersebut.</BarisKolom>
-                                <BarisKolom nama="Jabatan" wajib>Bebas diisi.</BarisKolom>
-                                <BarisKolom nama="Unit Kerja" wajib>Bebas diisi.</BarisKolom>
-                                <BarisKolom nama="Status" wajib>PNS, PPPK, Kontrak, atau Honorer.</BarisKolom>
-                                <BarisKolom nama="NIP">18 digit. Kolom sudah berformat Teks — jangan diubah.</BarisKolom>
+                                <BarisKolom nama="SATKER" wajib>Satuan kerja karyawan, mis. &quot;OP SDA&quot;. Tersimpan sebagai unit kerja.</BarisKolom>
+                                <BarisKolom nama="PPK">Label PPK karyawan, mis. &quot;PPK OP SDA II&quot;. Hanya keterangan, tidak mengatur hak akses.</BarisKolom>
+                                <BarisKolom nama="EMAIL" wajib>Dipakai untuk login. Harus unik.</BarisKolom>
+                                <BarisKolom nama="Wilayah" wajib={!isWilayah}>
+                                    {isWilayah
+                                        ? `Diisi otomatis: ${wilayah || '—'}.`
+                                        : 'Nama wilayah persis seperti pada lembar Daftar. Boleh dikosongkan bila wilayah tujuan dipilih di halaman ini.'}
+                                </BarisKolom>
+                                <BarisKolom nama="Titik Proyek">Harus titik yang benar-benar ada di wilayah baris tersebut. Boleh dikosongkan bila titik tujuan dipilih di halaman ini.</BarisKolom>
+                                <BarisKolom nama="NIP">Kolom sudah berformat Teks — jangan diubah.</BarisKolom>
                                 <BarisKolom nama="Golongan">Mis. III/a. Boleh dikosongkan.</BarisKolom>
+                                <BarisKolom nama="Status Kepegawaian">PNS, PPPK, Kontrak, atau Honorer. Kosong berarti memakai pilihan bawaan di halaman ini.</BarisKolom>
                                 <BarisKolom nama="Regu">Label bebas (mis. Regu A). Jumlah regu tidak dibatasi.</BarisKolom>
                                 <BarisKolom nama="Shift">Ya / Tidak. Kosong berarti Tidak.</BarisKolom>
                                 <BarisKolom nama="Hari Kerja">Mis. 1,2,3,4,5 (1 = Senin). Kosong berarti ikut hari kerja umum: {hariKerjaUmum}.</BarisKolom>
-                                <BarisKolom nama="Sandi Awal">Dipakai bila sumber sandi dipilih &quot;dari kolom&quot;. Minimal 6 karakter.</BarisKolom>
+                                <BarisKolom nama="Sandi Awal">Dipakai bila sumber sandi dipilih &quot;Kolom Sandi Awal&quot;. Minimal 6 karakter.</BarisKolom>
                             </tbody>
                         </table>
                     </div>
@@ -428,6 +548,17 @@ export default function EmployeeImport() {
             </div>
         </AdminLayout>
     );
+}
+
+/** Hitung jumlah baris per PPK, untuk ringkasan cepat sebelum impor. */
+function ringkasanPpk(baris) {
+    const hitung = new Map();
+    for (const b of baris ?? []) {
+        if (b.aksi !== 'tambah' && b.aksi !== 'perbarui') continue;
+        const nama = (b.ppk || '').trim() || 'Tanpa PPK';
+        hitung.set(nama, (hitung.get(nama) ?? 0) + 1);
+    }
+    return [...hitung.entries()].sort((a, b) => b[1] - a[1]);
 }
 
 function Chip({ label, nilai, nada }) {
@@ -471,8 +602,9 @@ function TabelPratinjau({ baris }) {
                     <tr>
                         <th className="text-left px-3 py-2 font-medium">Baris</th>
                         <th className="text-left px-3 py-2 font-medium">Hasil</th>
-                        <th className="text-left px-3 py-2 font-medium">NIK</th>
+                        <th className="text-left px-3 py-2 font-medium">NIK/NIP</th>
                         <th className="text-left px-3 py-2 font-medium">Nama</th>
+                        <th className="text-left px-3 py-2 font-medium">PPK</th>
                         <th className="text-left px-3 py-2 font-medium">Wilayah</th>
                         <th className="text-left px-3 py-2 font-medium">Titik Proyek</th>
                         <th className="text-left px-3 py-2 font-medium">Catatan</th>
@@ -489,6 +621,7 @@ function TabelPratinjau({ baris }) {
                                 </td>
                                 <td className="px-3 py-2 font-mono text-[#0F172A]">{b.nik || '—'}</td>
                                 <td className="px-3 py-2 text-[#0F172A]">{b.nama || '—'}</td>
+                                <td className="px-3 py-2 text-[#334155]">{b.ppk || '—'}</td>
                                 <td className="px-3 py-2 text-[#334155]">{b.wilayah || '—'}</td>
                                 <td className="px-3 py-2 text-[#334155]">{b.titik || '—'}</td>
                                 <td className="px-3 py-2 text-[#991B1B]">
