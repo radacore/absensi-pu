@@ -4,8 +4,6 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getBase } from './_shared';
 
-const HARI_LABEL = { 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu', 7: 'Minggu' };
-
 const MODE_PILIHAN = [
     { nilai: 'tambah', judul: 'Tambah saja', ket: 'Karyawan yang NIK/NIP-nya (atau emailnya) sudah terdaftar dilewati. Data lama tidak pernah diubah.' },
     { nilai: 'perbarui', judul: 'Perbarui saja', ket: 'Hanya karyawan yang sudah terdaftar yang diubah. Yang belum terdaftar dilewati. Sandi tidak pernah direset.' },
@@ -20,7 +18,7 @@ const sandiPilihan = (bawaan) => [
     { nilai: 'bawaan', judul: bawaan ? `Sandi bawaan (${bawaan})` : 'Sandi bawaan', ket: 'Satu sandi yang sama untuk semua akun baru pada impor ini.' },
     { nilai: 'nik', judul: 'NIK/NIP', ket: 'Bila NIK kosong, otomatis memakai email.' },
     { nilai: 'email', judul: 'Email', ket: 'Selalu memakai alamat email karyawan.' },
-    { nilai: 'kolom', judul: 'Kolom "Sandi Awal"', ket: 'Diambil dari berkas, minimal 6 karakter.' },
+    { nilai: 'kolom', judul: 'Kolom "Sandi Awal"', ket: 'Hanya untuk berkas yang punya kolom "Sandi Awal". Minimal 6 karakter.' },
 ];
 
 const STATUS_PILIHAN = ['Kontrak', 'PNS', 'PPPK', 'Honorer'];
@@ -87,7 +85,7 @@ function unduhCsv(namaBerkas, baris) {
 
 export default function EmployeeImport() {
     const { url, props } = usePage();
-    const { regions, settings, batas, errors, flash, sandiBawaan } = props;
+    const { regions, batas, errors, flash, sandiBawaan } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
 
@@ -130,11 +128,6 @@ export default function EmployeeImport() {
     const titikDaftar = useMemo(
         () => wilayahDaftar.find((r) => r.name === wilayah)?.locations ?? [],
         [wilayahDaftar, wilayah],
-    );
-
-    const hariKerjaUmum = useMemo(
-        () => (settings?.hariKerja ?? ['1', '2', '3', '4', '5']).map((d) => HARI_LABEL[String(d)] ?? d).join(', '),
-        [settings],
     );
 
     const barisTampil = useMemo(() => {
@@ -203,7 +196,7 @@ export default function EmployeeImport() {
                         <div className="flex-1">
                             <h2 className="text-sm font-semibold text-[#0F172A]">Unduh templat</h2>
                             <p className="text-xs text-[#64748B] mt-0.5">
-                                Enam kolom pertama templat ini <span className="font-medium">sama persis</span> dengan berkas yang biasa dikirim PPK
+                                Templat ini memuat <span className="font-medium">enam kolom</span> yang sama persis dengan berkas yang biasa dikirim PPK
                                 (NAMA, NIK/NIP, STATUS PEGAWAI, SATKER, PPK, EMAIL) — isi berkas lama bisa disalin langsung.
                                 Lembar <span className="font-medium">Daftar</span> memuat {isWilayah ? 'titik proyek di wilayah Anda' : 'seluruh wilayah dan titik proyek'}.
                             </p>
@@ -214,8 +207,8 @@ export default function EmployeeImport() {
                                 Unduh templat (.xlsx)
                             </a>
                             <p className="text-xs text-[#92400E] bg-[#FFF7E6] border border-[#FCB833]/20 rounded-xl px-3 py-2 mt-3">
-                                Jangan mengubah format kolom <span className="font-semibold">NIK/NIP</span> dan <span className="font-semibold">NIP</span>.
-                                Keduanya sudah disetel sebagai <span className="font-semibold">Teks</span> karena Excel hanya menyimpan 15 angka pertama dengan tepat —
+                                Jangan mengubah format kolom <span className="font-semibold">NIK/NIP</span>.
+                                Kolom itu sudah disetel sebagai <span className="font-semibold">Teks</span> karena Excel hanya menyimpan 15 angka pertama dengan tepat —
                                 bila diubah jadi angka, digit terakhir NIK bisa berubah tanpa peringatan.
                             </p>
                         </div>
@@ -230,7 +223,7 @@ export default function EmployeeImport() {
                             <div>
                                 <h2 className="text-sm font-semibold text-[#0F172A]">Tujuan dan berkas</h2>
                                 <p className="text-xs text-[#64748B] mt-0.5">
-                                    Kolom wajib: NAMA, STATUS PEGAWAI, SATKER, EMAIL. NIK/NIP, PPK, dan kolom lainnya boleh dikosongkan.
+                                    Kolom wajib: NAMA, STATUS PEGAWAI, SATKER, EMAIL. NIK/NIP dan PPK boleh dikosongkan.
                                     Maksimal {batas?.baris ?? 1000} baris dan {batas?.mb ?? 5} MB per berkas.
                                 </p>
                             </div>
@@ -345,7 +338,7 @@ export default function EmployeeImport() {
                                         {STATUS_PILIHAN.map((s) => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                     <span className="block text-xs text-[#64748B] mt-1">
-                                        Dipakai bila berkas tidak punya kolom &quot;Status Kepegawaian&quot;. Bila ada, isi kolom itulah yang dipakai.
+                                        Templat tidak memuat kolom &quot;Status Kepegawaian&quot;, jadi nilai ini dipakai untuk semua baris. Bila berkas punya kolom itu, isi kolom itulah yang dipakai.
                                     </span>
                                 </div>
                                 <div>
@@ -513,7 +506,9 @@ export default function EmployeeImport() {
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
                     <h2 className="text-sm font-semibold text-[#0F172A]">Keterangan kolom</h2>
                     <p className="text-xs text-[#64748B] mt-0.5">
-                        Empat kolom pertama di bawah ini mengikuti berkas PPK apa adanya. Kolom lain boleh dikosongkan.
+                        Templat hanya memuat enam kolom di bawah ini, sama persis dengan berkas PPK. Kolom lain
+                        tidak perlu ditambahkan: wilayah, titik proyek, regu, shift, dan hari kerja diatur dari
+                        halaman ini atau disunting setelah impor.
                     </p>
                     <div className="overflow-x-auto mt-3">
                         <table className="w-full text-xs">
@@ -533,22 +528,14 @@ export default function EmployeeImport() {
                                 <BarisKolom nama="SATKER" wajib>Satuan kerja karyawan, mis. &quot;OP SDA&quot;. Tersimpan sebagai unit kerja.</BarisKolom>
                                 <BarisKolom nama="PPK">Label PPK karyawan, mis. &quot;PPK OP SDA II&quot;. Hanya keterangan, tidak mengatur hak akses.</BarisKolom>
                                 <BarisKolom nama="EMAIL" wajib>Dipakai untuk login. Harus unik.</BarisKolom>
-                                <BarisKolom nama="Wilayah" wajib={!isWilayah}>
-                                    {isWilayah
-                                        ? `Diisi otomatis: ${wilayah || '—'}.`
-                                        : 'Nama wilayah persis seperti pada lembar Daftar. Boleh dikosongkan bila wilayah tujuan dipilih di halaman ini.'}
-                                </BarisKolom>
-                                <BarisKolom nama="Titik Proyek">Harus titik yang benar-benar ada di wilayah baris tersebut. Boleh dikosongkan bila titik tujuan dipilih di halaman ini.</BarisKolom>
-                                <BarisKolom nama="NIP">Kolom sudah berformat Teks — jangan diubah.</BarisKolom>
-                                <BarisKolom nama="Golongan">Mis. III/a. Boleh dikosongkan.</BarisKolom>
-                                <BarisKolom nama="Status Kepegawaian">PNS, PPPK, Kontrak, atau Honorer. Kosong berarti memakai pilihan bawaan di halaman ini.</BarisKolom>
-                                <BarisKolom nama="Regu">Label bebas (mis. Regu A). Jumlah regu tidak dibatasi.</BarisKolom>
-                                <BarisKolom nama="Shift">Ya / Tidak. Kosong berarti Tidak.</BarisKolom>
-                                <BarisKolom nama="Hari Kerja">Mis. 1,2,3,4,5 (1 = Senin). Kosong berarti ikut hari kerja umum: {hariKerjaUmum}.</BarisKolom>
-                                <BarisKolom nama="Sandi Awal">Dipakai bila sumber sandi dipilih &quot;Kolom Sandi Awal&quot;. Minimal 6 karakter.</BarisKolom>
                             </tbody>
                         </table>
                     </div>
+                    <p className="text-xs text-[#64748B] mt-3">
+                        Berkas milik PPK boleh diunggah apa adanya. Bila berkas itu kebetulan memuat kolom
+                        tambahan (Wilayah, Titik Proyek, NIP, Golongan, Status Kepegawaian, Regu, Shift, Hari Kerja,
+                        Sandi Awal), isinya tetap dibaca.
+                    </p>
                 </div>
             </div>
         </AdminLayout>

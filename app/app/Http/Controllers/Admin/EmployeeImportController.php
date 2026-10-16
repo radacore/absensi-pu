@@ -44,7 +44,6 @@ class EmployeeImportController extends Controller
 
         return Inertia::render('Admin/EmployeeImport', [
             'regions' => AdminPresenter::regionsFor($scope),
-            'settings' => AdminPresenter::settingsFor(),
             // Ditampilkan di pilihan "Sandi bawaan" supaya admin tahu sandi
             // mana yang harus diberitahukan ke karyawan.
             'sandiBawaan' => Employee::SANDI_BAWAAN,

@@ -167,18 +167,32 @@ class ImporKaryawanTest extends TestCase
         $this->assertStringNotContainsString('Kota Makassar', $teks);
     }
 
-    public function test_templat_menyimpan_nik_dan_nip_sebagai_teks(): void
+    public function test_templat_menyimpan_nik_sebagai_teks(): void
     {
         $spreadsheet = KaryawanTemplate::buat(null);
         $sheet = $spreadsheet->getSheetByName(KaryawanTemplate::LEMBAR);
 
-        foreach (['nik', 'nip'] as $kunci) {
-            $format = $sheet->getStyle(KaryawanTemplate::huruf($kunci).'2')
-                ->getNumberFormat()
-                ->getFormatCode();
+        $format = $sheet->getStyle(KaryawanTemplate::huruf('nik').'2')
+            ->getNumberFormat()
+            ->getFormatCode();
 
-            $this->assertSame('@', $format, "Kolom {$kunci} harus berformat Teks.");
+        $this->assertSame('@', $format, 'Kolom NIK/NIP harus berformat Teks.');
+    }
+
+    public function test_templat_hanya_memuat_enam_kolom_berkas_ppk(): void
+    {
+        $spreadsheet = KaryawanTemplate::buat(null);
+        $sheet = $spreadsheet->getSheetByName(KaryawanTemplate::LEMBAR);
+
+        $this->assertSame('F', $sheet->getHighestColumn(), 'Templat tidak boleh memuat kolom tambahan.');
+
+        $judul = [];
+        foreach (range('A', 'F') as $huruf) {
+            $judul[] = $sheet->getCell($huruf.'1')->getValue();
         }
+
+        $this->assertSame(array_column(KaryawanTemplate::kolomLembar(), 'judul'), $judul);
+        $this->assertSame('EMAIL', $judul[5]);
     }
 
     /** Membaca seluruh isi lembar sebagai satu teks, untuk pemeriksaan sederhana. */
@@ -943,8 +957,8 @@ class ImporKaryawanTest extends TestCase
 
     /**
      * Penjaga penting: setiap judul kolom pada templat yang kita terbitkan harus
-     * dikenali oleh mesin impor. Salah ketik satu alias (pernah terjadi pada
-     * "Sandi Awal") membuat kolom opsional diam-diam terabaikan tanpa galat.
+     * dikenali oleh mesin impor. Salah ketik satu alias membuat kolomnya
+     * diam-diam terabaikan tanpa galat.
      */
     public function test_templat_bawaan_bisa_diisi_lalu_dibaca_utuh(): void
     {
@@ -956,17 +970,9 @@ class ImporKaryawanTest extends TestCase
             'nik' => '7371000000002001',
             'nama' => 'Utuh Sekali',
             'email' => 'utuh.sekali@uji.test',
-            'wilayah' => $gowa->name,
-            'titik' => $this->titik($gowa)->nama_lokasi,
             'jabatan' => 'Pengelola Data',
             'unit' => 'Bidang Air',
-            'status' => 'PPPK',
-            'nip' => '199003032020121002',
-            'gol' => 'IX',
-            'regu' => 'Regu Malam',
-            'is_shift' => 'Ya',
-            'hari_kerja' => '1,3,5',
-            'sandi' => 'sandiAwalKu1',
+            'ppk' => 'PPK OP SDA II',
         ];
 
         foreach ($nilai as $kunci => $isi) {
@@ -993,8 +999,11 @@ class ImporKaryawanTest extends TestCase
             ->post('/super-admin/employees/impor', [
                 'berkas' => $berkas,
                 'mode' => 'tambah',
-                'sandi' => 'kolom',
+                'sandi' => 'bawaan',
                 'wajibGanti' => '0',
+                'statusDefault' => 'PPPK',
+                'wilayah' => $gowa->name,
+                'titik' => $this->titik($gowa)->id,
             ])
             ->assertSessionHasNoErrors();
 
@@ -1002,19 +1011,15 @@ class ImporKaryawanTest extends TestCase
 
         $this->assertSame('Utuh Sekali', $karyawan->name);
         $this->assertSame('utuh.sekali@uji.test', $karyawan->email);
-        $this->assertSame('199003032020121002', $karyawan->nip);
-        $this->assertSame('IX', $karyawan->golongan);
         $this->assertSame('Pengelola Data', $karyawan->jabatan);
         $this->assertSame('Bidang Air', $karyawan->unit_kerja);
+        $this->assertSame('PPK OP SDA II', $karyawan->ppk);
         $this->assertSame('PPPK', $karyawan->status_kepegawaian);
-        $this->assertSame('Regu Malam', $karyawan->regu);
-        $this->assertTrue($karyawan->is_shift);
-        $this->assertSame(['1', '3', '5'], $karyawan->hari_kerja);
         $this->assertSame($gowa->id, $karyawan->region_id);
         $this->assertSame($this->titik($gowa)->id, $karyawan->site_id);
 
-        // Kolom "Sandi Awal" harus benar-benar terpakai, bukan diabaikan.
-        $this->assertTrue(Hash::check('sandiAwalKu1', $karyawan->password));
+        // Sandi awal: pilihan "bawaan" harus terpakai, bukan diabaikan.
+        $this->assertTrue(Hash::check(Employee::SANDI_BAWAAN, $karyawan->password));
     }
 
     public function test_berkas_hasil_impor_bisa_dibaca_ulang(): void
