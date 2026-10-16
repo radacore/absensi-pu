@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DinasController as AdminDinasController;
 use App\Http\Controllers\Admin\EarlyLeaveController as AdminEarlyLeaveController;
 use App\Http\Controllers\Admin\EmployeeController;
+use App\Http\Controllers\Admin\EmployeeImportController;
 use App\Http\Controllers\Admin\EmployeeRekapController;
 use App\Http\Controllers\Admin\HolidayController;
 use App\Http\Controllers\Admin\LoveController as AdminLoveController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\Karyawan\EarlyLeaveController as KaryawanEarlyLeaveCont
 use App\Http\Controllers\Karyawan\LoveController as KaryawanLoveController;
 use App\Http\Controllers\Karyawan\PengumumanController as KaryawanPengumumanController;
 use App\Http\Controllers\Karyawan\ProfilController as KaryawanProfilController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -100,93 +102,100 @@ Route::prefix('karyawan')->group(function () {
  * $labelPrefix: bagian nama route (super_admin|admin|wilayah).
  */
 if (! function_exists('adminMasterRoutes')) {
-function adminMasterRoutes(string $prefix, string $role, string $label): void
-{
-    Route::prefix($prefix)->middleware("role:{$role}")->group(function () use ($label) {
-        Route::post('/logout', [AdminAuthController::class, 'destroy'])->name("{$label}.logout");
+    function adminMasterRoutes(string $prefix, string $role, string $label): void
+    {
+        Route::prefix($prefix)->middleware("role:{$role}")->group(function () use ($label) {
+            Route::post('/logout', [AdminAuthController::class, 'destroy'])->name("{$label}.logout");
 
-        Route::get('/', [DashboardController::class, 'index'])->name("{$label}.dashboard");
-        Route::get('/attendances', [AttendanceController::class, 'index'])->name("{$label}.attendances");
-        Route::delete('/attendances/{attendance}', [AttendanceController::class, 'destroy'])->name("{$label}.attendances.destroy");
-        // D5: admin boleh mengoreksi catatan pekerjaan yang sudah tersimpan.
-        Route::put('/attendances/{attendance}/catatan', [AttendanceController::class, 'updateCatatan'])->name("{$label}.attendances.catatan");
-        Route::get('/cuti', [AdminCutiController::class, 'index'])->name("{$label}.cuti");
-        Route::get('/cuti/{id}', [AdminCutiController::class, 'show'])->name("{$label}.cuti.detail");
-        Route::put('/cuti/{cuti}/approve', [AdminCutiController::class, 'approve'])->name("{$label}.cuti.approve");
-        Route::put('/cuti/{cuti}/reject', [AdminCutiController::class, 'reject'])->name("{$label}.cuti.reject");
-        Route::delete('/cuti/{cuti}', [AdminCutiController::class, 'destroy'])->name("{$label}.cuti.destroy");
-        Route::get('/love', [AdminLoveController::class, 'index'])->name("{$label}.love");
-        Route::put('/love/{love}/approve', [AdminLoveController::class, 'approve'])->name("{$label}.love.approve");
-        Route::put('/love/{love}/reject', [AdminLoveController::class, 'reject'])->name("{$label}.love.reject");
-        Route::delete('/love/{love}', [AdminLoveController::class, 'destroy'])->name("{$label}.love.destroy");
+            Route::get('/', [DashboardController::class, 'index'])->name("{$label}.dashboard");
+            Route::get('/attendances', [AttendanceController::class, 'index'])->name("{$label}.attendances");
+            Route::delete('/attendances/{attendance}', [AttendanceController::class, 'destroy'])->name("{$label}.attendances.destroy");
+            // D5: admin boleh mengoreksi catatan pekerjaan yang sudah tersimpan.
+            Route::put('/attendances/{attendance}/catatan', [AttendanceController::class, 'updateCatatan'])->name("{$label}.attendances.catatan");
+            Route::get('/cuti', [AdminCutiController::class, 'index'])->name("{$label}.cuti");
+            Route::get('/cuti/{id}', [AdminCutiController::class, 'show'])->name("{$label}.cuti.detail");
+            Route::put('/cuti/{cuti}/approve', [AdminCutiController::class, 'approve'])->name("{$label}.cuti.approve");
+            Route::put('/cuti/{cuti}/reject', [AdminCutiController::class, 'reject'])->name("{$label}.cuti.reject");
+            Route::delete('/cuti/{cuti}', [AdminCutiController::class, 'destroy'])->name("{$label}.cuti.destroy");
+            Route::get('/love', [AdminLoveController::class, 'index'])->name("{$label}.love");
+            Route::put('/love/{love}/approve', [AdminLoveController::class, 'approve'])->name("{$label}.love.approve");
+            Route::put('/love/{love}/reject', [AdminLoveController::class, 'reject'])->name("{$label}.love.reject");
+            Route::delete('/love/{love}', [AdminLoveController::class, 'destroy'])->name("{$label}.love.destroy");
 
-        // Pola shift & jadwal shift (K4–K9)
-        Route::get('/pola-shift', [ShiftPatternController::class, 'index'])->name("{$label}.pola-shift");
-        Route::post('/pola-shift', [ShiftPatternController::class, 'store'])->name("{$label}.pola-shift.store");
-        Route::put('/pola-shift/{pola}', [ShiftPatternController::class, 'update'])->name("{$label}.pola-shift.update");
-        Route::put('/pola-shift/{pola}/toggle', [ShiftPatternController::class, 'toggle'])->name("{$label}.pola-shift.toggle");
-        Route::delete('/pola-shift/{pola}', [ShiftPatternController::class, 'destroy'])->name("{$label}.pola-shift.destroy");
+            // Pola shift & jadwal shift (K4–K9)
+            Route::get('/pola-shift', [ShiftPatternController::class, 'index'])->name("{$label}.pola-shift");
+            Route::post('/pola-shift', [ShiftPatternController::class, 'store'])->name("{$label}.pola-shift.store");
+            Route::put('/pola-shift/{pola}', [ShiftPatternController::class, 'update'])->name("{$label}.pola-shift.update");
+            Route::put('/pola-shift/{pola}/toggle', [ShiftPatternController::class, 'toggle'])->name("{$label}.pola-shift.toggle");
+            Route::delete('/pola-shift/{pola}', [ShiftPatternController::class, 'destroy'])->name("{$label}.pola-shift.destroy");
 
-        Route::get('/jadwal-shift', [ShiftScheduleController::class, 'index'])->name("{$label}.jadwal-shift");
-        Route::post('/jadwal-shift', [ShiftScheduleController::class, 'save'])->name("{$label}.jadwal-shift.save");
+            Route::get('/jadwal-shift', [ShiftScheduleController::class, 'index'])->name("{$label}.jadwal-shift");
+            Route::post('/jadwal-shift', [ShiftScheduleController::class, 'save'])->name("{$label}.jadwal-shift.save");
 
-        // Pulang cepat (P2/P5)
-        Route::get('/pulang-cepat', [AdminEarlyLeaveController::class, 'index'])->name("{$label}.pulang-cepat");
-        Route::put('/pulang-cepat/{pulangCepat}/approve', [AdminEarlyLeaveController::class, 'approve'])->name("{$label}.pulang-cepat.approve");
-        Route::put('/pulang-cepat/{pulangCepat}/reject', [AdminEarlyLeaveController::class, 'reject'])->name("{$label}.pulang-cepat.reject");
-        Route::get('/dinas', [AdminDinasController::class, 'index'])->name("{$label}.dinas");
-        Route::put('/dinas/{dinas}/approve', [AdminDinasController::class, 'approve'])->name("{$label}.dinas.approve");
-        Route::put('/dinas/{dinas}/reject', [AdminDinasController::class, 'reject'])->name("{$label}.dinas.reject");
-        Route::delete('/dinas/{dinas}', [AdminDinasController::class, 'destroy'])->name("{$label}.dinas.destroy");
-        Route::get('/dinas/{dinas}/dokumen', [AdminDinasController::class, 'dokumen'])->name("{$label}.dinas.dokumen");
-        Route::get('/pengumuman', [AdminPengumumanController::class, 'index'])->name("{$label}.pengumuman");
-        Route::post('/pengumuman', [AdminPengumumanController::class, 'store'])->name("{$label}.pengumuman.store");
-        Route::put('/pengumuman/{pengumuman}', [AdminPengumumanController::class, 'update'])->name("{$label}.pengumuman.update");
-        Route::delete('/pengumuman/{pengumuman}', [AdminPengumumanController::class, 'destroy'])->name("{$label}.pengumuman.destroy");
-        Route::get('/settings', [SettingController::class, 'index'])->name("{$label}.settings");
-        Route::put('/settings', [SettingController::class, 'update'])->name("{$label}.settings.update");
+            // Pulang cepat (P2/P5)
+            Route::get('/pulang-cepat', [AdminEarlyLeaveController::class, 'index'])->name("{$label}.pulang-cepat");
+            Route::put('/pulang-cepat/{pulangCepat}/approve', [AdminEarlyLeaveController::class, 'approve'])->name("{$label}.pulang-cepat.approve");
+            Route::put('/pulang-cepat/{pulangCepat}/reject', [AdminEarlyLeaveController::class, 'reject'])->name("{$label}.pulang-cepat.reject");
+            Route::get('/dinas', [AdminDinasController::class, 'index'])->name("{$label}.dinas");
+            Route::put('/dinas/{dinas}/approve', [AdminDinasController::class, 'approve'])->name("{$label}.dinas.approve");
+            Route::put('/dinas/{dinas}/reject', [AdminDinasController::class, 'reject'])->name("{$label}.dinas.reject");
+            Route::delete('/dinas/{dinas}', [AdminDinasController::class, 'destroy'])->name("{$label}.dinas.destroy");
+            Route::get('/dinas/{dinas}/dokumen', [AdminDinasController::class, 'dokumen'])->name("{$label}.dinas.dokumen");
+            Route::get('/pengumuman', [AdminPengumumanController::class, 'index'])->name("{$label}.pengumuman");
+            Route::post('/pengumuman', [AdminPengumumanController::class, 'store'])->name("{$label}.pengumuman.store");
+            Route::put('/pengumuman/{pengumuman}', [AdminPengumumanController::class, 'update'])->name("{$label}.pengumuman.update");
+            Route::delete('/pengumuman/{pengumuman}', [AdminPengumumanController::class, 'destroy'])->name("{$label}.pengumuman.destroy");
+            Route::get('/settings', [SettingController::class, 'index'])->name("{$label}.settings");
+            Route::put('/settings', [SettingController::class, 'update'])->name("{$label}.settings.update");
 
-        // Regions
-        Route::get('/regions', [RegionController::class, 'index'])->name("{$label}.regions");
-        Route::post('/regions', [RegionController::class, 'store'])->name("{$label}.regions.store");
-        Route::put('/regions/{region}', [RegionController::class, 'update'])->name("{$label}.regions.update");
-        Route::delete('/regions/{region}', [RegionController::class, 'destroy'])->name("{$label}.regions.destroy");
+            // Regions
+            Route::get('/regions', [RegionController::class, 'index'])->name("{$label}.regions");
+            Route::post('/regions', [RegionController::class, 'store'])->name("{$label}.regions.store");
+            Route::put('/regions/{region}', [RegionController::class, 'update'])->name("{$label}.regions.update");
+            Route::delete('/regions/{region}', [RegionController::class, 'destroy'])->name("{$label}.regions.destroy");
 
-        // Sites
-        Route::get('/regions/{region}/sites/{site}', [SiteController::class, 'show'])->name("{$label}.sites.show");
-        Route::post('/regions/{region}/sites', [SiteController::class, 'store'])->name("{$label}.sites.store");
-        Route::put('/sites/{site}', [SiteController::class, 'update'])->name("{$label}.sites.update");
-        Route::delete('/sites/{site}', [SiteController::class, 'destroy'])->name("{$label}.sites.destroy");
-        Route::post('/sites/{site}/employees', [SiteController::class, 'assignEmployees'])->name("{$label}.sites.employees");
-        Route::put('/sites/{site}/move', [SiteController::class, 'move'])->name("{$label}.sites.move");
+            // Sites
+            Route::get('/regions/{region}/sites/{site}', [SiteController::class, 'show'])->name("{$label}.sites.show");
+            Route::post('/regions/{region}/sites', [SiteController::class, 'store'])->name("{$label}.sites.store");
+            Route::put('/sites/{site}', [SiteController::class, 'update'])->name("{$label}.sites.update");
+            Route::delete('/sites/{site}', [SiteController::class, 'destroy'])->name("{$label}.sites.destroy");
+            Route::post('/sites/{site}/employees', [SiteController::class, 'assignEmployees'])->name("{$label}.sites.employees");
+            Route::put('/sites/{site}/move', [SiteController::class, 'move'])->name("{$label}.sites.move");
 
-        // Employees
-        Route::get('/employees', [EmployeeController::class, 'index'])->name("{$label}.employees");
-        Route::post('/employees', [EmployeeController::class, 'store'])->name("{$label}.employees.store");
-        Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->name("{$label}.employees.update");
-        Route::post('/employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name("{$label}.employees.reset-password");
-        Route::get('/employees/{employee}/rekap', [EmployeeRekapController::class, 'show'])->name("{$label}.employees.rekap");
-        Route::get('/employees/{employee}/rekap/unduh', [EmployeeRekapController::class, 'download'])->name("{$label}.employees.rekap.unduh");
-        Route::get('/employees/{employee}/rekap/pdf', [EmployeeRekapController::class, 'pdf'])->name("{$label}.employees.rekap.pdf");
-        Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->name("{$label}.employees.destroy");
+            // Employees
+            Route::get('/employees', [EmployeeController::class, 'index'])->name("{$label}.employees");
+            Route::post('/employees', [EmployeeController::class, 'store'])->name("{$label}.employees.store");
 
-        // Audit log (super admin only via controller guard)
-        Route::get('/audit-log', [AuditLogController::class, 'index'])->name("{$label}.audit-log");
+            // Impor akun karyawan massal. Didaftarkan sebelum rute ber-{employee}
+            // supaya "impor" tidak pernah tertangkap sebagai id karyawan.
+            Route::get('/employees/impor', [EmployeeImportController::class, 'index'])->name("{$label}.employees.impor.halaman");
+            Route::get('/employees/impor/templat', [EmployeeImportController::class, 'template'])->name("{$label}.employees.impor.templat");
+            Route::post('/employees/impor/pratinjau', [EmployeeImportController::class, 'preview'])->middleware('throttle:30,1')->name("{$label}.employees.impor.pratinjau");
+            Route::post('/employees/impor', [EmployeeImportController::class, 'commit'])->middleware('throttle:30,1')->name("{$label}.employees.impor");
+            Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->name("{$label}.employees.update");
+            Route::post('/employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name("{$label}.employees.reset-password");
+            Route::get('/employees/{employee}/rekap', [EmployeeRekapController::class, 'show'])->name("{$label}.employees.rekap");
+            Route::get('/employees/{employee}/rekap/unduh', [EmployeeRekapController::class, 'download'])->name("{$label}.employees.rekap.unduh");
+            Route::get('/employees/{employee}/rekap/pdf', [EmployeeRekapController::class, 'pdf'])->name("{$label}.employees.rekap.pdf");
+            Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->name("{$label}.employees.destroy");
 
-        // Holidays (super admin only via controller guard)
-        Route::get('/holidays', [HolidayController::class, 'index'])->name("{$label}.holidays");
-        Route::post('/holidays', [HolidayController::class, 'store'])->name("{$label}.holidays.store");
-        Route::put('/holidays/{holiday}', [HolidayController::class, 'update'])->name("{$label}.holidays.update");
-        Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name("{$label}.holidays.destroy");
+            // Audit log (super admin only via controller guard)
+            Route::get('/audit-log', [AuditLogController::class, 'index'])->name("{$label}.audit-log");
 
-        // Admin Wilayah (super admin only via controller guard)
-        Route::get('/admin-wilayah', [AdminWilayahController::class, 'index'])->name("{$label}.admin-wilayah");
-        Route::post('/admin-wilayah', [AdminWilayahController::class, 'store'])->name("{$label}.admin-wilayah.store");
-        Route::put('/admin-wilayah/{admin_wilayah}', [AdminWilayahController::class, 'update'])->name("{$label}.admin-wilayah.update");
-        Route::put('/admin-wilayah/{admin_wilayah}/toggle', [AdminWilayahController::class, 'toggle'])->name("{$label}.admin-wilayah.toggle");
-        Route::delete('/admin-wilayah/{admin_wilayah}', [AdminWilayahController::class, 'destroy'])->name("{$label}.admin-wilayah.destroy");
-    });
-}
+            // Holidays (super admin only via controller guard)
+            Route::get('/holidays', [HolidayController::class, 'index'])->name("{$label}.holidays");
+            Route::post('/holidays', [HolidayController::class, 'store'])->name("{$label}.holidays.store");
+            Route::put('/holidays/{holiday}', [HolidayController::class, 'update'])->name("{$label}.holidays.update");
+            Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name("{$label}.holidays.destroy");
+
+            // Admin Wilayah (super admin only via controller guard)
+            Route::get('/admin-wilayah', [AdminWilayahController::class, 'index'])->name("{$label}.admin-wilayah");
+            Route::post('/admin-wilayah', [AdminWilayahController::class, 'store'])->name("{$label}.admin-wilayah.store");
+            Route::put('/admin-wilayah/{admin_wilayah}', [AdminWilayahController::class, 'update'])->name("{$label}.admin-wilayah.update");
+            Route::put('/admin-wilayah/{admin_wilayah}/toggle', [AdminWilayahController::class, 'toggle'])->name("{$label}.admin-wilayah.toggle");
+            Route::delete('/admin-wilayah/{admin_wilayah}', [AdminWilayahController::class, 'destroy'])->name("{$label}.admin-wilayah.destroy");
+        });
+    }
 }
 
 // ── Super Admin Pusat ─────────────────────────────────────────
@@ -217,7 +226,7 @@ Route::prefix('wilayah')->group(function () {
 adminMasterRoutes('wilayah', 'admin_wilayah', 'wilayah');
 
 // Fallback: halaman 404 yang benar (status 404, bukan 200) untuk PWA/Inertia.
-Route::fallback(function (\Illuminate\Http\Request $request) {
+Route::fallback(function (Request $request) {
     return Inertia::render('Errors/Error', ['status' => 404])
         ->toResponse($request)
         ->setStatusCode(404);

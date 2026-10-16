@@ -154,7 +154,10 @@ export default function Employees() {
                         <p className="text-xs text-[#64748B] mt-1">1 karyawan = 1 titik — wajib titik saat tambah/edit. Pindah via halaman titik (Kelola).</p>
                         {isWilayah && <span className="inline-block mt-2 text-xs bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full border border-[#FCB833]/20">Write own region saja</span>}
                     </div>
-                    <button type="button" onClick={openAdd} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0">+ Tambah Karyawan</button>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Link href={`${base}/employees/impor`} className="bg-white border border-[#E2E8F0] text-[#0F172A] rounded-xl px-4 py-2.5 text-sm font-semibold">Impor Excel</Link>
+                        <button type="button" onClick={openAdd} className="bg-[#0F172A] text-white rounded-xl px-4 py-2.5 text-sm font-semibold">+ Tambah Karyawan</button>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-2xl p-4 flex flex-wrap gap-3 items-end shadow-[0_2px_16px_rgba(15,23,42,0.04)]">

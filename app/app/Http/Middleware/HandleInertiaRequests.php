@@ -40,6 +40,10 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
                 'reset_password' => $request->session()->get('reset_password'),
+                // Hasil impor karyawan massal: pratinjau (belum menyimpan apa pun)
+                // dan hasil simpan. Hanya muncul sekali, saat dialihkan kembali.
+                'importPreview' => $request->session()->get('importPreview'),
+                'importHasil' => $request->session()->get('importHasil'),
             ],
         ]);
     }
