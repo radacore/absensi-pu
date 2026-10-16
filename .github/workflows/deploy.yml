@@ -28,9 +28,12 @@ jobs:
     runs-on: ubuntu-latest
 
     # Lewati bila dipicu oleh CI yang gagal. (`workflow_dispatch` selalu lolos.)
+    # Syarat cabang ditulis eksplisit supaya CI dari branch fitur tidak pernah
+    # memicu deploy, walaupun kelak filter `branches:` di atas diubah.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
 
     steps:
       - name: Periksa secret wajib
