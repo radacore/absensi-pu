@@ -19,14 +19,18 @@ export default function AdminWilayah() {
     const confirm = useConfirm();
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
-    const [form, setForm] = useState({ ...empty, region: regions[1] || '' });
+    const [form, setForm] = useState({ ...empty });
 
-    const openAdd = () => { setEditing(null); setForm({ ...empty, region: regions[1] || '' }); setOpen(true); };
+    // Wilayah sengaja tidak dipilih otomatis. Dulu di sini ada `regions[1]`, dan
+    // karena urutan wilayah mengikuti id, pilihan itu selalu jatuh ke "Kab. Gowa":
+    // Super Admin yang tidak menyentuh kolom Region tanpa sadar membuat admin Gowa.
+    const openAdd = () => { setEditing(null); setForm({ ...empty }); setOpen(true); };
     const openEdit = (a) => { setEditing(a); setForm({ nama: a.nama, email: a.email, region: a.region, password: '' }); setOpen(true); };
     const close = () => setOpen(false);
 
     const save = () => {
         if (!form.nama.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { toast.error('Nama dan email valid wajib diisi'); return; }
+        if (!form.region) { toast.error('Pilih wilayah dulu'); return; }
         if (!editing && form.password.length < 8) { toast.error('Password minimal 8 karakter'); return; }
         const payload = { nama: form.nama, email: form.email, region: form.region };
         if (editing) {
@@ -138,6 +142,7 @@ export default function AdminWilayah() {
                                 <div>
                                     <label className="text-xs font-medium text-[#334155]">Region (assign 1 wilayah)</label>
                                     <select value={form.region} onChange={(e)=>setForm({...form, region:e.target.value})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10">
+                                        <option value="" disabled>— Pilih wilayah —</option>
                                         {regions.map((r)=><option key={r} value={r}>{r}</option>)}
                                     </select>
                                 </div>

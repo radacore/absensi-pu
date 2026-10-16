@@ -4,7 +4,7 @@ import { IconClose } from '@/Components/Icons';
 import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { getBase, OWN_REGION, MAX_SITES } from './_shared';
+import { getBase, ownRegionName, MAX_SITES } from './_shared';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -17,6 +17,9 @@ export default function Regions() {
     const { regions, employees } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
+    // Wilayah admin yang sedang login. Jangan ditulis tetap: tiap admin wilayah
+    // punya wilayah yang berbeda, dan nama tetap membuat admin lain salah tampil.
+    const OWN_REGION = ownRegionName(regions);
     const confirm = useConfirm();
     const [q, setQ] = useState('');
 
@@ -31,7 +34,7 @@ export default function Regions() {
     const siteMapRef = useRef(null);
     const siteLeafletRef = useRef(null);
 
-    const liveOwn = useMemo(() => regions.find((r) => r.name === OWN_REGION) || regions.find((r) => r.id === 2) || regions[0], [regions]);
+    const liveOwn = useMemo(() => regions.find((r) => r.name === OWN_REGION) ?? regions[0], [regions, OWN_REGION]);
     const displayRegions = isWilayah ? (liveOwn ? [liveOwn] : []) : regions;
     const filtered = displayRegions.filter((r) => r.name.toLowerCase().includes(q.toLowerCase()) || r.kantor.toLowerCase().includes(q.toLowerCase()));
 

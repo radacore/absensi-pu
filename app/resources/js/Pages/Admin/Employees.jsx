@@ -4,7 +4,7 @@ import { IconCheck, IconClose } from '@/Components/Icons';
 import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
-import { getBase, OWN_REGION, REGION_LIST as regionsList, siteById } from './_shared';
+import { getBase, ownRegionName, siteById } from './_shared';
 
 // B3: hari kerja per orang memakai nomor ISO-8601 (1 = Senin … 7 = Minggu),
 // sama seperti pengaturan umum.
@@ -16,6 +16,8 @@ export default function Employees() {
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     const regionsData = regions;
+    // Wilayah admin yang sedang login; bukan nama tetap, karena tiap admin beda.
+    const OWN_REGION = ownRegionName(regionsData);
     const list = employees;
     const confirm = useConfirm();
     const [open, setOpen] = useState(false);
@@ -30,7 +32,7 @@ export default function Employees() {
         nik: '', nip: '', nama: '', email: '', gol: '-', jabatan: '', unit: '', status: 'PNS',
         // Label PPK dari berkas PPK; murni keterangan.
         ppk: '',
-        region: isWilayah ? OWN_REGION : regionsList[1],
+        region: isWilayah ? OWN_REGION : '',
         office_location_id: null,
         isShift: false,
         // null = ikut hari kerja umum.
@@ -70,7 +72,9 @@ export default function Employees() {
     }, [scopedList, filterRegion, filterSite, filterStatus, isWilayah]);
 
     const openAdd = () => {
-        const defaultRegion = isWilayah ? OWN_REGION : regionsList[1];
+        // Wilayah sengaja tidak dipilih otomatis: salah pilih wilayah di sini
+        // langsung mengubah data karyawan, jadi biarkan admin memilih sendiri.
+        const defaultRegion = isWilayah ? OWN_REGION : '';
         const r = regionsData.find((x) => x.name === defaultRegion);
         const firstSiteId = r?.locations?.[0]?.id ?? null;
         setEditing(null);
@@ -96,6 +100,7 @@ export default function Employees() {
         const nik = String(form.nik ?? '').trim();
         if (nik !== '' && !/^[0-9A-Za-z.\-/]{1,30}$/.test(nik)) { toast.error('NIK/NIP hanya boleh angka, huruf, titik, strip, atau garis miring (maks. 30)'); return; }
         if (form.office_location_id == null || form.office_location_id === '') { toast.error('Titik proyek wajib dipilih (1 karyawan = 1 titik)'); return; }
+        if (!form.region) { toast.error('Pilih wilayah dulu'); return; }
         const regionObj = regionsData.find((r) => r.name === form.region);
         if (!regionObj) { toast.error('Wilayah tidak ditemukan'); return; }
         const ok = regionObj.locations.some((s) => s.id === Number(form.office_location_id));
@@ -311,6 +316,7 @@ export default function Employees() {
                                             <div className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#0F172A] font-medium">{OWN_REGION}</div>
                                         ) : (
                                             <select value={form.region} onChange={(e)=>setForm({...form, region:e.target.value, office_location_id: null})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
+                                                <option value="" disabled>— Pilih wilayah —</option>
                                                 {regionsData.map((r)=><option key={r.id} value={r.name}>{r.name} — {r.locations.length} titik</option>)}
                                             </select>
                                         )}

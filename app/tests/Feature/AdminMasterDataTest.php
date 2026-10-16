@@ -7,6 +7,9 @@ use App\Models\Region;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -152,7 +155,7 @@ class AdminMasterDataTest extends TestCase
 
     public function test_super_admin_reset_karyawan_password_to_nik_and_employee_can_login(): void
     {
-        $emp = \App\Models\Employee::where('nik', '7371001234567890')->firstOrFail();
+        $emp = Employee::where('nik', '7371001234567890')->firstOrFail();
         $oldHash = $emp->password;
 
         $response = $this->actingAs($this->superAdmin())
@@ -169,7 +172,7 @@ class AdminMasterDataTest extends TestCase
 
         $emp->refresh();
         $this->assertNotSame($oldHash, $emp->password);
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($emp->nik, $emp->password));
+        $this->assertTrue(Hash::check($emp->nik, $emp->password));
         $this->assertTrue($emp->must_change_password);
 
         // login karyawan pakai email sebagai password
@@ -179,13 +182,13 @@ class AdminMasterDataTest extends TestCase
             'password' => $emp->nik,
         ]);
         $login->assertRedirect('/karyawan');
-        $this->assertTrue(\Illuminate\Support\Facades\Auth::guard('employee')->check());
+        $this->assertTrue(Auth::guard('employee')->check());
     }
 
     public function test_admin_wilayah_can_reset_own_region_karyawan_but_not_other(): void
     {
-        $gowaEmp = \App\Models\Employee::where('region_id', 2)->firstOrFail();
-        $marosEmp = \App\Models\Employee::where('region_id', 3)->firstOrFail();
+        $gowaEmp = Employee::where('region_id', 2)->firstOrFail();
+        $marosEmp = Employee::where('region_id', 3)->firstOrFail();
         $marosOldHash = $marosEmp->password;
 
         // own region → ok
@@ -207,14 +210,14 @@ class AdminMasterDataTest extends TestCase
 
     public function test_reset_password_route_requires_admin_authentication(): void
     {
-        $emp = \App\Models\Employee::first();
+        $emp = Employee::first();
         $this->post("/super-admin/employees/{$emp->id}/reset-password")->assertRedirect('/super-admin/login');
         $this->post("/admin/employees/{$emp->id}/reset-password")->assertRedirect('/admin/login');
     }
 
     public function test_must_change_password_flag_shared_to_inertia_and_cleared_after_update(): void
     {
-        $emp = \App\Models\Employee::where('nik', '7371001234567890')->firstOrFail();
+        $emp = Employee::where('nik', '7371001234567890')->firstOrFail();
 
         // reset dulu → flag true
         $this->actingAs($this->superAdmin())
@@ -231,7 +234,7 @@ class AdminMasterDataTest extends TestCase
         $this->get('/karyawan')->assertRedirect('/karyawan/profil');
 
         $this->get('/karyawan/profil')->assertOk()
-            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $p) => $p->where('auth.employee.must_change_password', true));
+            ->assertInertia(fn (AssertableInertia $p) => $p->where('auth.employee.must_change_password', true));
 
         // ganti password baru yang valid → flag false
         $this->put('/karyawan/profil/password', [
@@ -241,16 +244,16 @@ class AdminMasterDataTest extends TestCase
         ])->assertSessionHas('success');
 
         $this->assertFalse($emp->fresh()->must_change_password);
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('Rahasia123', $emp->fresh()->password));
+        $this->assertTrue(Hash::check('Rahasia123', $emp->fresh()->password));
 
         // shared prop refresh → flag false
         $this->get('/karyawan')->assertOk()
-            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $p) => $p->where('auth.employee.must_change_password', false));
+            ->assertInertia(fn (AssertableInertia $p) => $p->where('auth.employee.must_change_password', false));
     }
 
     public function test_update_password_rejects_weak_password_and_matches_nik(): void
     {
-        $emp = \App\Models\Employee::where('nik', '7371001234567890')->firstOrFail();
+        $emp = Employee::where('nik', '7371001234567890')->firstOrFail();
 
         // set kondisi awal: password sama dengan NIK
         $emp->forceFill(['password' => bcrypt($emp->nik), 'must_change_password' => true])->save();
@@ -379,5 +382,34 @@ class AdminMasterDataTest extends TestCase
 
         $this->from('/super-admin/admin-wilayah')->delete("/super-admin/admin-wilayah/{$created->id}")->assertRedirect('/super-admin/admin-wilayah');
         $this->assertDatabaseMissing('users', ['id' => $created->id]);
+    }
+
+    public function test_admin_wilayah_bukan_gowa_melihat_wilayahnya_sendiri(): void
+    {
+        // Dulu tiap halaman admin menulis 'Kab. Gowa' secara tetap sebagai
+        // "wilayah saya", jadi admin wilayah lain ikut tampil sebagai Gowa.
+        // Sekarang wilayah diambil dari entri pertama daftar `regions`
+        // (ownRegionName di _shared.js), maka server wajib mengirim tepat satu
+        // wilayah: wilayah milik admin yang sedang login.
+        $makassar = Region::where('name', 'Kota Makassar')->first();
+
+        $admin = User::create([
+            'name' => 'Admin Wilayah Kota Makassar',
+            'email' => 'admin.makassar@bbws-pj.go.id',
+            'role' => 'admin_wilayah',
+            'region_id' => $makassar->id,
+            'site_id' => null,
+            'password' => 'password123',
+            'is_active' => true,
+        ]);
+
+        foreach (['/admin', '/admin/regions', '/admin/attendances', '/admin/employees'] as $halaman) {
+            $this->actingAs($admin)
+                ->get($halaman)
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->has('regions', 1)
+                    ->where('regions.0.name', 'Kota Makassar'));
+        }
     }
 }

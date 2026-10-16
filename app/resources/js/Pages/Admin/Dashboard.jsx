@@ -1,6 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Link, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import { ownRegionName } from './_shared';
 
 function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
@@ -10,8 +11,9 @@ export default function Dashboard() {
     const { url, props } = usePage();
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
-    const OWN_DASH = 'Kab. Gowa';
     const regionsData = props.regions ?? [];
+    // Wilayah admin yang sedang login; bukan nama tetap, karena tiap admin beda.
+    const OWN_DASH = ownRegionName(regionsData);
     const employees = props.employees ?? [];
     const attendances = props.attendances ?? [];
     const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4 };

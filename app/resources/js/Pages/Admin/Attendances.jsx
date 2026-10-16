@@ -4,7 +4,7 @@ import { IconClose, IconDownload } from '@/Components/Icons';
 import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { getBase, OWN_REGION, WILAYAH_LIST as wilayahList, getSitesForWilayah, getValidSiteIds, siteById } from './_shared';
+import { getBase, ownRegionName, WILAYAH_LIST as wilayahList, getSitesForWilayah, getValidSiteIds, siteById } from './_shared';
 
 const statusLabel = { on_time: 'Tepat waktu', late: 'Terlambat', excused_love: 'Toleransi', early_leave: 'Pulang awal' };
 const statusTone = { on_time: 'bg-[#ECFDF5] text-[#065F46]', late: 'bg-[#FFF7E6] text-[#92400E]', excused_love: 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30', early_leave: 'bg-[#FEF2F2] text-[#991B1B]' };
@@ -18,6 +18,8 @@ export default function Attendances() {
     const { regions: regionsProp, attendances: attendancesProp, settings } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
+    // Wilayah admin yang sedang login; bukan nama tetap, karena tiap admin beda.
+    const OWN_REGION = ownRegionName(regionsProp);
     const regionsData = regionsProp ?? [];
     const attendances = attendancesProp ?? [];
     const confirm = useConfirm();
