@@ -28,7 +28,7 @@ class SecurityTest extends TestCase
         return User::where('role', 'super_admin')->first();
     }
 
-    public function test_karyawan_baru_dari_admin_password_default_sama_dengan_nik_dan_flag_must_change_true(): void
+    public function test_karyawan_baru_dari_admin_memakai_sandi_bawaan_dan_flag_must_change_true(): void
     {
         $this->actingAs($this->superAdmin())
             ->from('/super-admin/employees')
@@ -48,7 +48,7 @@ class SecurityTest extends TestCase
 
         $emp = Employee::where('nik', '7371009999999998')->firstOrFail();
         $this->assertTrue($emp->must_change_password);
-        $this->assertTrue(Hash::check($emp->nik, $emp->password), 'Password default harus sama dengan NIK');
+        $this->assertTrue(Hash::check(Employee::SANDI_BAWAAN, $emp->password), 'Password default harus sama dengan sandi bawaan');
     }
 
     public function test_endpoint_login_admin_dan_karyawan_dilindungi_throttle_middleware(): void

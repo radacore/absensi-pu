@@ -10,10 +10,10 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Paksa ganti kata sandi.
  *
- * Karyawan yang baru dibuat / direset Admin Wilayah memakai NIK sebagai kata
- * sandi awal (lihat EmployeeController). Tanpa gerbang ini, flag
- * `must_change_password` hanya menjadi hiasan: karyawan bisa memakai NIK
- * selamanya. Middleware ini mengalihkan semua halaman karyawan ke halaman
+ * Karyawan yang baru dibuat / direset Admin Wilayah memakai sandi bawaan
+ * (Employee::SANDI_BAWAAN) sebagai kata sandi awal. Tanpa gerbang ini, flag
+ * `must_change_password` hanya menjadi hiasan: karyawan bisa memakai sandi
+ * bawaan selamanya. Middleware ini mengalihkan semua halaman karyawan ke halaman
  * profil sampai kata sandi diganti — hanya profil, ganti sandi, dan logout
  * yang tetap boleh diakses.
  */

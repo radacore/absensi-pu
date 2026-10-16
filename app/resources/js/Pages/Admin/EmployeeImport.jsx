@@ -12,7 +12,12 @@ const MODE_PILIHAN = [
     { nilai: 'gabungan', judul: 'Tambah & perbarui', ket: 'Yang belum ada ditambahkan, yang sudah ada diperbarui. Pilihan paling umum.' },
 ];
 
-const SANDI_PILIHAN = [
+// Sumber sandi awal. Nilai "bawaan" adalah pilihan utama: satu sandi yang sama
+// untuk semua akun baru, sama seperti tambah manual dan reset kata sandi.
+// Nilainya ditulis apa adanya supaya admin tahu sandi mana yang harus
+// diberitahukan ke karyawan.
+const sandiPilihan = (bawaan) => [
+    { nilai: 'bawaan', judul: bawaan ? `Sandi bawaan (${bawaan})` : 'Sandi bawaan', ket: 'Satu sandi yang sama untuk semua akun baru pada impor ini.' },
     { nilai: 'nik', judul: 'NIK/NIP', ket: 'Bila NIK kosong, otomatis memakai email.' },
     { nilai: 'email', judul: 'Email', ket: 'Selalu memakai alamat email karyawan.' },
     { nilai: 'kolom', judul: 'Kolom "Sandi Awal"', ket: 'Diambil dari berkas, minimal 6 karakter.' },
@@ -82,7 +87,7 @@ function unduhCsv(namaBerkas, baris) {
 
 export default function EmployeeImport() {
     const { url, props } = usePage();
-    const { regions, settings, batas, errors, flash } = props;
+    const { regions, settings, batas, errors, flash, sandiBawaan } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
 
@@ -94,7 +99,7 @@ export default function EmployeeImport() {
 
     const [berkas, setBerkas] = useState(null);
     const [mode, setMode] = useState('gabungan');
-    const [sandi, setSandi] = useState('nik');
+    const [sandi, setSandi] = useState('bawaan');
     const [wajibGanti, setWajibGanti] = useState(true);
     const [wilayah, setWilayah] = useState(wilayahTetap ?? '');
     const [titik, setTitik] = useState('');
@@ -350,10 +355,10 @@ export default function EmployeeImport() {
                                         onChange={(e) => setSandi(e.target.value)}
                                         className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none"
                                     >
-                                        {SANDI_PILIHAN.map((s) => <option key={s.nilai} value={s.nilai}>{s.judul}</option>)}
+                                        {sandiPilihan(sandiBawaan).map((s) => <option key={s.nilai} value={s.nilai}>{s.judul}</option>)}
                                     </select>
                                     <span className="block text-xs text-[#64748B] mt-1">
-                                        {SANDI_PILIHAN.find((s) => s.nilai === sandi)?.ket} Karyawan yang sudah ada tidak pernah diganti sandinya.
+                                        {sandiPilihan(sandiBawaan).find((s) => s.nilai === sandi)?.ket} Karyawan yang sudah ada tidak pernah diganti sandinya.
                                     </span>
                                 </div>
                             </div>

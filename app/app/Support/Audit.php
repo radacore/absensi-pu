@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Request;
  *   Audit::log('employee.reset_password',
  *       subject: $employee,
  *       label: $employee->name,
- *       description: "Reset password karyawan ke NIK",
+ *       description: "Reset password karyawan ke sandi bawaan",
  *       meta: ['nik' => $employee->nik]);
  */
 class Audit

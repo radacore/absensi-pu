@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Employee;
 use App\Models\Region;
 use App\Models\Site;
 use App\Support\AdminPresenter;
@@ -44,6 +45,9 @@ class EmployeeImportController extends Controller
         return Inertia::render('Admin/EmployeeImport', [
             'regions' => AdminPresenter::regionsFor($scope),
             'settings' => AdminPresenter::settingsFor(),
+            // Ditampilkan di pilihan "Sandi bawaan" supaya admin tahu sandi
+            // mana yang harus diberitahukan ke karyawan.
+            'sandiBawaan' => Employee::SANDI_BAWAAN,
             'batas' => [
                 'baris' => KaryawanImpor::MAX_BARIS,
                 'mb' => (int) (KaryawanImpor::MAX_BITA / 1024 / 1024),

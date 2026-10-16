@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
+use App\Models\Employee;
 use App\Support\MediaCleanup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,6 +46,9 @@ class ProfilController extends Controller
                 'office_location_id' => $me->site_id,
             ],
             'assigned' => $assigned,
+            // Dipakai formulir ganti sandi untuk mencegah karyawan memakai
+            // sandi bawaan sebagai sandi barunya.
+            'sandiBawaan' => Employee::SANDI_BAWAAN,
         ]);
     }
 
@@ -121,9 +125,9 @@ class ProfilController extends Controller
             ]);
         }
 
-        if ($data['password'] === $me->nik) {
+        if ($data['password'] === Employee::SANDI_BAWAAN) {
             throw ValidationException::withMessages([
-                'password' => 'Kata sandi baru tidak boleh sama dengan NIK.',
+                'password' => 'Kata sandi baru tidak boleh sama dengan sandi bawaan.',
             ]);
         }
 

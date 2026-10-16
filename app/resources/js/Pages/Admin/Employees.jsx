@@ -10,9 +10,15 @@ import { getBase, ownRegionName, siteById } from './_shared';
 // sama seperti pengaturan umum.
 const HARI_LIST = [['1', 'Senin'], ['2', 'Selasa'], ['3', 'Rabu'], ['4', 'Kamis'], ['5', 'Jumat'], ['6', 'Sabtu'], ['7', 'Minggu']];
 
+// Pesan galat dari server, ditampilkan tepat di bawah kolom yang bersangkutan.
+function Galat({ pesan }) {
+    if (!pesan) return null;
+    return <span className="block text-xs text-[#991B1B] mt-1">{pesan}</span>;
+}
+
 export default function Employees() {
     const { url, props } = usePage();
-    const { regions, employees, settings } = props;
+    const { regions, employees, settings, sandiBawaan } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     const regionsData = regions;
@@ -27,6 +33,10 @@ export default function Employees() {
     const [filterStatus, setFilterStatus] = useState('Semua');
     const [photo, setPhoto] = useState(null);
     const [preview, setPreview] = useState(null);
+    // Galat dari server, ditampilkan di bawah kolomnya masing-masing. Dipisah
+    // dari props.errors supaya pesan lama tidak muncul lagi saat formulir
+    // dibuka kembali.
+    const [formErrors, setFormErrors] = useState({});
 
     const [form, setForm] = useState({
         nik: '', nip: '', nama: '', email: '', gol: '-', jabatan: '', unit: '', status: 'PNS',
@@ -79,14 +89,14 @@ export default function Employees() {
         const firstSiteId = r?.locations?.[0]?.id ?? null;
         setEditing(null);
         setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', ppk:'', region: defaultRegion, office_location_id: firstSiteId, isShift: false, hariKerja: null, regu: '' });
-        setPhoto(null); setPreview(null); setOpen(true);
+        setPhoto(null); setPreview(null); setOpen(true); setFormErrors({});
     };
     const openEdit = (e) => {
         setEditing(e);
         setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, ppk:e.ppk||'', region:e.region, office_location_id: e.office_location_id ?? null, isShift: !!e.isShift, hariKerja: Array.isArray(e.hariKerja) ? e.hariKerja.map(String) : null, regu: e.regu || '' });
-        setPreview(e.foto); setPhoto(null); setOpen(true);
+        setPreview(e.foto); setPhoto(null); setOpen(true); setFormErrors({});
     };
-    const close = () => setOpen(false);
+    const close = () => { setOpen(false); setFormErrors({}); };
 
     const onPhoto = (ev) => {
         const f = ev.target.files?.[0]; if (!f) return; setPhoto(f);
@@ -96,6 +106,10 @@ export default function Employees() {
     const save = () => {
         if (isWilayah && form.region !== OWN_REGION) { toast.error(`Admin Wilayah hanya boleh di ${OWN_REGION}`); return; }
         if (!form.nama.trim() || !form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { toast.error('Nama dan email valid wajib diisi'); return; }
+        // Jabatan dan unit wajib diisi. Dulu keduanya tidak diperiksa di sini,
+        // jadi formulir sudah ditutup sebelum server menolak dan isian admin
+        // ikut hilang.
+        if (!form.jabatan.trim() || !form.unit.trim()) { toast.error('Jabatan dan unit wajib diisi'); return; }
         // NIK/NIP kini opsional dan boleh kurang dari 16 digit (mengikuti berkas PPK).
         const nik = String(form.nik ?? '').trim();
         if (nik !== '' && !/^[0-9A-Za-z.\-/]{1,30}$/.test(nik)) { toast.error('NIK/NIP hanya boleh angka, huruf, titik, strip, atau garis miring (maks. 30)'); return; }
@@ -118,22 +132,29 @@ export default function Employees() {
             hariKerja: form.hariKerja,
             regu: form.regu.trim(),
         };
+        if (editing && isWilayah && editing.region !== OWN_REGION) { toast.error('Tidak bisa mengedit karyawan luar wilayah'); return; }
+        // Formulir baru ditutup setelah server menerima. Bila server menolak
+        // (mis. NIK/email sudah dipakai), pesannya muncul di bawah kolomnya dan
+        // isian admin tidak hilang.
+        const opsi = {
+            preserveScroll: true,
+            onSuccess: () => { setFormErrors({}); setOpen(false); },
+            onError: (errs) => setFormErrors(errs),
+        };
         if (editing) {
-            if (isWilayah && editing.region !== OWN_REGION) { toast.error('Tidak bisa mengedit karyawan luar wilayah'); return; }
-            router.put(`${base}/employees/${editing.id}`, payload, { preserveScroll: true });
+            router.put(`${base}/employees/${editing.id}`, payload, opsi);
         } else {
-            router.post(`${base}/employees`, payload, { preserveScroll: true });
+            router.post(`${base}/employees`, payload, opsi);
         }
-        setOpen(false);
     };
 
     const handleReset = async (e) => {
         if (isWilayah && e.region !== OWN_REGION) { toast.error('Hanya karyawan di wilayah Anda yang bisa direset'); return; }
-        const dasar = e.nik ? `NIK karyawan (${e.nik})` : 'email karyawan';
+        const dasar = `sandi bawaan (${sandiBawaan})`;
         const ok = await confirm({
             title: `Reset kata sandi ${e.nama}?`,
             description: `${e.email} • ${e.region}. Kata sandi baru akan disamakan dengan ${dasar} dan karyawan wajib menggantinya saat login berikutnya.`,
-            confirmLabel: e.nik ? 'Reset ke NIK' : 'Reset ke email',
+            confirmLabel: 'Reset ke sandi bawaan',
             cancelLabel: 'Batal',
             tone: 'warning',
         });
@@ -275,40 +296,49 @@ export default function Employees() {
                                     <div className="col-span-2">
                                         <label className="text-xs font-medium text-[#334155]">Nama lengkap</label>
                                         <input value={form.nama} onChange={(e)=>setForm({...form, nama:e.target.value})} placeholder="Andi Saputra" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                                        <Galat pesan={formErrors.nama} />
                                     </div>
                                     <div className="col-span-2">
                                         <label className="text-xs font-medium text-[#334155]">Email (UK, login)</label>
                                         <input value={form.email} onChange={(e)=>setForm({...form, email:e.target.value})} placeholder="nama@bbws-pj.go.id" type="email" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
+                                        <Galat pesan={formErrors.email} />
                                     </div>
                                     <div>
                                         <label className="text-xs font-medium text-[#334155]">NIK/NIP (opsional)</label>
                                         <input value={form.nik ?? ''} onChange={(e)=>setForm({...form, nik:e.target.value.replace(/[^0-9A-Za-z.\-\/]/g,'').slice(0,30)})} placeholder="7371… (boleh dikosongkan)" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm font-mono outline-none" />
-                                        <span className="block text-xs text-[#64748B] mt-1">Boleh kurang dari 16 digit dan boleh dikosongkan — disimpan apa adanya. Dipakai sebagai sandi awal bila diisi.</span>
+                                        <span className="block text-xs text-[#64748B] mt-1">Boleh kurang dari 16 digit dan boleh dikosongkan — disimpan apa adanya untuk data kepegawaian.</span>
+                                        <Galat pesan={formErrors.nik} />
                                     </div>
                                     <div>
                                         <label className="text-xs font-medium text-[#334155]">NIP (opsional)</label>
                                         <input value={form.nip} onChange={(e)=>setForm({...form, nip:e.target.value})} placeholder="1985..." className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm font-mono outline-none" />
+                                        <Galat pesan={formErrors.nip} />
                                     </div>
                                     <div>
                                         <label className="text-xs font-medium text-[#334155]">Golongan</label>
                                         <select value={form.gol} onChange={(e)=>setForm({...form, gol:e.target.value})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none"><option>III/a</option><option>III/b</option><option>II/a</option><option>II/b</option><option>-</option></select>
+                                        <Galat pesan={formErrors.gol} />
                                     </div>
                                     <div>
                                         <label className="text-xs font-medium text-[#334155]">Status</label>
                                         <select value={form.status} onChange={(e)=>setForm({...form, status:e.target.value})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none"><option>PNS</option><option>PPPK</option><option>Kontrak</option><option>Honorer</option></select>
+                                        <Galat pesan={formErrors.status} />
                                     </div>
                                     <div>
                                         <label className="text-xs font-medium text-[#334155]">Jabatan</label>
                                         <input value={form.jabatan} onChange={(e)=>setForm({...form, jabatan:e.target.value})} placeholder="Staff Teknik" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
+                                        <Galat pesan={formErrors.jabatan} />
                                     </div>
                                     <div>
                                         <label className="text-xs font-medium text-[#334155]">Unit</label>
                                         <input value={form.unit} onChange={(e)=>setForm({...form, unit:e.target.value})} placeholder="Bidang Jalan" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
+                                        <Galat pesan={formErrors.unit} />
                                     </div>
                                     <div className="col-span-2">
                                         <label className="text-xs font-medium text-[#334155]">PPK (opsional)</label>
                                         <input value={form.ppk} onChange={(e)=>setForm({...form, ppk:e.target.value.slice(0,150)})} placeholder="mis. PPK OP SDA II" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none" />
                                         <span className="block text-xs text-[#64748B] mt-1">Label dari berkas PPK. Hanya keterangan — tidak mengatur hak akses.</span>
+                                        <Galat pesan={formErrors.ppk} />
                                     </div>
                                     <div className="col-span-2">
                                         <label className="text-xs font-medium text-[#334155]">Wilayah {isWilayah && <span className="text-[#64748B]">— terkunci own</span>}</label>
@@ -320,6 +350,7 @@ export default function Employees() {
                                                 {regionsData.map((r)=><option key={r.id} value={r.name}>{r.name} — {r.locations.length} titik</option>)}
                                             </select>
                                         )}
+                                        <Galat pesan={formErrors.region} />
                                     </div>
                                     <div className="col-span-2">
                                         <label className="text-xs font-medium text-[#334155]">Titik Proyek — 1 karyawan = 1 titik (wajib)</label>
@@ -330,6 +361,7 @@ export default function Employees() {
                                         <p className="text-xs mt-1">
                                             <span className="text-[#065F46]"><IconCheck size={13} className="inline-block shrink-0 align-[-0.15em] mr-1" />Akan absen di {sitesForFormRegion.find((s)=>s.id===Number(form.office_location_id))?.nama_lokasi || '— pilih titik'} — dalam radius baru valid.</span>
                                         </p>
+                                        <Galat pesan={formErrors.office_location_id} />
                                     </div>
                                     <div className="col-span-2">
                                         <label className="text-xs font-medium text-[#334155]">Regu (opsional)</label>
@@ -344,6 +376,7 @@ export default function Employees() {
                                             {reguList.map((r) => <option key={r} value={r} />)}
                                         </datalist>
                                         <span className="block text-xs text-[#64748B] mt-1">Bebas diisi — jumlah regu tidak dibatasi. Dipakai untuk mengelompokkan dan mengisi jadwal shift satu regu sekaligus di halaman Jadwal Shift.</span>
+                                        <Galat pesan={formErrors.regu} />
                                     </div>
                                     <div className="col-span-2 rounded-xl bg-[#F8FAFC] px-3 py-3">
                                         <label className="flex items-start gap-3 cursor-pointer">

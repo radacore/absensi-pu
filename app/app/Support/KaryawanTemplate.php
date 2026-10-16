@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Employee;
 use App\Models\Region;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -287,11 +288,12 @@ class KaryawanTemplate
             ['Shift — isi "Ya" bila karyawan bekerja shift, selain itu "Tidak" atau kosongkan.', 'teks'],
             ['Hari Kerja — mis. "1,2,3,4,5" (Senin–Jumat) atau "Senin-Jumat".', 'teks'],
             ['   Kosongkan bila karyawan mengikuti hari kerja umum.', 'catatan'],
-            ['Sandi Awal — kosongkan bila sandi awal diambil dari NIK atau email.', 'teks'],
+            ['Sandi Awal — kosongkan bila sandi awal diambil dari sandi bawaan, NIK, atau email.', 'teks'],
             ['', ''],
             ['Catatan', 'subjudul'],
             ['Sandi awal karyawan baru wajib diganti saat login pertama.', 'catatan'],
-            ['Bila NIK kosong, sandi awal otomatis memakai email karyawan.', 'catatan'],
+            ['Sandi awal bawaan untuk semua akun baru adalah '.Employee::SANDI_BAWAAN.'.', 'catatan'],
+            ['Bila sumber sandi dipilih NIK dan NIK-nya kosong, sandi awal memakai email karyawan.', 'catatan'],
             ['Baris yang gagal tidak akan diimpor; sisanya tetap diproses.', 'catatan'],
         ];
 

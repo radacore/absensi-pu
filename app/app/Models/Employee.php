@@ -12,6 +12,16 @@ class Employee extends Authenticatable
 {
     use Notifiable;
 
+    /**
+     * Sandi bawaan untuk akun karyawan yang baru dibuat.
+     *
+     * Dipakai di tiga tempat supaya semuanya sama persis: tambah manual oleh
+     * admin, impor massal, dan tombol reset kata sandi. Setiap akun baru
+     * memakai sandi ini dan wajib menggantinya saat login pertama
+     * (lihat middleware EnsurePasswordChanged).
+     */
+    public const SANDI_BAWAAN = 'bbws1234';
+
     protected $fillable = [
         'nik',
         'nip',

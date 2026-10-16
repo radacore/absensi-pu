@@ -46,7 +46,7 @@ class KaryawanImpor
     public const MODE = ['tambah', 'perbarui', 'gabungan'];
 
     /** Sumber sandi awal untuk karyawan baru. */
-    public const SANDI = ['nik', 'email', 'kolom'];
+    public const SANDI = ['bawaan', 'nik', 'email', 'kolom'];
 
     /** Pilihan status kepegawaian yang sah. */
     public const STATUS_PILIHAN = ['PNS', 'PPPK', 'Kontrak', 'Honorer'];
@@ -129,7 +129,7 @@ class KaryawanImpor
     public static function terapkan(string $path, ?int $scopeRegionId, array $opsi): array
     {
         $mode = in_array($opsi['mode'] ?? '', self::MODE, true) ? $opsi['mode'] : 'tambah';
-        $sumber = in_array($opsi['sandi'] ?? '', self::SANDI, true) ? $opsi['sandi'] : 'nik';
+        $sumber = in_array($opsi['sandi'] ?? '', self::SANDI, true) ? $opsi['sandi'] : 'bawaan';
         $wajibGanti = (bool) ($opsi['wajib_ganti'] ?? true);
 
         $analisa = self::analisa($path, $scopeRegionId, [
@@ -230,9 +230,15 @@ class KaryawanImpor
             return $data['email'];
         }
 
-        // Sumber "nik": NIK dipakai apa adanya. Bila NIK-nya memang kosong,
-        // sandinya jatuh ke email supaya akunnya tetap bisa dibuka.
-        return $data['nik'] ?: $data['email'];
+        if ($sumber === 'nik') {
+            // NIK dipakai apa adanya. Bila NIK-nya memang kosong, sandinya
+            // jatuh ke email supaya akunnya tetap bisa dibuka.
+            return $data['nik'] ?: $data['email'];
+        }
+
+        // Pilihan bawaan: satu sandi yang sama untuk semua akun baru, sama
+        // seperti tambah manual dan reset kata sandi.
+        return Employee::SANDI_BAWAAN;
     }
 
     /**
@@ -712,7 +718,7 @@ class KaryawanImpor
 
         // --- Sandi awal dari kolom, kalau memang itu sumbernya ---
         $sandi = null;
-        if (($opsi['sandi'] ?? 'nik') === 'kolom') {
+        if (($opsi['sandi'] ?? 'bawaan') === 'kolom') {
             $sandiMentah = trim($n['sandi'] ?? '');
             if ($sandiMentah !== '') {
                 if (mb_strlen($sandiMentah) < 6) {

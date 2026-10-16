@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 export default function Profil(){
     const { props } = usePage();
     const me0 = props.me ?? { nama:'—', email:'', phone:'', foto:'', region:'', jabatan:'', unit:'', status:'', gol:'-', nip:'', nik:'' };
+    const sandiBawaan = props.sandiBawaan || '';
     const confirm = useConfirm();
 
     const [phone,setPhone]=useState(me0.phone || '');
@@ -66,8 +67,8 @@ export default function Profil(){
         if(!/[A-Z]/.test(pwd.password) || !/[a-z]/.test(pwd.password) || !/\d/.test(pwd.password)){
             toast.error('Kata sandi wajib mengandung huruf besar, huruf kecil, dan angka'); return;
         }
-        if(me0.nik && pwd.password === me0.nik){
-            toast.error('Kata sandi baru tidak boleh sama dengan NIK'); return;
+        if(sandiBawaan && pwd.password === sandiBawaan){
+            toast.error('Kata sandi baru tidak boleh sama dengan sandi bawaan'); return;
         }
         if(pwd.password !== pwd.password_confirmation){ toast.error('Konfirmasi kata sandi tidak cocok'); return; }
         router.put('/karyawan/profil/password', pwd, {
@@ -146,7 +147,7 @@ export default function Profil(){
                         <div>
                             <label htmlFor="newPwd" className="text-xs font-medium text-[#334155]">Kata sandi baru</label>
                             <input id="newPwd" type="password" value={pwd.password} onChange={(e)=>setPwd({...pwd, password:e.target.value})} placeholder="Min. 8 karakter, huruf besar+kecil+angka" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
-                            <p className="text-xs text-[#64748B] mt-1">Wajib mengandung huruf besar, huruf kecil, dan angka. Tidak boleh sama dengan NIK.</p>
+                            <p className="text-xs text-[#64748B] mt-1">Wajib mengandung huruf besar, huruf kecil, dan angka. Tidak boleh sama dengan sandi bawaan.</p>
                         </div>
                         <div>
                             <label htmlFor="confirmPwd" className="text-xs font-medium text-[#334155]">Konfirmasi baru</label>

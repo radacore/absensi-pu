@@ -31,6 +31,9 @@ class EmployeeController extends Controller
             'employees' => AdminPresenter::employeesFor($scope),
             // B3: hari kerja umum dipakai sebagai acuan/preset di formulir.
             'settings' => AdminPresenter::settingsFor(),
+            // Ditampilkan di dialog reset supaya admin tahu sandi mana yang
+            // harus diberitahukan ke karyawan.
+            'sandiBawaan' => Employee::SANDI_BAWAAN,
         ]);
     }
 
@@ -135,10 +138,10 @@ class EmployeeController extends Controller
         $scope = $this->scopeRegion();
         abort_if($scope && $employee->region_id !== $scope, 403, 'Karyawan ini di luar cakupan Anda.');
 
-        // NIK kini boleh kosong, jadi sandi jatuh ke email bila NIK tidak ada.
-        // Ini sejalan dengan impor massal yang memakai aturan yang sama.
-        $sandi = $employee->nik ?: $employee->email;
-        $dasar = $employee->nik ? 'NIK' : 'email';
+        // Semua akun karyawan memakai satu sandi bawaan yang sama, baik saat
+        // dibuat manual, diimpor, maupun direset di sini. Karena sandinya
+        // seragam, flag wajib ganti selalu dinyalakan.
+        $sandi = Employee::SANDI_BAWAAN;
 
         $employee->update([
             'password' => $sandi,
@@ -149,18 +152,18 @@ class EmployeeController extends Controller
             'employee.reset_password',
             subject: $employee,
             label: $employee->name,
-            description: "Reset kata sandi karyawan {$employee->name} ke {$dasar}",
-            meta: ['dasar' => $dasar, 'panjang' => strlen($sandi)]
+            description: "Reset kata sandi karyawan {$employee->name} ke sandi bawaan",
+            meta: ['dasar' => 'sandi bawaan', 'panjang' => strlen($sandi)]
         );
 
         return back()->with([
-            'success' => "Kata sandi {$employee->name} direset ke {$dasar}. Karyawan wajib ganti kata sandi saat login.",
+            'success' => "Kata sandi {$employee->name} direset ke sandi bawaan. Karyawan wajib ganti kata sandi saat login.",
             'reset_password' => [
                 'employee_id' => $employee->id,
                 'nama' => $employee->name,
                 'nik' => $employee->nik,
                 'sandi' => $sandi,
-                'dasar' => $dasar,
+                'dasar' => 'sandi bawaan',
             ],
         ]);
     }
@@ -192,6 +195,30 @@ class EmployeeController extends Controller
             'hariKerja.*' => ['in:1,2,3,4,5,6,7'],
             // F4: label regu bebas. Kosong = tanpa regu.
             'regu' => ['sometimes', 'nullable', 'string', 'max:30'],
+        ], [
+            // Pesan Indonesia. Tanpa ini Laravel menjawab dalam bahasa Inggris
+            // ("The jabatan field is required."), dan itulah yang muncul di
+            // notifikasi admin.
+            'nik.max' => 'NIK/NIP maksimal 30 karakter.',
+            'nik.regex' => 'NIK/NIP hanya boleh angka, huruf, titik, strip, atau garis miring.',
+            'nik.unique' => 'NIK/NIP ini sudah terdaftar.',
+            'nip.unique' => 'NIP ini sudah terdaftar.',
+            'nama.required' => 'Nama lengkap wajib diisi.',
+            'nama.max' => 'Nama lengkap maksimal 150 karakter.',
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Email ini sudah dipakai karyawan lain.',
+            'gol.required' => 'Golongan wajib dipilih.',
+            'jabatan.required' => 'Jabatan wajib diisi.',
+            'unit.required' => 'Unit wajib diisi.',
+            'status.required' => 'Status kepegawaian wajib dipilih.',
+            'status.in' => 'Status kepegawaian tidak dikenal.',
+            'region.required' => 'Wilayah wajib dipilih.',
+            'office_location_id.required' => 'Titik proyek wajib dipilih.',
+            'office_location_id.integer' => 'Titik proyek tidak valid.',
+            'ppk.max' => 'PPK maksimal 150 karakter.',
+            'regu.max' => 'Regu maksimal 30 karakter.',
+            'hariKerja.min' => 'Pilih minimal satu hari kerja.',
         ]);
     }
 
@@ -263,8 +290,9 @@ class EmployeeController extends Controller
             'is_shift' => (bool) ($data['isShift'] ?? false),
             'hari_kerja' => $this->hariKerjaPayload($data),
             'regu' => $this->reguPayload($data),
-            // NIK boleh kosong → sandi awal jatuh ke email, sama seperti impor.
-            'password' => $data['nik'] ?: $data['email'],
+            // Sandi bawaan yang sama untuk semua akun baru; karyawan wajib
+            // menggantinya saat login pertama.
+            'password' => Employee::SANDI_BAWAAN,
             'must_change_password' => true,
         ]);
     }

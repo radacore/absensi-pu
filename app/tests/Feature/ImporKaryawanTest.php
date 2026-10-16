@@ -447,6 +447,40 @@ class ImporKaryawanTest extends TestCase
         $this->assertFalse($karyawan->must_change_password);
     }
 
+    public function test_impor_bisa_memakai_sandi_bawaan(): void
+    {
+        $gowa = $this->region('Kab. Gowa');
+
+        $berkas = $this->berkas([
+            $this->barisValid('7371000000000851', 'Sandi Bawaan', $gowa),
+        ]);
+
+        $this->actingAs($this->superAdmin())
+            ->from('/super-admin/employees')
+            ->post('/super-admin/employees/impor', [
+                'berkas' => $berkas,
+                'mode' => 'tambah',
+                'sandi' => 'bawaan',
+                'wajibGanti' => '1',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $karyawan = Employee::where('nik', '7371000000000851')->firstOrFail();
+        $this->assertTrue(Hash::check(Employee::SANDI_BAWAAN, $karyawan->password));
+        $this->assertTrue($karyawan->must_change_password);
+    }
+
+    public function test_halaman_impor_dan_karyawan_membagikan_sandi_bawaan(): void
+    {
+        $this->actingAs($this->superAdmin())
+            ->get('/super-admin/employees/impor')
+            ->assertInertia(fn ($page) => $page->where('sandiBawaan', Employee::SANDI_BAWAAN));
+
+        $this->actingAs($this->superAdmin())
+            ->get('/super-admin/employees')
+            ->assertInertia(fn ($page) => $page->where('sandiBawaan', Employee::SANDI_BAWAAN));
+    }
+
     public function test_impor_menolak_nik_yang_terbaca_sebagai_angka(): void
     {
         $gowa = $this->region('Kab. Gowa');

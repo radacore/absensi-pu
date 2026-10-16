@@ -153,7 +153,7 @@ class AdminMasterDataTest extends TestCase
         $this->assertDatabaseMissing('employees', ['id' => $emp->id]);
     }
 
-    public function test_super_admin_reset_karyawan_password_to_nik_and_employee_can_login(): void
+    public function test_super_admin_reset_karyawan_password_ke_sandi_bawaan_and_employee_can_login(): void
     {
         $emp = Employee::where('nik', '7371001234567890')->firstOrFail();
         $oldHash = $emp->password;
@@ -172,14 +172,14 @@ class AdminMasterDataTest extends TestCase
 
         $emp->refresh();
         $this->assertNotSame($oldHash, $emp->password);
-        $this->assertTrue(Hash::check($emp->nik, $emp->password));
+        $this->assertTrue(Hash::check(Employee::SANDI_BAWAAN, $emp->password));
         $this->assertTrue($emp->must_change_password);
 
-        // login karyawan pakai email sebagai password
+        // login karyawan memakai sandi bawaan
         $this->post('/karyawan/logout');
         $login = $this->post('/karyawan/login', [
             'login' => $emp->email,
-            'password' => $emp->nik,
+            'password' => Employee::SANDI_BAWAAN,
         ]);
         $login->assertRedirect('/karyawan');
         $this->assertTrue(Auth::guard('employee')->check());
@@ -198,6 +198,7 @@ class AdminMasterDataTest extends TestCase
         $ok->assertRedirect('/admin/employees');
         $ok->assertSessionHas('reset_password');
         $this->assertTrue($gowaEmp->fresh()->must_change_password);
+        $this->assertTrue(Hash::check(Employee::SANDI_BAWAAN, $gowaEmp->fresh()->password));
 
         // luar region → 403 dan password tidak berubah
         $forbidden = $this->actingAs($this->adminGowa())
@@ -229,7 +230,7 @@ class AdminMasterDataTest extends TestCase
         // mengalihkan halaman karyawan mana pun ke profil sampai kata sandi
         // diganti, jadi flag-nya diperiksa di halaman profil.
         $this->post('/karyawan/logout');
-        $this->post('/karyawan/login', ['login' => $emp->email, 'password' => $emp->nik]);
+        $this->post('/karyawan/login', ['login' => $emp->email, 'password' => Employee::SANDI_BAWAAN]);
 
         $this->get('/karyawan')->assertRedirect('/karyawan/profil');
 
@@ -238,7 +239,7 @@ class AdminMasterDataTest extends TestCase
 
         // ganti password baru yang valid → flag false
         $this->put('/karyawan/profil/password', [
-            'current_password' => $emp->nik,
+            'current_password' => Employee::SANDI_BAWAAN,
             'password' => 'Rahasia123',
             'password_confirmation' => 'Rahasia123',
         ])->assertSessionHas('success');
@@ -251,42 +252,42 @@ class AdminMasterDataTest extends TestCase
             ->assertInertia(fn (AssertableInertia $p) => $p->where('auth.employee.must_change_password', false));
     }
 
-    public function test_update_password_rejects_weak_password_and_matches_nik(): void
+    public function test_update_password_rejects_weak_password_and_matches_sandi_bawaan(): void
     {
         $emp = Employee::where('nik', '7371001234567890')->firstOrFail();
 
-        // set kondisi awal: password sama dengan NIK
-        $emp->forceFill(['password' => bcrypt($emp->nik), 'must_change_password' => true])->save();
+        // kondisi awal: karyawan masih memakai sandi bawaan
+        $emp->forceFill(['password' => bcrypt(Employee::SANDI_BAWAAN), 'must_change_password' => true])->save();
 
         $this->post('/karyawan/logout');
-        $this->post('/karyawan/login', ['login' => $emp->email, 'password' => $emp->nik]);
+        $this->post('/karyawan/login', ['login' => $emp->email, 'password' => Employee::SANDI_BAWAAN]);
 
         // tanpa huruf besar → gagal
         $this->put('/karyawan/profil/password', [
-            'current_password' => $emp->nik,
+            'current_password' => Employee::SANDI_BAWAAN,
             'password' => 'lowercase1',
             'password_confirmation' => 'lowercase1',
         ])->assertSessionHasErrors('password');
 
         // tanpa angka → gagal
         $this->put('/karyawan/profil/password', [
-            'current_password' => $emp->nik,
+            'current_password' => Employee::SANDI_BAWAAN,
             'password' => 'NoNumberHere',
             'password_confirmation' => 'NoNumberHere',
         ])->assertSessionHasErrors('password');
 
         // < 8 → gagal
         $this->put('/karyawan/profil/password', [
-            'current_password' => $emp->nik,
+            'current_password' => Employee::SANDI_BAWAAN,
             'password' => 'Ab1',
             'password_confirmation' => 'Ab1',
         ])->assertSessionHasErrors('password');
 
-        // sama dengan NIK → gagal
+        // sama dengan sandi bawaan → gagal
         $this->put('/karyawan/profil/password', [
-            'current_password' => $emp->nik,
-            'password' => $emp->nik,
-            'password_confirmation' => $emp->nik,
+            'current_password' => Employee::SANDI_BAWAAN,
+            'password' => Employee::SANDI_BAWAAN,
+            'password_confirmation' => Employee::SANDI_BAWAAN,
         ])->assertSessionHasErrors('password');
 
         $this->assertTrue($emp->fresh()->must_change_password);
