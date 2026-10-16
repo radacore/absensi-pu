@@ -1,5 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { useConfirm } from '@/Components/ConfirmDialog';
+import { IconClose } from '@/Components/Icons';
 import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
@@ -147,7 +148,7 @@ export default function LoveAdmin(){
                                                             <span className="flex gap-1">
                                                                 <input value={rejectNote.text} onChange={(e)=>setRejectNote({id:c.id, text:e.target.value})} placeholder="Alasan reject..." className="w-28 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] px-2 py-1 text-xs outline-none" />
                                                                 <button type="button" onClick={()=>handleReject(c.id)} className="text-xs font-medium bg-[#EF4444] text-white px-2 py-1.5 rounded-lg">Kirim</button>
-                                                                <button type="button" onClick={()=>setRejectNote({id:null,text:''})} className="text-xs px-1">✕</button>
+                                                                <button type="button" onClick={()=>setRejectNote({id:null,text:''})} className="text-xs px-1"><IconClose size={14} /></button>
                                                             </span>
                                                         ) : (
                                                             <button type="button" onClick={()=>setRejectNote({id:c.id, text:''})} className="text-xs font-medium bg-[#F1F5F9] text-[#64748B] px-2.5 py-1.5 rounded-lg">Reject</button>

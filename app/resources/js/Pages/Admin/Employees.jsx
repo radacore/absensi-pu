@@ -1,5 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { useConfirm } from '@/Components/ConfirmDialog';
+import { IconCheck, IconClose } from '@/Components/Icons';
 import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
@@ -252,7 +253,7 @@ export default function Employees() {
                         <div className="bg-white rounded-2xl w-full max-w-[560px] max-h-[90vh] overflow-y-auto shadow-xl" onClick={(e)=>e.stopPropagation()}>
                             <div className="sticky top-0 bg-white px-6 py-4 flex items-center justify-between border-b">
                                 <h3 className="font-semibold text-[#0F172A]">{editing ? 'Edit Karyawan' : 'Tambah Karyawan'}</h3>
-                                <button type="button" onClick={close} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center">✕</button>
+                                <button type="button" onClick={close} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center"><IconClose size={15} /></button>
                             </div>
                             <div className="px-6 py-5 space-y-4">
                                 <div className="flex gap-4">
@@ -321,7 +322,7 @@ export default function Employees() {
                                             {sitesForFormRegion.map((s)=><option key={s.id} value={String(s.id)}>{s.nama_lokasi} • {s.radius}m • {s.lat.toFixed(3)},{s.lng.toFixed(3)}</option>)}
                                         </select>
                                         <p className="text-xs mt-1">
-                                            <span className="text-[#065F46]">✓ Akan absen di {sitesForFormRegion.find((s)=>s.id===Number(form.office_location_id))?.nama_lokasi || '— pilih titik'} — dalam radius baru valid.</span>
+                                            <span className="text-[#065F46]"><IconCheck size={13} className="inline-block shrink-0 align-[-0.15em] mr-1" />Akan absen di {sitesForFormRegion.find((s)=>s.id===Number(form.office_location_id))?.nama_lokasi || '— pilih titik'} — dalam radius baru valid.</span>
                                         </p>
                                     </div>
                                     <div className="col-span-2">

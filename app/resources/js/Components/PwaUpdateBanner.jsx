@@ -1,3 +1,4 @@
+import { IconClose } from '@/Components/Icons';
 import { useEffect, useState } from 'react';
 
 /**
@@ -35,9 +36,9 @@ export default function PwaUpdateBanner() {
                 type="button"
                 onClick={() => setSiap(false)}
                 aria-label="Tutup pemberitahuan versi baru"
-                className="shrink-0 rounded-lg px-2 py-1 text-sm text-white/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                className="shrink-0 rounded-lg p-2 text-white/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             >
-                ✕
+                <IconClose size={15} />
             </button>
         </div>
     );

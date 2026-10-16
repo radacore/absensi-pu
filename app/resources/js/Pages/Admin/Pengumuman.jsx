@@ -1,5 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { useConfirm } from '@/Components/ConfirmDialog';
+import { IconClose, IconPin } from '@/Components/Icons';
 import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
@@ -89,7 +90,7 @@ export default function PengumumanAdmin(){
                             <tbody className="divide-y divide-[#F1F5F9]">
                                 {list.map((p)=>(
                                     <tr key={p.id} className="hover:bg-[#F8FAFC]/50">
-                                        <td className="px-4 py-3"><span className="font-medium text-[#0F172A]">{p.pin ? '📌 ' : ''}{p.judul}</span><p className="text-xs text-[#64748B] line-clamp-1">{p.konten}</p></td>
+                                        <td className="px-4 py-3"><span className="font-medium text-[#0F172A]">{p.pin && <IconPin size={13} className="inline-block shrink-0 align-[-0.15em] mr-1" />}{p.judul}</span><p className="text-xs text-[#64748B] line-clamp-1">{p.konten}</p></td>
                                         <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-1 rounded-full ${p.scope==='Global' ? 'bg-[#0F172A] text-white' : 'bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/20'}`}>{p.scope}{p.region ? ` • ${p.region}` : ''}</span></td>
                                         <td className="px-4 py-3 text-xs text-[#64748B]">{p.tgl}</td>
                                         <td className="px-4 py-3 text-xs text-[#64748B]">{p.stat}</td>
@@ -111,7 +112,7 @@ export default function PengumumanAdmin(){
                         <div className="bg-white rounded-2xl w-full max-w-[560px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
                             <div className="px-6 py-4 flex items-center justify-between border-b">
                                 <h3 className="font-semibold text-[#0F172A]">{editing ? 'Edit Pengumuman' : 'Buat Pengumuman'}</h3>
-                                <button type="button" onClick={close} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center">✕</button>
+                                <button type="button" onClick={close} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center"><IconClose size={15} /></button>
                             </div>
                             <div className="px-6 py-5 space-y-4">
                                 <div>

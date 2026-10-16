@@ -1,5 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { useConfirm } from '@/Components/ConfirmDialog';
+import { IconClose } from '@/Components/Icons';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -119,7 +120,7 @@ export default function CutiDetail(){
                         <div role="dialog" aria-modal="true" aria-label="Pratinjau dokumen pendukung" className="bg-white rounded-2xl max-w-[640px] w-full overflow-hidden" onClick={(e)=>e.stopPropagation()}>
                             <div className="px-5 py-4 flex items-center justify-between border-b">
                                 <h3 className="font-medium text-sm text-[#0F172A]">{data.dokumen}</h3>
-                                <button type="button" onClick={()=>setShowDoc(false)} aria-label="Tutup pratinjau dokumen" autoFocus className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center">✕</button>
+                                <button type="button" onClick={()=>setShowDoc(false)} aria-label="Tutup pratinjau dokumen" autoFocus className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center"><IconClose size={15} /></button>
                             </div>
                             <div className="p-6">
                                 {data.dokumen ? (

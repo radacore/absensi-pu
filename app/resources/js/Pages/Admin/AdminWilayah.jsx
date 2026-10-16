@@ -1,5 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { useConfirm } from '@/Components/ConfirmDialog';
+import { IconClose } from '@/Components/Icons';
 import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
@@ -123,7 +124,7 @@ export default function AdminWilayah() {
                         <div className="bg-white rounded-2xl w-full max-w-[480px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
                             <div className="px-6 py-4 flex items-center justify-between border-b">
                                 <h3 className="font-semibold text-[#0F172A]">{editing ? 'Edit Admin Wilayah' : 'Tambah Admin Wilayah'}</h3>
-                                <button type="button" onClick={close} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center">✕</button>
+                                <button type="button" onClick={close} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center"><IconClose size={15} /></button>
                             </div>
                             <div className="px-6 py-5 space-y-4">
                                 <div>

@@ -1,5 +1,6 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
 import { useConfirm } from '@/Components/ConfirmDialog';
+import { IconBanknote, IconCar, IconCheck, IconFile, IconImage, IconMapPin, IconPaperclip } from '@/Components/Icons';
 import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
@@ -143,11 +144,12 @@ export default function Dinas() {
                         <div>
                             <span className="text-xs font-medium text-[#334155]">Dokumen Surat Tugas <span className="text-[#DC2626]">*</span></span>
                             <input ref={fileRef} type="file" accept={DOKUMEN_ACCEPT} onChange={pickFile} className="hidden" />
-                            <button type="button" onClick={() => fileRef.current?.click()} className="mt-1 w-full whitespace-nowrap rounded-xl bg-white border border-dashed border-[#CBD5E1] py-3 text-sm font-medium text-[#334155] hover:bg-[#F8FAFC] transition">
-                                {dokumen ? '📎 Ganti dokumen' : '📎 Pilih dokumen'}
+                            <button type="button" onClick={() => fileRef.current?.click()} className="mt-1 w-full inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-white border border-dashed border-[#CBD5E1] py-3 text-sm font-medium text-[#334155] hover:bg-[#F8FAFC] transition">
+                                <IconPaperclip size={15} />
+                                {dokumen ? 'Ganti dokumen' : 'Pilih dokumen'}
                             </button>
                             {dokumen ? (
-                                <p className="mt-1.5 text-xs text-[#0D9488] break-all">✓ {dokumen.name} • {formatBytes(dokumen.size)}</p>
+                                <p className="mt-1.5 text-xs text-[#0D9488] break-all"><IconCheck size={13} className="inline-block shrink-0 align-[-0.15em] mr-1" />{dokumen.name} • {formatBytes(dokumen.size)}</p>
                             ) : (
                                 <p className="mt-1.5 text-xs text-[#64748B]">Wajib diunggah. Format PDF atau gambar, maksimal 5 MB.</p>
                             )}
@@ -165,12 +167,17 @@ export default function Dinas() {
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0 flex-1">
                                         <p className="font-medium text-sm text-[#0F172A] truncate">{r.tglLabel}</p>
-                                        <p className="text-xs text-[#64748B] mt-1">📄 {r.nomor_surat} • 🎯 {r.tujuan}</p>
+                                        <p className="text-xs text-[#64748B] mt-1"><IconFile size={13} className="inline-block shrink-0 align-[-0.15em] mr-1" />{r.nomor_surat} • <IconMapPin size={13} className="inline-block shrink-0 align-[-0.15em] mr-1" />{r.tujuan}</p>
                                         <p className="text-xs text-[#475569] mt-2">{r.keterangan}</p>
-                                        {r.transportasi && <p className="text-xs text-[#64748B] mt-1">🚗 {r.transportasi}{r.pembebanan_anggaran ? ` • 💰 ${r.pembebanan_anggaran}` : ''}</p>}
+                                        {r.transportasi && (
+                                            <p className="text-xs text-[#64748B] mt-1">
+                                                <IconCar size={13} className="inline-block shrink-0 align-[-0.15em] mr-1" />{r.transportasi}
+                                                {r.pembebanan_anggaran && <> • <IconBanknote size={13} className="inline-block shrink-0 align-[-0.15em] mr-1" />{r.pembebanan_anggaran}</>}
+                                            </p>
+                                        )}
                                         {r.dokumen_url && (
                                             <a href={r.dokumen_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-[#0D9488] bg-[#F0FDFA] border border-[#99F6E4] px-2.5 py-1.5 rounded-lg">
-                                                {r.dokumen_is_image ? '🖼' : '📄'} Lihat dokumen{r.dokumen_size ? ` • ${r.dokumen_size}` : ''}
+                                                {r.dokumen_is_image ? <IconImage size={13} /> : <IconFile size={13} />} Lihat dokumen{r.dokumen_size ? ` • ${r.dokumen_size}` : ''}
                                             </a>
                                         )}
                                     </div>

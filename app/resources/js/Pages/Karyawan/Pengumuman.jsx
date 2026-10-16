@@ -1,5 +1,6 @@
 import KaryawanLayout from '@/Layouts/KaryawanLayout';
 import { useConfirm } from '@/Components/ConfirmDialog';
+import { IconPin } from '@/Components/Icons';
 import { router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 
@@ -58,7 +59,7 @@ export default function Pengumuman(){
                             return (
                                 <div key={p.id} className={`bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)] ${unread ? 'ring-1 ring-[#E0F2FE]' : ''}`}>
                                     <div className="flex items-start justify-between gap-3">
-                                        <h3 className="font-medium text-sm leading-snug text-[#0F172A]">{p.pin ? '📌 ' : ''}{p.judul}</h3>
+                                        <h3 className="font-medium text-sm leading-snug text-[#0F172A]">{p.pin && <IconPin size={14} className="inline-block shrink-0 align-[-0.15em] mr-1" />}{p.judul}</h3>
                                         {unread && <span className="mt-1 w-2 h-2 rounded-full bg-[#1E3A8A] shrink-0"></span>}
                                     </div>
                                     <p className="text-xs text-[#64748B] mt-1">{p.scope==='Global' ? `Pusat • ${p.tgl}` : `${p.region} • ${p.tgl}`} {p.pin ? '• Disematkan' : ''} {unread ? '• Belum dibaca' : '• Sudah dibaca'}</p>

@@ -1,5 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { useConfirm } from '@/Components/ConfirmDialog';
+import { IconClose, IconDownload } from '@/Components/Icons';
 import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
@@ -113,7 +114,7 @@ export default function Attendances() {
                         <p className="text-sm text-[#64748B]">{isWilayah ? `Hanya own region • 1 karyawan = 1 titik` : 'Filter wilayah → titik proyek → status • 1 karyawan = 1 titik • di luar titik assigned ditolak 422'}</p>
                         <p className="text-xs text-[#64748B] mt-1">Radius per titik 50–1000 m — absen valid hanya di titik penugasan dalam radius • Jam {jamLabel} WITA</p>
                     </div>
-                    <button type="button" onClick={handleExport} className="bg-white border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-sm font-medium text-[#334155] shrink-0">⬇ Export CSV{isWilayah ? ` ${OWN_REGION}` : ''}</button>
+                    <button type="button" onClick={handleExport} className="inline-flex items-center gap-1.5 bg-white border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-sm font-medium text-[#334155] shrink-0"><IconDownload size={15} /> Export CSV{isWilayah ? ` ${OWN_REGION}` : ''}</button>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
@@ -197,7 +198,7 @@ export default function Attendances() {
                                         <h3 className="font-semibold text-[#0F172A]">{detail.nama}</h3>
                                         <p className="text-xs text-[#64748B]">{detail.wilayah} • {detail.kantor} • {detail.jarak} m {hit ? `• ${hit.site.nama_lokasi} ${hit.site.radius}m • ${inRadius ? 'Dalam' : 'Di luar'}` : ''} • {statusLabel[detail.status] ?? detail.status}</p>
                                     </div>
-                                    <button type="button" onClick={() => setDetail(null)} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center">✕</button>
+                                    <button type="button" onClick={() => setDetail(null)} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center"><IconClose size={15} /></button>
                                 </div>
                                 <div className="p-5 space-y-4">
                                     <div>

@@ -1,5 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { useConfirm } from '@/Components/ConfirmDialog';
+import { IconCar, IconFile, IconImage } from '@/Components/Icons';
 import { toast } from '@/lib/toast';
 import { router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
@@ -117,13 +118,13 @@ export default function Dinas() {
                                         </td>
                                         <td className="px-4 py-3 text-xs text-[#334155]">
                                             {r.tujuan}
-                                            {r.transportasi && <p className="text-[#64748B]">🚗 {r.transportasi}</p>}
+                                            {r.transportasi && <p className="text-[#64748B]"><IconCar size={12} className="inline-block shrink-0 align-[-0.15em] mr-1" />{r.transportasi}</p>}
                                         </td>
                                         <td className="px-4 py-3">
                                             {r.dokumen_nama ? (
                                                 <div className="space-y-1">
                                                     <a href={`${base}/dinas/${r.id}/dokumen`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-[#0D9488] bg-[#F0FDFA] border border-[#99F6E4] px-2 py-1.5 rounded-lg">
-                                                        {r.dokumen_is_image ? '🖼' : '📄'} Lihat
+                                                        {r.dokumen_is_image ? <IconImage size={13} /> : <IconFile size={13} />} Lihat
                                                     </a>
                                                     <p className="text-[10px] text-[#64748B] max-w-[150px] truncate" title={r.dokumen_nama}>{r.dokumen_nama} • {r.dokumen_size}</p>
                                                 </div>
