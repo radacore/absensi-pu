@@ -46,8 +46,12 @@ class ShiftResolver
     /**
      * Pola shift yang berlaku untuk karyawan — yang paling spesifik menang:
      * per lokasi → per wilayah → global, dipersempit sesuai setelan cakupan.
+     *
+     * `$siteId` diisi bila karyawan sedang berada di salah satu titik
+     * tambahannya, supaya pola yang dipakai adalah pola titik tempat dia
+     * benar-benar absen hari itu.
      */
-    public static function patternFor(Employee $employee, ?AttendanceSetting $settings = null): ?ShiftPattern
+    public static function patternFor(Employee $employee, ?AttendanceSetting $settings = null, ?int $siteId = null): ?ShiftPattern
     {
         if (! $employee->is_shift) {
             return null;
@@ -55,9 +59,10 @@ class ShiftResolver
 
         $cakupan = self::cakupan($settings);
         $base = fn () => ShiftPattern::where('is_active', true)->orderBy('id');
+        $siteId ??= $employee->site_id;
 
-        if (self::pakaiLokasi($cakupan) && $employee->site_id) {
-            $site = $base()->whereNotNull('site_id')->where('site_id', $employee->site_id)->first();
+        if (self::pakaiLokasi($cakupan) && $siteId) {
+            $site = $base()->whereNotNull('site_id')->where('site_id', $siteId)->first();
             if ($site) {
                 return $site;
             }
@@ -139,7 +144,7 @@ class ShiftResolver
      *
      * @return array{schedule: ShiftSchedule, pattern: ShiftPattern, mulai: Carbon, selesai: Carbon}|null
      */
-    public static function currentShift(Employee $employee, Carbon $now): ?array
+    public static function currentShift(Employee $employee, Carbon $now, ?int $siteId = null): ?array
     {
         if (! $employee->is_shift) {
             return null;
@@ -155,7 +160,7 @@ class ShiftResolver
                 continue;
             }
 
-            $pattern = $schedule->pattern ?: self::patternFor($employee);
+            $pattern = $schedule->pattern ?: self::patternFor($employee, null, $siteId);
             if (! $pattern) {
                 continue;
             }

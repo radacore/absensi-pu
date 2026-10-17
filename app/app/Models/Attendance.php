@@ -31,6 +31,8 @@ class Attendance extends Model
         // Buku catatan pekerjaan yang diisi karyawan saat absen pulang.
         'catatan_pulang',
         'site_id',
+        // Titik absen pulang bila berbeda dari titik absen masuk.
+        'site_out_id',
         'region_id',
         'tolerance_claim_id',
     ];

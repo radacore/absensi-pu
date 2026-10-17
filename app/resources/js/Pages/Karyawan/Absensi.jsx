@@ -24,7 +24,10 @@ const statusMeta = (s) => STATUS_META[s] ?? { label: s, cls: 'bg-[#F1F5F9] text-
 export default function Absensi() {
     const { props } = usePage();
     const me = props.me ?? { id: 1, nama: '—', foto: '', region: '' };
-    const assigned = props.assigned ?? null;
+    // Semua titik absensi yang sah (utama + tambahan). Absen memakai titik
+    // terdekat dari posisi GPS, jadi UI cukup menampilkan daftarnya.
+    const sites = useMemo(() => props.sites ?? [], [props.sites]);
+    const assigned = sites[0] ?? null;
     const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15 };
     const history = props.history ?? [];
     const todayISO = props.todayISO ?? new Date().toISOString().slice(0, 10);
@@ -117,15 +120,25 @@ export default function Absensi() {
         }, 'image/jpeg', 0.82);
     };
 
-    const jarak = useMemo(() => {
-        if (!assigned || !myPos) return null;
-        return Math.round(haversineM(myPos.lat, myPos.lng, assigned.lat, assigned.lng));
-    }, [assigned, myPos]);
-    const inRadius = assigned && jarak != null ? jarak <= assigned.radius : false;
-    const tanpaTitik = !assigned;
+    // Titik terdekat dari posisi sekarang. Server tetap menghitung ulang saat
+    // absen dikirim — angka di sini hanya petunjuk untuk pengguna.
+    const terdekat = useMemo(() => {
+        if (!myPos || sites.length === 0) return null;
+        let best = null;
+        for (const s of sites) {
+            const d = haversineM(myPos.lat, myPos.lng, s.lat, s.lng);
+            if (!best || d < best.jarak) best = { site: s, jarak: d };
+        }
+        return best ? { site: best.site, jarak: Math.round(best.jarak) } : null;
+    }, [sites, myPos]);
+
+    const jarak = terdekat?.jarak ?? null;
+    const radiusAktif = terdekat?.site?.radius ?? null;
+    const inRadius = jarak != null && radiusAktif != null ? jarak <= radiusAktif : false;
+    const tanpaTitik = sites.length === 0;
 
     const requestPos = () => {
-        if (!assigned) return;
+        if (sites.length === 0) return;
         if (!navigator.geolocation) { setGeoError('Perangkat tidak mendukung GPS — aktifkan layanan lokasi'); setMyPos(null); return; }
         setGeoLoading(true); setGeoError(null);
         navigator.geolocation.getCurrentPosition(
@@ -146,7 +159,7 @@ export default function Absensi() {
         if (tanpaTitik) { toast.error('Titik belum di-assign — tidak bisa absen'); return; }
         if (blokirAbsen) { toast.error(`Absen ditolak — ${absenLibur.label}`); return; }
         if (jarak == null) { toast.error(geoLoading ? 'Menunggu GPS...' : 'Lokasi belum siap — aktifkan GPS'); return; }
-        if (!inRadius) { toast.error(`${jarak} m / ${assigned.radius} m — di luar radius`); return; }
+        if (!inRadius) { toast.error(`${jarak} m / ${radiusAktif} m — di luar radius ${terdekat?.site?.nama_lokasi ?? 'titik terdekat'}`); return; }
         if (alreadyToday) { toast.error('Sudah absen hari ini'); return; }
         if (!selfieFile) { toast.error('Ambil foto selfie dulu — wajib untuk absen masuk'); return; }
         router.post('/karyawan/absensi/clock-in', {
@@ -169,7 +182,7 @@ export default function Absensi() {
             return;
         }
         if (jarak == null) { toast.error(geoLoading ? 'Menunggu GPS...' : 'Aktifkan GPS lalu tekan kirim lagi'); return; }
-        if (!inRadius) { toast.error(`${jarak} m / ${assigned.radius} m — di luar radius`); return; }
+        if (!inRadius) { toast.error(`${jarak} m / ${radiusAktif} m — di luar radius ${terdekat?.site?.nama_lokasi ?? 'titik terdekat'}`); return; }
         if (!selfieFile) { toast.error('Ambil foto selfie dulu — wajib untuk absen pulang'); return; }
         if (!catatanPulang.trim()) { toast.error('Isi catatan pekerjaan dulu — wajib saat absen pulang'); return; }
         router.post('/karyawan/absensi/clock-out', {
@@ -187,8 +200,8 @@ export default function Absensi() {
         return (
             <KaryawanLayout>
                 <div className="bg-white rounded-2xl p-6 text-center">
-                    <p className="font-medium text-[#0F172A]">Titik belum di-assign</p>
-                    <p className="text-sm text-[#64748B] mt-1">Hubungi admin wilayah untuk penugasan titik.</p>
+                    <p className="font-medium text-[#0F172A]">Belum ada titik absensi</p>
+                    <p className="text-sm text-[#64748B] mt-1">Hubungi Admin Wilayah untuk mendaftarkan titik absensi Anda.</p>
                 </div>
             </KaryawanLayout>
         );
@@ -199,7 +212,11 @@ export default function Absensi() {
             <div className="space-y-5">
                 <div>
                     <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Absensi</h2>
-                    <p className="text-sm text-[#64748B] mt-1">Radius {assigned.radius} m</p>
+                    <p className="text-sm text-[#64748B] mt-1">
+                        {sites.length > 1
+                            ? `${sites.length} titik absensi • titik terdekat dipakai otomatis`
+                            : `Radius ${assigned.radius} m`}
+                    </p>
                 </div>
 
                 {absenLibur.hariIniLibur && (
@@ -217,10 +234,34 @@ export default function Absensi() {
                 )}
 
                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-4">
-                    <p className="text-xs font-medium text-[#64748B]">Titik assigned kamu • {assigned.regionName}</p>
-                    <p className="text-sm font-semibold text-[#0F172A] mt-1">{assigned.nama_lokasi}</p>
-                    <p className="text-xs font-mono text-[#64748B]">{assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)} • {assigned.radius} m{isShift ? ' • jam mengikuti jadwal shift' : ` • Jam ${settings.jamMasuk}–${settings.jamPulang} WITA`}</p>
-                    {assigned.address && <p className="text-xs text-[#64748B] mt-1">{assigned.address}</p>}
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-[#64748B]">Titik absensi kamu • {me.region}</p>
+                        <span className="text-[10px] font-medium text-[#1E3A8A] bg-white px-2 py-0.5 rounded-full">{sites.length} titik</span>
+                    </div>
+                    <ul className="mt-2 space-y-1.5">
+                        {sites.map((s) => {
+                            const aktif = terdekat?.site?.id === s.id;
+                            const d = myPos ? Math.round(haversineM(myPos.lat, myPos.lng, s.lat, s.lng)) : null;
+                            return (
+                                <li key={s.id} className={`rounded-xl px-3 py-2 ${aktif ? 'bg-white ring-1 ring-[#1E3A8A]/20' : 'bg-white/60'}`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <p className="text-sm font-semibold text-[#0F172A]">
+                                            {s.nama_lokasi}
+                                            {s.utama && <span className="ml-1.5 text-[10px] font-medium text-[#64748B] bg-[#F1F5F9] px-1.5 py-0.5 rounded align-middle">utama</span>}
+                                        </p>
+                                        {d != null && (
+                                            <span className={`text-xs font-medium ${d <= s.radius ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{d} m</span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs font-mono text-[#64748B]">{s.lat.toFixed(4)}, {s.lng.toFixed(4)} • {s.radius} m</p>
+                                    {s.address && <p className="text-xs text-[#64748B] mt-0.5">{s.address}</p>}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                    <p className="text-xs text-[#64748B] mt-2">
+                        {isShift ? 'Jam mengikuti jadwal shift' : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA`} • Absen dicatat di titik terdekat yang sah.
+                    </p>
                 </div>
 
                 {isShift && (
@@ -263,7 +304,7 @@ export default function Absensi() {
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><path d="M14 4a2 2 0 012 2v1h2a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2V6a2 2 0 012-2h4z" /><circle cx="12" cy="13" r="3.5" /><path d="M16 6h1" /></svg>
                                 </span>
                                 <p className="text-sm font-medium text-[#0F172A] mt-3">Siap absen</p>
-                                <p className="text-xs text-[#64748B] text-center mt-1">Ambil swafoto + kunci GPS di titik ini</p>
+                                <p className="text-xs text-[#64748B] text-center mt-1">Ambil swafoto + kunci GPS di titik terdekat</p>
                                 <button type="button" onClick={handleOpenCapture} disabled={blokirAbsen} title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : ''} className={`mt-4 rounded-xl px-5 py-2.5 text-sm font-semibold ${blokirAbsen ? 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed' : 'bg-[#0F172A] text-white'}`}>Buka kamera &amp; lokasi</button>
                             </div>
                         ) : (
@@ -289,7 +330,7 @@ export default function Absensi() {
                                 ) : jarak == null ? (
                                     <p className="text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 bg-[#FEF2F2] text-[#991B1B]">Lokasi belum siap</p>
                                 ) : (
-                                    <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{jarak} m / {assigned.radius} m • {inRadius ? 'Dalam radius' : 'Di luar radius'}</p>
+                                    <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{jarak} m / {radiusAktif} m • {inRadius ? `Dalam radius ${terdekat?.site?.nama_lokasi ?? ''}` : 'Di luar radius'}</p>
                                 )}
                                 {geoError && <p className="text-xs text-[#92400E] mt-1">{geoError}</p>}
                                 {mode === 'pulang' && (
@@ -315,7 +356,7 @@ export default function Absensi() {
                                             type="button"
                                             onClick={handlePulang}
                                             disabled={jarak == null || !inRadius || !selfieFile || !openRow || !bolehPulang || !catatanPulang.trim()}
-                                            title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : !bolehPulang ? 'Belum waktunya pulang — ajukan pulang cepat dulu' : !catatanPulang.trim() ? 'Isi catatan pekerjaan dulu' : ''}
+                                            title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${radiusAktif} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : !bolehPulang ? 'Belum waktunya pulang — ajukan pulang cepat dulu' : !catatanPulang.trim() ? 'Isi catatan pekerjaan dulu' : ''}
                                             className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && openRow && bolehPulang && catatanPulang.trim() ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
                                         >
                                             Absen Pulang
@@ -325,7 +366,7 @@ export default function Absensi() {
                                             type="button"
                                             onClick={handleKirim}
                                             disabled={jarak == null || !inRadius || !selfieFile || alreadyToday || blokirAbsen}
-                                            title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${assigned.radius} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : alreadyToday ? 'Sudah absen hari ini' : ''}
+                                            title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${radiusAktif} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : alreadyToday ? 'Sudah absen hari ini' : ''}
                                             className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && !alreadyToday && !blokirAbsen ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
                                         >
                                             Absen Masuk
@@ -344,7 +385,7 @@ export default function Absensi() {
                             Absen pulang baru bisa dilakukan setelah jam shift berakhir. Perlu pulang lebih awal? <Link href="/karyawan/pulang-cepat" className="font-semibold underline">Ajukan pulang cepat</Link>.
                         </p>
                     )}
-                    <p className="text-xs text-[#64748B] mt-3 text-center">Absen tercatat hanya di dalam radius titik penugasan</p>
+                    <p className="text-xs text-[#64748B] mt-3 text-center">Absen tercatat di titik terdekat yang sah, selama Anda berada dalam radiusnya</p>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">

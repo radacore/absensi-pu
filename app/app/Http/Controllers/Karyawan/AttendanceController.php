@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\AttendanceSetting;
 use App\Models\EarlyLeaveRequest;
+use App\Models\Employee;
 use App\Models\Leave;
 use App\Models\ShiftSchedule;
+use App\Models\Site;
 use App\Support\AdminPresenter;
 use App\Support\Audit;
 use App\Support\RekapPdf;
@@ -25,7 +27,7 @@ class AttendanceController extends Controller
 {
     public function index()
     {
-        $me = Auth::guard('employee')->user()->load(['region', 'site']);
+        $me = Auth::guard('employee')->user()->load(['region', 'site', 'sites']);
 
         $now = now('Asia/Makassar');
         $today = $now->toDateString();
@@ -59,6 +61,23 @@ class AttendanceController extends Controller
             'regionName' => $me->region?->name ?? '',
             'kantor' => $me->region?->kantor_name ?? '',
         ] : null;
+
+        // Semua titik yang sah untuk absen: titik utama lalu titik tambahan.
+        // UI memakai daftar ini untuk mencari titik terdekat dari GPS.
+        $sites = collect([$me->site])
+            ->filter()
+            ->concat($me->sites)
+            ->unique('id')
+            ->values()
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'nama_lokasi' => $s->nama_lokasi,
+                'lat' => (float) $s->lat,
+                'lng' => (float) $s->lng,
+                'radius' => (int) $s->radius_m,
+                'address' => $s->address,
+                'utama' => $s->id === $me->site_id,
+            ])->all();
 
         $settings = AttendanceSetting::first();
 
@@ -131,6 +150,7 @@ class AttendanceController extends Controller
                 'region' => $me->region?->name ?? '',
             ],
             'assigned' => $assigned,
+            'sites' => $sites,
             'history' => $history,
             'settings' => $settings ? [
                 'jamMasuk' => substr((string) $settings->jam_masuk, 0, 5),
@@ -151,7 +171,7 @@ class AttendanceController extends Controller
 
     public function clockIn(Request $request)
     {
-        $me = Auth::guard('employee')->user()->load(['site', 'region']);
+        $me = Auth::guard('employee')->user()->load(['site', 'region', 'sites']);
         if (! $me->site_id || ! $me->site) {
             throw ValidationException::withMessages(['site' => 'Titik belum di-assign — tidak bisa absen (422).']);
         }
@@ -168,20 +188,26 @@ class AttendanceController extends Controller
         $now = now('Asia/Makassar');
         $settings = AttendanceSetting::first();
 
+        // Titik ditentukan dari koordinat yang dikirim, bukan dari pilihan
+        // peramban: karyawan boleh absen di titik utama atau titik tambahan
+        // mana pun yang masih dalam radiusnya.
+        $terdekat = $this->titikTerdekat($me, (float) $data['lat'], (float) $data['lng']);
+        $site = $terdekat['site'];
+        $dist = $terdekat['jarak'];
+
+        if ($dist > (int) $site->radius_m) {
+            throw ValidationException::withMessages(['distance' => "{$dist} m / {$site->radius_m} m — di luar radius."]);
+        }
+
         // Pekerja shift mengikuti jadwal shift; karyawan lain mengikuti jam
         // masuk global. `$shift` berisi rentang shift yang sedang berlaku —
         // null berarti karyawan ini tidak sedang dalam sebuah shift.
-        $shift = ShiftResolver::currentShift($me, $now);
+        // Pola shift dicari memakai titik yang benar-benar dipakai hari ini.
+        $shift = ShiftResolver::currentShift($me, $now, (int) $site->id);
         $workDate = $shift ? $shift['schedule']->tanggal->toDateString() : $now->toDateString();
 
         if (Attendance::where('employee_id', $me->id)->whereDate('work_date', $workDate)->exists()) {
             throw ValidationException::withMessages(['work_date' => 'Sudah absen hari ini.']);
-        }
-
-        $site = $me->site;
-        $dist = AdminPresenter::haversineM((float) $data['lat'], (float) $data['lng'], (float) $site->lat, (float) $site->lng);
-        if ($dist > (int) $site->radius_m) {
-            throw ValidationException::withMessages(['distance' => "{$dist} m / {$site->radius_m} m — di luar radius."]);
         }
 
         // ── Gerbang hari kerja (Super Admin: absen_libur_aktif / absen_libur_mode)
@@ -263,7 +289,7 @@ class AttendanceController extends Controller
 
     public function clockOut(Request $request)
     {
-        $me = Auth::guard('employee')->user()->load('site');
+        $me = Auth::guard('employee')->user()->load(['site', 'sites']);
         if (! $me->site) {
             throw ValidationException::withMessages(['site' => 'Titik belum di-assign.']);
         }
@@ -307,9 +333,15 @@ class AttendanceController extends Controller
             throw ValidationException::withMessages(['clock_out_at' => $tolakPulang]);
         }
 
-        $dist = AdminPresenter::haversineM((float) $data['lat'], (float) $data['lng'], (float) $me->site->lat, (float) $me->site->lng);
-        if ($dist > (int) $me->site->radius_m) {
-            throw ValidationException::withMessages(['distance' => "{$dist} m / {$me->site->radius_m} m — di luar radius."]);
+        // Titik pulang tidak dikunci ke titik masuk: pekerja lapangan boleh
+        // menyelesaikan shift di titik lain. Yang dicatat adalah titik tempat
+        // dia benar-benar berada saat absen pulang.
+        $terdekat = $this->titikTerdekat($me, (float) $data['lat'], (float) $data['lng']);
+        $siteKeluar = $terdekat['site'];
+        $dist = $terdekat['jarak'];
+
+        if ($dist > (int) $siteKeluar->radius_m) {
+            throw ValidationException::withMessages(['distance' => "{$dist} m / {$siteKeluar->radius_m} m — di luar radius."]);
         }
 
         $tanggalKerja = $row->work_date instanceof Carbon
@@ -324,9 +356,40 @@ class AttendanceController extends Controller
             'lng_out' => $data['lng'],
             'selfie_pulang_url' => $pulangPath,
             'catatan_pulang' => $data['catatan_pulang'],
+            'site_out_id' => $siteKeluar->id,
         ]);
 
         return back()->with('success', 'Absen pulang tercatat');
+    }
+
+    /**
+     * Titik absensi terdekat dari posisi karyawan.
+     *
+     * Kandidatnya titik utama ditambah titik tambahan. Yang dikembalikan
+     * selalu titik terdekat — pemanggil yang memutuskan apakah jaraknya masih
+     * dalam radius, supaya pesan galat bisa menyebut titik terdekat tersebut.
+     *
+     * @return array{site: Site, jarak: int}
+     */
+    private function titikTerdekat(Employee $me, float $lat, float $lng): array
+    {
+        $kandidat = collect([$me->site])
+            ->filter()
+            ->concat($me->relationLoaded('sites') ? $me->sites : $me->sites()->get())
+            ->unique('id')
+            ->values();
+
+        $terdekat = null;
+
+        foreach ($kandidat as $site) {
+            $jarak = AdminPresenter::haversineM($lat, $lng, (float) $site->lat, (float) $site->lng);
+
+            if ($terdekat === null || $jarak < $terdekat['jarak']) {
+                $terdekat = ['site' => $site, 'jarak' => $jarak];
+            }
+        }
+
+        return $terdekat;
     }
 
     /**
@@ -340,7 +403,9 @@ class AttendanceController extends Controller
             return null;
         }
 
-        $pattern = ShiftResolver::patternFor($me);
+        // Pola shift mengikuti titik absen masuk hari itu, bukan selalu titik
+        // utama — pekerja bisa berpindah titik antar hari.
+        $pattern = ShiftResolver::patternFor($me, null, $row->site_id ? (int) $row->site_id : null);
         if (! $pattern) {
             return null;
         }

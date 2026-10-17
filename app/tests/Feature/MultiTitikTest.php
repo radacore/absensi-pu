@@ -2,9 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\Site;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -19,6 +24,8 @@ class MultiTitikTest extends TestCase
     {
         parent::setUp();
         $this->seed();
+        Storage::fake(config('filesystems.uploads.private_disk'));
+        Storage::fake(config('filesystems.uploads.public_disk'));
     }
 
     private function superAdmin(): User
@@ -77,6 +84,57 @@ class MultiTitikTest extends TestCase
 
         // Karyawan barunya batal dibuat, bukan tertinggal setengah jadi.
         $this->assertSame($sebelum, Employee::count());
+    }
+
+    public function test_absen_masuk_di_titik_tambahan_lalu_pulang_di_titik_utama(): void
+    {
+        $emp = $this->karyawanGowa();
+        $emp->sites()->attach(202);
+        $siteTambahan = Site::findOrFail(202);
+        $siteUtama = Site::findOrFail(201);
+
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-in', [
+                'lat' => $siteTambahan->lat,
+                'lng' => $siteTambahan->lng,
+                'selfie' => UploadedFile::fake()->image('masuk.jpg', 200, 200),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $hariIni = Carbon::now('Asia/Makassar')->toDateString();
+        $row = Attendance::where('employee_id', $emp->id)->whereDate('work_date', $hariIni)->firstOrFail();
+        $this->assertSame(202, (int) $row->site_id);
+
+        // Pulang di titik utama tetap boleh — titik pulang tidak dikunci.
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-out', [
+                'lat' => $siteUtama->lat,
+                'lng' => $siteUtama->lng,
+                'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200),
+                'catatan_pulang' => 'Pindah lokasi pemeriksaan bendungan',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $row->refresh();
+        $this->assertNotNull($row->clock_out_at);
+        $this->assertSame(201, (int) $row->site_out_id);
+    }
+
+    public function test_absen_di_luar_semua_titik_ditolak(): void
+    {
+        $emp = $this->karyawanGowa();
+        $emp->sites()->attach(202);
+        $site = Site::findOrFail(201);
+
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-in', [
+                'lat' => $site->lat + 0.2,
+                'lng' => $site->lng + 0.2,
+                'selfie' => UploadedFile::fake()->image('luar.jpg', 200, 200),
+            ])
+            ->assertSessionHasErrors('distance');
+
+        $this->assertDatabaseCount('attendances', 0);
     }
 
     public function test_hapus_titik_mempromosikan_titik_tambahan_karyawan(): void
