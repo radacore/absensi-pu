@@ -57,7 +57,7 @@ class EmployeeController extends Controller
             subject: $employee,
             label: $employee->name,
             description: 'Tambah karyawan baru '.$employee->name.' ('.$this->penanda($employee).')',
-            meta: ['region_id' => $employee->region_id, 'site_id' => $employee->site_id]
+            meta: ['region_id' => $employee->region_id, 'site_id' => $employee->site_id, 'boleh_pindah_titik' => (bool) $employee->boleh_pindah_titik]
         );
 
         return back()->with('success', 'Karyawan berhasil ditambahkan.');
@@ -109,6 +109,12 @@ class EmployeeController extends Controller
             $payload['regu'] = $this->reguPayload($data);
         }
 
+        // Izin pulang di titik berbeda. Hanya diubah bila memang dikirim,
+        // supaya pemanggil lama tidak mematikan izin yang sudah diberikan.
+        if (array_key_exists('bolehPindahTitik', $data)) {
+            $payload['boleh_pindah_titik'] = (bool) $data['bolehPindahTitik'];
+        }
+
         // Perubahan data dan daftar titik disimpan bersama supaya tidak ada
         // karyawan yang titiknya setengah tersimpan saat validasi gagal.
         DB::transaction(function () use ($employee, $payload, $data) {
@@ -126,7 +132,7 @@ class EmployeeController extends Controller
             subject: $employee,
             label: $employee->name,
             description: "Perbarui data karyawan {$employee->name}",
-            meta: ['region_id' => $employee->region_id, 'site_id' => $employee->site_id, 'site_ids' => $employee->siteIds()]
+            meta: ['region_id' => $employee->region_id, 'site_id' => $employee->site_id, 'site_ids' => $employee->siteIds(), 'boleh_pindah_titik' => (bool) $employee->boleh_pindah_titik]
         );
 
         return back()->with('success', 'Karyawan berhasil diperbarui.');
@@ -225,6 +231,8 @@ class EmployeeController extends Controller
             'hariKerja.*' => ['in:1,2,3,4,5,6,7'],
             // F4: label regu bebas. Kosong = tanpa regu.
             'regu' => ['sometimes', 'nullable', 'string', 'max:30'],
+            // Izin absen pulang di titik berbeda. Bawaan mati.
+            'bolehPindahTitik' => ['sometimes', 'boolean'],
         ], [
             // Pesan Indonesia. Tanpa ini Laravel menjawab dalam bahasa Inggris
             // ("The jabatan field is required."), dan itulah yang muncul di
@@ -343,6 +351,7 @@ class EmployeeController extends Controller
             'region_id' => $region->id,
             'site_id' => $data['office_location_id'],
             'is_shift' => (bool) ($data['isShift'] ?? false),
+            'boleh_pindah_titik' => (bool) ($data['bolehPindahTitik'] ?? false),
             'hari_kerja' => $this->hariKerjaPayload($data),
             'regu' => $this->reguPayload($data),
             // Sandi bawaan yang sama untuk semua akun baru; karyawan wajib

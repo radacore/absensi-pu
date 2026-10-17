@@ -28,6 +28,9 @@ class RegionController extends Controller
         return Inertia::render('Admin/Regions', [
             'regions' => AdminPresenter::regionsFor($scope),
             'employees' => AdminPresenter::employeesFor($scope),
+            // Dampak tiap titik bila dihapus: riwayat, absensi hari ini, dan
+            // absensi yang belum pulang. Dipakai dialog konfirmasi.
+            'dampakTitik' => AdminPresenter::siteImpactFor($scope),
         ]);
     }
 

@@ -38,6 +38,9 @@ export default function Absensi() {
     const shift = props.shift ?? null;
     const shiftHariIni = props.shiftHariIni ?? null;
     const bolehPulang = props.bolehPulang !== false;
+    // Izin pulang di titik berbeda. Mati = hanya titik tempat absen masuk.
+    const bolehPindahTitik = props.bolehPindahTitik !== false;
+    const titikMasukAktif = props.titikMasukAktif ?? null;
     const pulangCepat = props.pulangCepat ?? null;
     const absenLibur = props.absenLibur ?? { aktif: false, mode: 'tolak', hariIniLibur: false, label: null, ditolak: false };
     const sudahMasuk = useMemo(() => history.some((h) => h.tgl === workDateAktif), [history, workDateAktif]);
@@ -120,22 +123,33 @@ export default function Absensi() {
         }, 'image/jpeg', 0.82);
     };
 
+    // Titik yang sah untuk tahap yang sedang dibuka. Saat pulang dengan izin
+    // mati, hanya titik masuk yang dipakai — sama dengan aturan di server.
+    const sitesAktif = useMemo(() => {
+        if (mode !== 'pulang' || bolehPindahTitik || titikMasukAktif == null) return sites;
+        const satu = sites.find((s) => Number(s.id) === Number(titikMasukAktif));
+        return satu ? [satu] : sites;
+    }, [sites, mode, bolehPindahTitik, titikMasukAktif]);
+
     // Titik terdekat dari posisi sekarang. Server tetap menghitung ulang saat
     // absen dikirim — angka di sini hanya petunjuk untuk pengguna.
     const terdekat = useMemo(() => {
-        if (!myPos || sites.length === 0) return null;
+        if (!myPos || sitesAktif.length === 0) return null;
         let best = null;
-        for (const s of sites) {
+        for (const s of sitesAktif) {
             const d = haversineM(myPos.lat, myPos.lng, s.lat, s.lng);
             if (!best || d < best.jarak) best = { site: s, jarak: d };
         }
         return best ? { site: best.site, jarak: Math.round(best.jarak) } : null;
-    }, [sites, myPos]);
+    }, [sitesAktif, myPos]);
 
     const jarak = terdekat?.jarak ?? null;
     const radiusAktif = terdekat?.site?.radius ?? null;
     const inRadius = jarak != null && radiusAktif != null ? jarak <= radiusAktif : false;
     const tanpaTitik = sites.length === 0;
+    // Tahap pulang sedang dibuka, izin pindah titik mati, dan titik masuknya
+    // masih diketahui: hanya titik itu yang diterima server.
+    const terkunciPulang = mode === 'pulang' && !bolehPindahTitik && titikMasukAktif != null;
 
     const requestPos = () => {
         if (sites.length === 0) return;
@@ -242,12 +256,14 @@ export default function Absensi() {
                         {sites.map((s) => {
                             const aktif = terdekat?.site?.id === s.id;
                             const d = myPos ? Math.round(haversineM(myPos.lat, myPos.lng, s.lat, s.lng)) : null;
+                            const dikunci = terkunciPulang && Number(s.id) !== Number(titikMasukAktif);
                             return (
-                                <li key={s.id} className={`rounded-xl px-3 py-2 ${aktif ? 'bg-white ring-1 ring-[#1E3A8A]/20' : 'bg-white/60'}`}>
+                                <li key={s.id} className={`rounded-xl px-3 py-2 ${aktif ? 'bg-white ring-1 ring-[#1E3A8A]/20' : 'bg-white/60'} ${dikunci ? 'opacity-50' : ''}`}>
                                     <div className="flex items-center justify-between gap-2">
                                         <p className="text-sm font-semibold text-[#0F172A]">
                                             {s.nama_lokasi}
                                             {s.utama && <span className="ml-1.5 text-[10px] font-medium text-[#64748B] bg-[#F1F5F9] px-1.5 py-0.5 rounded align-middle">utama</span>}
+                                            {terkunciPulang && !dikunci && <span className="ml-1.5 text-[10px] font-medium text-[#065F46] bg-[#ECFDF5] px-1.5 py-0.5 rounded align-middle">titik pulang</span>}
                                         </p>
                                         {d != null && (
                                             <span className={`text-xs font-medium ${d <= s.radius ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{d} m</span>
@@ -260,7 +276,7 @@ export default function Absensi() {
                         })}
                     </ul>
                     <p className="text-xs text-[#64748B] mt-2">
-                        {isShift ? 'Jam mengikuti jadwal shift' : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA`} • Absen dicatat di titik terdekat yang sah.
+                        {isShift ? 'Jam mengikuti jadwal shift' : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA`} • {terkunciPulang ? 'Pulang hanya bisa di titik tempat Anda absen masuk.' : 'Absen dicatat di titik terdekat yang sah.'}
                     </p>
                 </div>
 
@@ -385,7 +401,7 @@ export default function Absensi() {
                             Absen pulang baru bisa dilakukan setelah jam shift berakhir. Perlu pulang lebih awal? <Link href="/karyawan/pulang-cepat" className="font-semibold underline">Ajukan pulang cepat</Link>.
                         </p>
                     )}
-                    <p className="text-xs text-[#64748B] mt-3 text-center">Absen tercatat di titik terdekat yang sah, selama Anda berada dalam radiusnya</p>
+                    <p className="text-xs text-[#64748B] mt-3 text-center">{terkunciPulang ? 'Absen pulang hanya diterima di titik tempat Anda absen masuk' : 'Absen tercatat di titik terdekat yang sah, selama Anda berada dalam radiusnya'}</p>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">

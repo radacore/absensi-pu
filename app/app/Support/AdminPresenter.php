@@ -10,6 +10,7 @@ use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\Region;
 use App\Models\ShiftSchedule;
+use App\Models\Site;
 use App\Models\ToleranceClaim;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -44,6 +45,59 @@ class AdminPresenter
                 'address' => $s->address,
             ])->values()->all(),
         ])->values()->all();
+    }
+
+    /**
+     * Dampak menghapus tiap titik, dipakai dialog konfirmasi di halaman wilayah.
+     *
+     * Menghapus titik tidak menghapus riwayat absensi, tetapi nama titiknya
+     * hilang dari rekap karena `attendances.site_id` dan `site_out_id` hanya
+     * menyimpan angka. Absensi yang belum absen pulang di titik itu juga
+     * kehilangan acuan jarak. Angka-angka ini ditampilkan sebelum admin
+     * memutuskan, supaya penghapusan titik aktif tidak terjadi tanpa sadar.
+     *
+     * @return array<int, array{riwayat: int, hariIni: int, belumPulang: int}>
+     */
+    public static function siteImpactFor(?int $regionId): array
+    {
+        $ids = Site::query()
+            ->when($regionId, fn ($q) => $q->where('region_id', $regionId))
+            ->pluck('id')
+            ->map(fn ($v) => (int) $v)
+            ->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $hariIni = Carbon::now('Asia/Makassar')->toDateString();
+
+        $hitung = function (string $kolom, bool $hanyaHariIni, bool $hanyaTerbuka = false) use ($ids, $hariIni): Collection {
+            return Attendance::query()
+                ->whereIn($kolom, $ids)
+                ->when($hanyaHariIni, fn ($q) => $q->whereDate('work_date', $hariIni))
+                ->when($hanyaTerbuka, fn ($q) => $q->whereNull('clock_out_at'))
+                ->selectRaw("{$kolom} as sid, count(*) as jumlah")
+                ->groupBy($kolom)
+                ->pluck('jumlah', 'sid');
+        };
+
+        $riwayatMasuk = $hitung('site_id', false);
+        $riwayatPulang = $hitung('site_out_id', false);
+        $hariIniMasuk = $hitung('site_id', true);
+        $hariIniPulang = $hitung('site_out_id', true);
+        $belumPulang = $hitung('site_id', true, true);
+
+        $hasil = [];
+        foreach ($ids as $id) {
+            $hasil[$id] = [
+                'riwayat' => (int) ($riwayatMasuk[$id] ?? 0) + (int) ($riwayatPulang[$id] ?? 0),
+                'hariIni' => (int) ($hariIniMasuk[$id] ?? 0) + (int) ($hariIniPulang[$id] ?? 0),
+                'belumPulang' => (int) ($belumPulang[$id] ?? 0),
+            ];
+        }
+
+        return $hasil;
     }
 
     public static function employeesFor(?int $regionId): array
@@ -97,6 +151,8 @@ class AdminPresenter
                 : null,
             // F4: label regu bebas ('' = tanpa regu).
             'regu' => $e->regu ?? '',
+            // Izin pulang di titik berbeda; mati = hanya titik masuk.
+            'bolehPindahTitik' => (bool) $e->boleh_pindah_titik,
         ];
     }
 

@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
@@ -92,6 +93,8 @@ class MultiTitikTest extends TestCase
     {
         $emp = $this->karyawanGowa();
         $emp->sites()->attach(202);
+        // Izin pulang di titik berbeda dinyalakan admin untuk karyawan ini.
+        $emp->update(['boleh_pindah_titik' => true]);
         $siteTambahan = Site::findOrFail(202);
         $siteUtama = Site::findOrFail(201);
 
@@ -120,6 +123,182 @@ class MultiTitikTest extends TestCase
         $row->refresh();
         $this->assertNotNull($row->clock_out_at);
         $this->assertSame(201, (int) $row->site_out_id);
+    }
+
+    public function test_pulang_di_titik_lain_ditolak_bila_izin_mati(): void
+    {
+        $emp = $this->karyawanGowa();
+        $emp->sites()->attach(202);
+        $this->assertFalse((bool) $emp->fresh()->boleh_pindah_titik);
+
+        $masuk = Site::findOrFail(202);
+        $pulang = Site::findOrFail(201);
+
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-in', [
+                'lat' => $masuk->lat,
+                'lng' => $masuk->lng,
+                'selfie' => UploadedFile::fake()->image('masuk.jpg', 200, 200),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-out', [
+                'lat' => $pulang->lat,
+                'lng' => $pulang->lng,
+                'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200),
+                'catatan_pulang' => 'Pulang di titik lain tanpa izin',
+            ])
+            ->assertSessionHasErrors('distance');
+
+        $row = Attendance::where('employee_id', $emp->id)->firstOrFail();
+        $this->assertNull($row->clock_out_at);
+        $this->assertNull($row->site_out_id);
+    }
+
+    public function test_pulang_di_titik_lain_diterima_bila_izin_hidup(): void
+    {
+        $emp = $this->karyawanGowa();
+        $emp->sites()->attach(202);
+        $emp->update(['boleh_pindah_titik' => true]);
+
+        $masuk = Site::findOrFail(202);
+        $pulang = Site::findOrFail(201);
+
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-in', [
+                'lat' => $masuk->lat,
+                'lng' => $masuk->lng,
+                'selfie' => UploadedFile::fake()->image('masuk.jpg', 200, 200),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-out', [
+                'lat' => $pulang->lat,
+                'lng' => $pulang->lng,
+                'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200),
+                'catatan_pulang' => 'Pindah lokasi pemeriksaan',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $row = Attendance::where('employee_id', $emp->id)->firstOrFail();
+        $this->assertNotNull($row->clock_out_at);
+        $this->assertSame(201, (int) $row->site_out_id);
+    }
+
+    public function test_admin_menyalakan_dan_mematikan_izin_pindah_titik(): void
+    {
+        $emp = $this->karyawanGowa();
+
+        $this->actingAs($this->superAdmin())
+            ->put("/super-admin/employees/{$emp->id}", $this->payloadKaryawan([
+                'nik' => $emp->nik,
+                'nama' => $emp->name,
+                'email' => $emp->email,
+                'office_location_id' => 201,
+                'office_location_ids' => [202],
+                'bolehPindahTitik' => true,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertTrue((bool) $emp->fresh()->boleh_pindah_titik);
+
+        // Pemanggil lama yang tidak mengirim kuncinya tidak boleh mematikan
+        // izin yang sudah diberikan.
+        $this->actingAs($this->superAdmin())
+            ->put("/super-admin/employees/{$emp->id}", $this->payloadKaryawan([
+                'nik' => $emp->nik,
+                'nama' => $emp->name,
+                'email' => $emp->email,
+                'office_location_id' => 201,
+                'office_location_ids' => [202],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertTrue((bool) $emp->fresh()->boleh_pindah_titik);
+
+        $this->actingAs($this->superAdmin())
+            ->put("/super-admin/employees/{$emp->id}", $this->payloadKaryawan([
+                'nik' => $emp->nik,
+                'nama' => $emp->name,
+                'email' => $emp->email,
+                'office_location_id' => 201,
+                'office_location_ids' => [202],
+                'bolehPindahTitik' => false,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse((bool) $emp->fresh()->boleh_pindah_titik);
+    }
+
+    public function test_pulang_dilonggarkan_bila_titik_masuk_dihapus(): void
+    {
+        $emp = $this->karyawanGowa();
+        $emp->sites()->attach(202);
+        $masuk = Site::findOrFail(202);
+        $pulang = Site::findOrFail(201);
+
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-in', [
+                'lat' => $masuk->lat,
+                'lng' => $masuk->lng,
+                'selfie' => UploadedFile::fake()->image('masuk.jpg', 200, 200),
+            ])
+            ->assertSessionHasNoErrors();
+
+        // Admin menghapus titik masuk di tengah hari. Karyawan tidak boleh
+        // terkunci tidak bisa absen pulang.
+        $this->actingAs($this->superAdmin(), 'web')
+            ->delete('/super-admin/sites/202')
+            ->assertSessionHas('success');
+
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-out', [
+                'lat' => $pulang->lat,
+                'lng' => $pulang->lng,
+                'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200),
+                'catatan_pulang' => 'Titik masuk dihapus admin',
+            ])
+            ->assertSessionHasNoErrors();
+        $row = Attendance::where('employee_id', $emp->id)->firstOrFail();
+        $this->assertNotNull($row->clock_out_at);
+        $this->assertSame(201, (int) $row->site_out_id);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'attendance.clock_out_titik_hilang']);
+    }
+
+    public function test_dampak_titik_menghitung_absensi_hari_ini(): void
+    {
+        [, , $siteMasuk, $sitePulang] = $this->absenDuaTitik();
+
+        $dampak = AdminPresenter::siteImpactFor(2);
+
+        $this->assertSame(1, $dampak[$siteMasuk->id]['riwayat']);
+        $this->assertSame(1, $dampak[$siteMasuk->id]['hariIni']);
+        $this->assertSame(1, $dampak[$sitePulang->id]['riwayat']);
+        $this->assertSame(1, $dampak[$sitePulang->id]['hariIni']);
+        // Kedua baris sudah absen pulang.
+        $this->assertSame(0, $dampak[$siteMasuk->id]['belumPulang']);
+    }
+
+    public function test_halaman_karyawan_dan_wilayah_memuat_izin_serta_dampak_titik(): void
+    {
+        $admin = $this->superAdmin();
+
+        $this->actingAs($admin, 'web')
+            ->get('/super-admin/employees')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Employees')
+                ->has('employees.0.bolehPindahTitik'));
+
+        $this->actingAs($admin, 'web')
+            ->get('/super-admin/regions')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Regions')
+                ->has('dampakTitik.201.riwayat')
+                ->has('dampakTitik.201.belumPulang'));
     }
 
     public function test_absen_di_luar_semua_titik_ditolak(): void

@@ -164,6 +164,10 @@ class AttendanceController extends Controller
             'shift' => $shift,
             'shiftHariIni' => $isShift ? ShiftResolver::labelFor($me, $now) : null,
             'bolehPulang' => $bolehPulang,
+            // Izin pulang di titik berbeda. Mati = UI hanya menawarkan titik
+            // tempat absen masuk; server tetap memeriksa ulang.
+            'bolehPindahTitik' => (bool) $me->boleh_pindah_titik,
+            'titikMasukAktif' => $openRow?->site_id,
             'pulangCepat' => $pulangCepat,
             'workDateAktif' => $workDateAktif,
         ]);
@@ -333,15 +337,53 @@ class AttendanceController extends Controller
             throw ValidationException::withMessages(['clock_out_at' => $tolakPulang]);
         }
 
-        // Titik pulang tidak dikunci ke titik masuk: pekerja lapangan boleh
-        // menyelesaikan shift di titik lain. Yang dicatat adalah titik tempat
-        // dia benar-benar berada saat absen pulang.
-        $terdekat = $this->titikTerdekat($me, (float) $data['lat'], (float) $data['lng']);
-        $siteKeluar = $terdekat['site'];
-        $dist = $terdekat['jarak'];
+        // Titik pulang mengikuti izin per karyawan:
+        //   boleh_pindah_titik = mati → hanya titik tempat ia absen masuk;
+        //   boleh_pindah_titik = hidup → titik terdaftar mana pun.
+        // Titik tetap ditentukan server dari koordinat yang dikirim.
+        $titikMasuk = $row->site_id ? Site::find($row->site_id) : null;
 
-        if ($dist > (int) $siteKeluar->radius_m) {
-            throw ValidationException::withMessages(['distance' => "{$dist} m / {$siteKeluar->radius_m} m — di luar radius."]);
+        if ($titikMasuk !== null && ! $me->boleh_pindah_titik) {
+            $siteKeluar = $titikMasuk;
+            $dist = AdminPresenter::haversineM(
+                (float) $data['lat'],
+                (float) $data['lng'],
+                (float) $titikMasuk->lat,
+                (float) $titikMasuk->lng
+            );
+
+            if ($dist > (int) $titikMasuk->radius_m) {
+                throw ValidationException::withMessages([
+                    'distance' => "{$dist} m / {$titikMasuk->radius_m} m — di luar radius titik masuk ({$titikMasuk->nama_lokasi}). Absen pulang hanya boleh di titik tempat Anda absen masuk.",
+                ]);
+            }
+        } else {
+            if ($titikMasuk === null) {
+                // Titik masuknya sudah dihapus admin di tengah hari. Acuan jarak
+                // tidak ada lagi, jadi untuk hari itu karyawan boleh pulang di
+                // titik terdaftar mana pun — lebih baik daripada terkunci
+                // tidak bisa absen pulang. Kejadiannya tetap tercatat.
+                Audit::log(
+                    'attendance.clock_out_titik_hilang',
+                    subject: $row,
+                    label: $me->name,
+                    description: 'Absen pulang dilonggarkan karena titik masuk sudah dihapus',
+                    meta: ['employee_id' => $me->id, 'site_id' => $row->site_id]
+                );
+            }
+
+            $terdekat = $this->titikTerdekat(
+                $me,
+                (float) $data['lat'],
+                (float) $data['lng'],
+                $titikMasuk !== null ? [$titikMasuk] : []
+            );
+            $siteKeluar = $terdekat['site'];
+            $dist = $terdekat['jarak'];
+
+            if ($dist > (int) $siteKeluar->radius_m) {
+                throw ValidationException::withMessages(['distance' => "{$dist} m / {$siteKeluar->radius_m} m — di luar radius."]);
+            }
         }
 
         $tanggalKerja = $row->work_date instanceof Carbon
@@ -371,11 +413,15 @@ class AttendanceController extends Controller
      *
      * @return array{site: Site, jarak: int}
      */
-    private function titikTerdekat(Employee $me, float $lat, float $lng): array
+    private function titikTerdekat(Employee $me, float $lat, float $lng, array $tambahan = []): array
     {
         $kandidat = collect([$me->site])
             ->filter()
             ->concat($me->relationLoaded('sites') ? $me->sites : $me->sites()->get())
+            // Titik masuk boleh ikut jadi kandidat walau sudah tidak terdaftar
+            // lagi untuk karyawan ini (mis. admin mencabut titik tambahannya
+            // di tengah hari).
+            ->concat($tambahan)
             ->unique('id')
             ->values();
 

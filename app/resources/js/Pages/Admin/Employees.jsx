@@ -47,6 +47,8 @@ export default function Employees() {
         // Titik tambahan selain titik utama (boleh kosong).
         office_location_ids: [],
         isShift: false,
+        // Izin absen pulang di titik berbeda. Mati = hanya titik masuk.
+        bolehPindahTitik: false,
         // null = ikut hari kerja umum.
         hariKerja: null,
         // F4: label regu bebas, kosong = tanpa regu.
@@ -90,12 +92,12 @@ export default function Employees() {
         const r = regionsData.find((x) => x.name === defaultRegion);
         const firstSiteId = r?.locations?.[0]?.id ?? null;
         setEditing(null);
-        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', ppk:'', region: defaultRegion, office_location_id: firstSiteId, office_location_ids: [], isShift: false, hariKerja: null, regu: '' });
+        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', ppk:'', region: defaultRegion, office_location_id: firstSiteId, office_location_ids: [], isShift: false, bolehPindahTitik: false, hariKerja: null, regu: '' });
         setPhoto(null); setPreview(null); setOpen(true); setFormErrors({});
     };
     const openEdit = (e) => {
         setEditing(e);
-        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, ppk:e.ppk||'', region:e.region, office_location_id: e.office_location_id ?? null, office_location_ids: (e.site_ids ?? []).map(Number).filter((id)=>id !== Number(e.office_location_id)), isShift: !!e.isShift, hariKerja: Array.isArray(e.hariKerja) ? e.hariKerja.map(String) : null, regu: e.regu || '' });
+        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, ppk:e.ppk||'', region:e.region, office_location_id: e.office_location_id ?? null, office_location_ids: (e.site_ids ?? []).map(Number).filter((id)=>id !== Number(e.office_location_id)), isShift: !!e.isShift, bolehPindahTitik: !!e.bolehPindahTitik, hariKerja: Array.isArray(e.hariKerja) ? e.hariKerja.map(String) : null, regu: e.regu || '' });
         setPreview(e.foto); setPhoto(null); setOpen(true); setFormErrors({});
     };
     const close = () => { setOpen(false); setFormErrors({}); };
@@ -138,6 +140,7 @@ export default function Employees() {
             region: form.region, office_location_id: Number(form.office_location_id),
             office_location_ids: extraSites,
             isShift: !!form.isShift,
+            bolehPindahTitik: !!form.bolehPindahTitik,
             hariKerja: form.hariKerja,
             regu: form.regu.trim(),
         };
@@ -240,7 +243,7 @@ export default function Employees() {
                                                 <div className="flex items-center gap-3">
                                                     <img src={e.foto} alt={e.nama} className="w-8 h-8 rounded-full object-cover" />
                                                     <div>
-                                                        <p className="font-medium text-[#0F172A]">{e.nama}{e.isShift && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#E0E7FF] text-[#3730A3] px-2 py-0.5 rounded-full">Shift</span>}{Array.isArray(e.hariKerja) && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#FFF7E6] text-[#92400E] px-2 py-0.5 rounded-full">Hari kerja khusus</span>}{e.regu && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded-full">{e.regu}</span>}</p>
+                                                        <p className="font-medium text-[#0F172A]">{e.nama}{e.isShift && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#E0E7FF] text-[#3730A3] px-2 py-0.5 rounded-full">Shift</span>}{Array.isArray(e.hariKerja) && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#FFF7E6] text-[#92400E] px-2 py-0.5 rounded-full">Hari kerja khusus</span>}{e.regu && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded-full">{e.regu}</span>}{e.bolehPindahTitik && <span className="ml-2 align-middle text-[10px] font-semibold bg-[#ECFDF5] text-[#065F46] px-2 py-0.5 rounded-full">Pulang lintas titik</span>}</p>
                                                         <p className="text-xs text-[#64748B]">{e.gol} • {e.unit} • {e.status}</p>
                                                         <p className="text-xs text-[#64748B]">{e.email}</p>
                                                     </div>
@@ -419,6 +422,15 @@ export default function Employees() {
                                             <span>
                                                 <span className="text-sm font-medium text-[#0F172A]">Pekerja shift</span>
                                                 <span className="block text-xs text-[#64748B] mt-0.5">Centang bila karyawan ini bekerja giliran (pagi/siang/malam). Absensinya mengikuti jadwal shift, bukan jam kantor biasa.</span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div className="col-span-2 rounded-xl bg-[#F8FAFC] px-3 py-3">
+                                        <label className="flex items-start gap-3 cursor-pointer">
+                                            <input type="checkbox" checked={!!form.bolehPindahTitik} onChange={(e)=>setForm({...form, bolehPindahTitik:e.target.checked})} className="mt-0.5 w-4 h-4 accent-[#0F172A]" />
+                                            <span>
+                                                <span className="text-sm font-medium text-[#0F172A]">Boleh absen pulang di titik berbeda</span>
+                                                <span className="block text-xs text-[#64748B] mt-0.5">Bila dimatikan, absen pulang hanya diterima di titik tempat karyawan absen masuk. Bila dinyalakan, karyawan boleh pulang di titik terdaftar mana pun, tetap harus di dalam radius titik itu.</span>
                                             </span>
                                         </label>
                                     </div>

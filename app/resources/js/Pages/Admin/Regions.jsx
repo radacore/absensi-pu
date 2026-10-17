@@ -14,7 +14,7 @@ const emptySite = { nama_lokasi: '', lat: '', lng: '', radius: 200, address: '' 
 
 export default function Regions() {
     const { url, props } = usePage();
-    const { regions, employees } = props;
+    const { regions, employees, dampakTitik } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     // Wilayah admin yang sedang login. Jangan ditulis tetap: tiap admin wilayah
@@ -184,6 +184,7 @@ export default function Regions() {
         const nAnggota = anggotaSite.length;
         const nUtama = anggotaSite.filter((e) => Number(e.office_location_id) === Number(siteId)).length;
         const siteName = region.locations.find((s) => s.id === siteId)?.nama_lokasi || 'titik ini';
+        const dampak = dampakTitik?.[siteId] ?? dampakTitik?.[String(siteId)] ?? { riwayat: 0, hariIni: 0, belumPulang: 0 };
         const desc = `${region.name} • ${nAnggota > 0
             ? `${nAnggota} anggota terdaftar di titik ini. ${nUtama} karyawan memakai titik ini sebagai titik utama dan akan dipindah otomatis; sisanya hanya kehilangan titik tambahan.`
             : 'Tidak ada anggota di titik ini.'}`;
@@ -193,6 +194,24 @@ export default function Regions() {
             confirmLabel: 'Ya, hapus titik',
             cancelLabel: 'Batal',
             tone: 'danger',
+            children: (
+                <div className="rounded-xl bg-[#FEF2F2] border border-[#FECACA] px-3 py-2.5">
+                    <p className="text-xs font-semibold text-[#991B1B]">Risiko menghapus titik aktif</p>
+                    <ul className="mt-1.5 space-y-1 text-xs text-[#7F1D1D] list-disc pl-4">
+                        {dampak.belumPulang > 0 && (
+                            <li><strong>{dampak.belumPulang} karyawan belum absen pulang</strong> di titik ini hari ini. Mereka masih bisa pulang di titik terdaftar lain, tetapi acuan titik masuknya hilang dan kejadiannya tercatat di log.</li>
+                        )}
+                        {dampak.hariIni > 0 && (
+                            <li>{dampak.hariIni} absensi hari ini memakai titik ini, baik sebagai titik masuk maupun titik pulang.</li>
+                        )}
+                        {dampak.riwayat > 0 && (
+                            <li>{dampak.riwayat} riwayat absensi akan kehilangan nama titik ini di rekap. Baris absensinya tetap ada, hanya nama lokasinya tidak lagi bisa ditampilkan.</li>
+                        )}
+                        <li>Karyawan yang memakai titik ini sebagai titik utama dipindahkan otomatis ke titik lain di wilayah yang sama.</li>
+                    </ul>
+                    <p className="mt-2 text-xs text-[#7F1D1D]">Bila titik ini masih dipakai hari ini, sebaiknya tunggu semua karyawan absen pulang sebelum menghapusnya.</p>
+                </div>
+            ),
         });
         if (!ok) return;
         router.delete(`${base}/sites/${siteId}`, { preserveScroll: true });

@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\Region;
 use App\Models\Site;
 use App\Support\AdminPresenter;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -147,6 +148,12 @@ class SiteController extends Controller
         $dipromosi = 0;
         $dipindah = 0;
 
+        // Catat dampaknya SEBELUM barisnya hilang: nama titik di riwayat
+        // absensi tidak bisa dipulihkan setelah titik dihapus.
+        $dampak = AdminPresenter::siteImpactFor($site->region_id)[$site->id] ?? ['riwayat' => 0, 'hariIni' => 0, 'belumPulang' => 0];
+        $namaSite = $site->nama_lokasi;
+        $namaRegion = $site->region->name;
+
         foreach ($members as $member) {
             // Utamakan titik tambahan karyawan itu sendiri: dia sudah terbiasa
             // absen di sana, jadi tidak perlu dipindah ke titik asing.
@@ -173,6 +180,23 @@ class SiteController extends Controller
         DB::table('employee_sites')->where('site_id', $site->id)->delete();
 
         $site->delete();
+
+        Audit::log(
+            'site.delete',
+            subject: null,
+            label: $namaSite,
+            description: "Hapus titik {$namaSite} ({$namaRegion})",
+            meta: [
+                'site_id' => $site->id,
+                'region_id' => $site->region_id,
+                'anggota_utama' => $members->count(),
+                'dipromosi' => $dipromosi,
+                'dipindah' => $dipindah,
+                'riwayat_absensi' => $dampak['riwayat'],
+                'absensi_hari_ini' => $dampak['hariIni'],
+                'belum_pulang' => $dampak['belumPulang'],
+            ]
+        );
 
         $bagian = [];
         if ($dipromosi > 0) {

@@ -43,6 +43,8 @@ class Employee extends Authenticatable
         'must_change_password',
         // Penanda pekerja shift (K4: per orang saja).
         'is_shift',
+        // Izin absen pulang di titik lain (tetap salah satu titik terdaftar).
+        'boleh_pindah_titik',
         // B3: hari kerja khusus per orang (null = ikut pengaturan umum).
         'hari_kerja',
         // F4: label regu bebas (null = tanpa regu).
@@ -60,6 +62,7 @@ class Employee extends Authenticatable
             'password' => 'hashed',
             'must_change_password' => 'boolean',
             'is_shift' => 'boolean',
+            'boleh_pindah_titik' => 'boolean',
             'hari_kerja' => 'array',
         ];
     }
