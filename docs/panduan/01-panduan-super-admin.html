@@ -200,8 +200,24 @@
 <h4>Mengeluarkan karyawan dari titik</h4>
 <p>Tombol <strong>Keluarkan</strong> melepas karyawan dari titik tambahan. Bila titik itu ternyata titik utamanya, karyawan dipindahkan ke titik tambahan lain yang masih terdaftar. Bila tidak ada titik tambahan, pindahkan dulu lewat <strong>Jadikan utama</strong> agar karyawan tidak kehilangan titik absensi.</p>
 
+<h4>Mengizinkan pulang di titik berbeda</h4>
+<p>Bawaannya, absen pulang hanya diterima di titik tempat karyawan absen masuk. Izin pulang di titik lain diberikan per karyawan pada formulir karyawan, dengan mencentang <strong>Boleh absen pulang di titik berbeda</strong>. Izin langsung berlaku, termasuk untuk shift yang sedang berjalan.</p>
+
+<div class="note">
+  <div class="t">Batas izin</div>
+  <p>Izin ini tidak membuka absen di sembarang tempat. Titik pulang tetap harus salah satu titik yang terdaftar untuk karyawan itu, dan posisinya tetap harus di dalam radius titik tersebut. Karyawan yang tidak diberi izin hanya bisa pulang di titik masuknya, walaupun sedang berdiri di titik terdaftar lain.</p>
+</div>
+
 <h4>Menghapus titik</h4>
-<p>Sebuah wilayah harus menyisakan minimal satu titik. Ketika sebuah titik dihapus, karyawan yang memakai titik itu sebagai titik utama dipindahkan otomatis: didahulukan ke titik tambahannya sendiri bila ada, bila tidak ke titik lain di wilayah yang sama. Karyawan yang hanya memakai titik itu sebagai titik tambahan cukup kehilangan titik tersebut.</p>
+<p>Sebuah wilayah harus menyisakan minimal satu titik. Sebelum titik benar-benar dihapus, aplikasi menampilkan ringkasan dampaknya: jumlah karyawan terdaftar, absensi hari itu yang memakai titik tersebut, absensi yang belum pulang, dan riwayat yang akan kehilangan nama titiknya.</p>
+
+<div class="warn">
+  <div class="t">Bahaya menghapus titik yang masih dipakai</div>
+  <p>Bila masih ada karyawan yang belum absen pulang di titik itu, acuan titik masuknya hilang. Karyawan tetap bisa absen pulang di titik terdaftar lain agar tidak terkunci, dan kejadian itu tercatat di log, tetapi rekap hari tersebut kehilangan nama titik masuknya. Sebaiknya tunggu semua karyawan absen pulang sebelum menghapus titik.</p>
+  <p>Riwayat absensi tidak ikut terhapus. Barisnya tetap ada, tetapi nama titiknya tidak lagi bisa ditampilkan di rekap karena titiknya sudah tidak ada.</p>
+</div>
+
+<p>Karyawan yang memakai titik itu sebagai titik utama dipindahkan otomatis: didahulukan ke titik tambahannya sendiri bila ada, bila tidak ke titik lain di wilayah yang sama. Karyawan yang hanya memakai titik itu sebagai titik tambahan cukup kehilangan titik tersebut.</p>
 
 <h3>4.4 Menambah karyawan secara manual</h3>
 <p class="path">/super-admin/employees, tombol Tambah Karyawan</p>
@@ -218,6 +234,7 @@
     <tr><td>Wilayah</td><td>Menentukan admin mana yang mengelola orang ini.</td></tr>
     <tr><td>Titik proyek</td><td>Wajib. Menjadi titik utama karyawan.</td></tr>
     <tr><td>Titik tambahan</td><td>Opsional. Titik lain di wilayah yang sama tempat karyawan juga boleh absen.</td></tr>
+    <tr><td>Boleh absen pulang di titik berbeda</td><td>Opsional. Bila dicentang, karyawan boleh pulang di titik terdaftar mana pun. Bila tidak, pulang hanya diterima di titik masuknya.</td></tr>
     <tr><td>Pekerja shift</td><td>Aktifkan bila orang ini bekerja bergiliran.</td></tr>
     <tr><td>Hari kerja khusus</td><td>Kosongkan bila ikut hari kerja umum. Bila diisi, jadwal pribadi ini yang dipakai.</td></tr>
     <tr><td>Regu</td><td>Opsional, dipakai untuk menyusun jadwal shift.</td></tr>

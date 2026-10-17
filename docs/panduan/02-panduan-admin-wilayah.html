@@ -151,6 +151,20 @@
 
 <p>Cara lain lewat formulir karyawan: tekan baris karyawan, lalu centang titik lain pada bagian <strong>Titik tambahan</strong>. Titik tambahan harus berada di wilayah yang sama dengan titik utama.</p>
 
+<h3>Mengizinkan pulang di titik berbeda</h3>
+<p>Bawaannya, absen pulang hanya diterima di titik tempat karyawan absen masuk. Izin pulang di titik lain diberikan per karyawan.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Karyawan</strong>, lalu tekan baris karyawan yang bersangkutan.</li>
+  <li>Centang <strong>Boleh absen pulang di titik berbeda</strong>.</li>
+  <li>Simpan. Izin langsung berlaku, termasuk untuk shift yang sedang berjalan.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Batas izin</div>
+  <p>Izin ini tidak membuka absen di sembarang tempat. Titik pulang tetap harus salah satu titik yang terdaftar untuk karyawan itu, dan posisinya tetap harus di dalam radius titik tersebut. Karyawan yang tidak diberi izin hanya bisa pulang di titik masuknya, walaupun sedang berdiri di titik terdaftar lain.</p>
+</div>
+
 <h3>Memindahkan titik utama</h3>
 <p>Pemindahan dipakai ketika seorang karyawan benar-benar berpindah tempat tugas dan tidak lagi bekerja di titik lama.</p>
 
@@ -176,7 +190,15 @@
 </div>
 
 <h3>Menghapus titik</h3>
-<p>Wilayah harus menyisakan minimal satu titik. Saat sebuah titik dihapus, karyawan yang memakai titik itu sebagai titik utama dipindahkan otomatis: didahulukan ke titik tambahannya sendiri bila ada, bila tidak ke titik lain di wilayah yang sama. Karyawan yang hanya memakai titik itu sebagai titik tambahan cukup kehilangan titik tersebut. Periksa dulu titik mana yang akan menjadi tujuan.</p>
+<p>Wilayah harus menyisakan minimal satu titik. Sebelum titik benar-benar dihapus, aplikasi menampilkan ringkasan dampaknya: jumlah karyawan terdaftar, absensi hari itu yang memakai titik tersebut, absensi yang belum pulang, dan riwayat yang akan kehilangan nama titiknya.</p>
+
+<div class="warn">
+  <div class="t">Bahaya menghapus titik yang masih dipakai</div>
+  <p>Bila masih ada karyawan yang belum absen pulang di titik itu, acuan titik masuknya hilang. Karyawan tetap bisa absen pulang di titik terdaftar lain agar tidak terkunci, dan kejadian itu tercatat di log, tetapi rekap hari tersebut kehilangan nama titik masuknya. Sebaiknya tunggu semua karyawan absen pulang sebelum menghapus titik.</p>
+  <p>Riwayat absensi tidak ikut terhapus. Barisnya tetap ada, tetapi nama titiknya tidak lagi bisa ditampilkan di rekap karena titiknya sudah tidak ada.</p>
+</div>
+
+<p>Karyawan yang memakai titik itu sebagai titik utama dipindahkan otomatis: didahulukan ke titik tambahannya sendiri bila ada, bila tidak ke titik lain di wilayah yang sama. Karyawan yang hanya memakai titik itu sebagai titik tambahan cukup kehilangan titik tersebut. Periksa dulu titik mana yang akan menjadi tujuan.</p>
 
 <h2 id="s5"><span class="num">5</span>Karyawan wilayah</h2>
 <p class="path">/admin/employees</p>
@@ -186,6 +208,7 @@
   <li>Tekan <strong>Tambah Karyawan</strong>.</li>
   <li>Isi nama, email, dan data kepegawaian. NIK/NIP boleh dikosongkan atau diisi sebagian.</li>
   <li>Pilih titik proyek. Isian ini wajib dan menjadi titik utama karyawan. Titik lain bisa ditambahkan pada isian <strong>Titik tambahan</strong>.</li>
+  <li>Bila karyawan perlu pulang dari titik yang berbeda, centang <strong>Boleh absen pulang di titik berbeda</strong>.</li>
   <li>Aktifkan <strong>Pekerja shift</strong> bila berlaku, lalu isi regu bila memakai regu.</li>
   <li>Simpan. Akun aktif dengan sandi bawaan dan wajib diganti saat pertama masuk.</li>
 </ol>
@@ -375,7 +398,7 @@
   <tbody>
     <tr><td>Karyawan muncul dengan pesan belum ada titik absensi</td><td>Karyawan belum terhubung ke titik. Buka titik yang benar, lalu tambahkan karyawan tersebut ke sana.</td></tr>
     <tr><td>Absen ditolak karena di luar radius</td><td>Periksa jarak pada detail absensi. Bila titiknya kurang tepat, perbaiki koordinat atau radius titik. Ingat, aplikasi memakai titik terdekat dari posisi ponsel.</td></tr>
-    <tr><td>Karyawan perlu absen di dua tempat</td><td>Tambahkan titik keduanya lewat <strong>Tambah Anggota</strong> di halaman titik atau isian <strong>Titik tambahan</strong> pada formulir karyawan. Absen masuk dan pulang boleh di titik berbeda.</td></tr>
+    <tr><td>Karyawan perlu absen di dua tempat</td><td>Tambahkan titik keduanya lewat <strong>Tambah Anggota</strong> di halaman titik atau isian <strong>Titik tambahan</strong> pada formulir karyawan. Bila perlu pulang di titik berbeda, centang <strong>Boleh absen pulang di titik berbeda</strong>.</td></tr>
     <tr><td>Impor ditolak seluruhnya</td><td>Periksa kolom wajib, batas 1000 baris dan 5 MB, serta NIK yang berubah menjadi angka.</td></tr>
     <tr><td>Karyawan lupa sandi atau tombol Buka panel admin tidak muncul</td><td>Gunakan <strong>Reset kata sandi</strong>, sampaikan sandi bawaan, lalu minta segera diganti lewat Profil. Tombol <strong>Buka panel admin</strong> baru muncul setelah sandi bawaan diganti.</td></tr>
   </tbody>

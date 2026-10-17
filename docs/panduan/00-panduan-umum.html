@@ -153,6 +153,7 @@
   <tbody>
     <tr><td><strong>Titik absen</strong></td><td>Lokasi resmi tempat absen boleh dilakukan, ditandai dengan titik di peta dan radius tertentu. Setiap karyawan punya satu titik utama, dan boleh ditambah titik lain di wilayah yang sama.</td></tr>
     <tr><td><strong>Radius</strong></td><td>Jarak maksimal dari titik absen yang masih diterima, antara 50 dan 1000 meter. Di luar jarak itu, absen ditolak.</td></tr>
+    <tr><td><strong>Izin pulang lintas titik</strong></td><td>Izin per karyawan untuk absen pulang di titik terdaftar yang berbeda dari titik masuk. Bawaannya mati, jadi pulang hanya bisa di titik tempat ia masuk.</td></tr>
     <tr><td><strong>Jam masuk dan jam pulang</strong></td><td>Acuan waktu kerja untuk pekerja bukan shift, diatur di Pengaturan.</td></tr>
     <tr><td><strong>Kelonggaran</strong></td><td>Jumlah menit setelah jam masuk yang masih dianggap tepat waktu, antara 0 dan 60 menit.</td></tr>
     <tr><td><strong>Shift</strong></td><td>Pola jam kerja bergiliran. Satu hari dibagi rata: 2 shift berarti 12 jam per shift, 3 shift berarti 8 jam, 4 shift berarti 6 jam.</td></tr>
@@ -172,7 +173,12 @@
   <p>Satu karyawan boleh terdaftar di <strong>beberapa titik absen dalam satu wilayah</strong>. Saat absen, aplikasi memilih titik terdekat dari posisi ponsel secara otomatis. Bila jaraknya melebihi radius titik terdekat, absen ditolak dan muncul pesan <em>di luar radius</em> beserta nama titiknya.</p>
 </div>
 
-<p>Karyawan yang bekerja di lebih dari satu tempat, misalnya kantor dan lokasi proyek, tidak perlu dipindah-pindahkan setiap hari. Admin cukup menambahkan titik lain satu kali. Absen masuk dan absen pulang juga boleh dilakukan di titik yang berbeda, misalnya masuk di kantor lalu pulang dari lokasi proyek.</p>
+<p>Karyawan yang bekerja di lebih dari satu tempat, misalnya kantor dan lokasi proyek, tidak perlu dipindah-pindahkan setiap hari. Admin cukup menambahkan titik lain satu kali.</p>
+
+<div class="key">
+  <div class="t">Pulang di titik berbeda perlu izin</div>
+  <p>Bawaannya, absen pulang hanya diterima di <strong>titik tempat karyawan absen masuk</strong>. Izin pulang di titik lain diberikan admin per karyawan, dan tetap terbatas pada titik yang terdaftar untuk karyawan itu. Jadi tidak ada absen di sembarang tempat.</p>
+</div>
 
 <div class="note">
   <div class="t">Bila masuk dan pulang di titik berbeda</div>
@@ -188,6 +194,7 @@
   <li>Buka menu <strong>Karyawan</strong>, lalu cari nama karyawan yang bersangkutan.</li>
   <li>Tekan baris karyawan untuk membuka formulirnya.</li>
   <li>Pada bagian <strong>Titik tambahan</strong>, centang titik lain yang boleh dipakai. Titik utama tetap seperti semula.</li>
+  <li>Bila karyawan memang perlu pulang dari titik yang berbeda, centang <strong>Boleh absen pulang di titik berbeda</strong>. Bila tidak dicentang, absen pulang hanya diterima di titik tempat ia masuk.</li>
   <li>Simpan, lalu minta karyawan memuat ulang halaman Absensi.</li>
 </ol>
 
@@ -255,13 +262,14 @@
     <tr><td><strong>Tambah titik</strong></td><td>Dua tempat tetap dalam jangka panjang</td><td>Ya, sekali saja</td><td>Titik tambahan harus satu wilayah; absen tetap mengikuti radius titik terdekat</td></tr>
     <tr><td><strong>Pindah titik utama</strong></td><td>Perpindahan tempat tugas</td><td>Ya, setiap kali pindah</td><td>Hanya satu titik utama pada satu waktu</td></tr>
     <tr><td><strong>Perbesar radius</strong></td><td>Dua tempat yang berdekatan</td><td>Ya, sekali saja</td><td>Maksimal 1000 meter, berlaku untuk semua anggota titik</td></tr>
+    <tr><td><strong>Izin pulang lintas titik</strong></td><td>Masuk di satu titik, pulang di titik lain</td><td>Ya, per karyawan</td><td>Tetap hanya di titik yang terdaftar; jarak diukur ke titik pulang</td></tr>
     <tr><td><strong>Dinas</strong></td><td>Perjalanan tugas sementara</td><td>Ya, lewat persetujuan</td><td>Tercatat sebagai dinas, bukan hadir biasa</td></tr>
   </tbody>
 </table>
 
 <div class="note">
   <div class="t">Yang perlu diingat</div>
-  <p>Karyawan tidak memilih titik sendiri di layar absen. Aplikasi selalu memakai titik terdekat dari posisi ponsel, dan absen hanya diterima bila jaraknya masih dalam radius titik itu. Bila berada di luar semua titik, gunakan pengajuan dinas.</p>
+  <p>Karyawan tidak memilih titik sendiri di layar absen. Aplikasi selalu memakai titik terdekat dari posisi ponsel, dan absen hanya diterima bila jaraknya masih dalam radius titik itu. Saat absen pulang, titik yang diterima mengikuti izin karyawan: hanya titik masuk bila izin mati, atau titik terdaftar mana pun bila izin hidup. Bila berada di luar semua titik, gunakan pengajuan dinas.</p>
 </div>
 
 <h2 id="s6"><span class="num">6</span>Pesan yang sering muncul dan artinya</h2>
