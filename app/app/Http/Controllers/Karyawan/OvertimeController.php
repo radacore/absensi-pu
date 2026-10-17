@@ -42,7 +42,7 @@ class OvertimeController extends Controller
                 'status' => $r->status,
                 'note' => $r->note ?? '',
                 'diprosesOleh' => $r->approvedBy?->name ?? '',
-            ])->values()->all();
+            ]);
 
         $bulanIni = $rows
             ->filter(fn ($r) => $r['status'] === 'Disetujui' && str_starts_with($r['tanggal'], $now->format('Y-m')))
@@ -54,7 +54,7 @@ class OvertimeController extends Controller
                 'nama' => $me->name,
                 'region' => $me->region?->name ?? '',
             ],
-            'requests' => $rows,
+            'requests' => $rows->values()->all(),
             'hariIni' => $now->toDateString(),
             'batasMundur' => $now->copy()->subDays(30)->toDateString(),
             'menitBulanIni' => (int) $bulanIni,
