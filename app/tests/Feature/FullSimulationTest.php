@@ -328,7 +328,7 @@ class FullSimulationTest extends TestCase
         $this->assertNotNull($row->fresh()->selfie_pulang_url);
     }
 
-    public function test_absensi_ditolak_di_luar_radius(): void
+    public function test_absensi_di_luar_radius_tetap_dicatat_dan_ditandai(): void
     {
         $me = $this->karyawan();
         $site = $me->site;
@@ -341,9 +341,12 @@ class FullSimulationTest extends TestCase
                 'lng' => $site->lng,
                 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200),
             ])
-            ->assertSessionHasErrors('distance');
+            ->assertSessionHasNoErrors();
 
-        $this->assertSame(0, Attendance::where('employee_id', $me->id)->count());
+        // E6: absen di luar radius semua titik tidak ditolak, tetapi ditandai.
+        $row = Attendance::where('employee_id', $me->id)->firstOrFail();
+        $this->assertTrue((bool) $row->di_luar_titik);
+        $this->assertSame('WFO', $row->jenis_kerja);
     }
 
     public function test_absensi_ganda_di_hari_yang_sama_ditolak(): void

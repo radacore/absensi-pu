@@ -301,7 +301,7 @@ class MultiTitikTest extends TestCase
                 ->has('dampakTitik.201.belumPulang'));
     }
 
-    public function test_absen_di_luar_semua_titik_ditolak(): void
+    public function test_absen_di_luar_semua_titik_tetap_dicatat_dan_ditandai(): void
     {
         $emp = $this->karyawanGowa();
         $emp->sites()->attach(202);
@@ -313,9 +313,16 @@ class MultiTitikTest extends TestCase
                 'lng' => $site->lng + 0.2,
                 'selfie' => UploadedFile::fake()->image('luar.jpg', 200, 200),
             ])
-            ->assertSessionHasErrors('distance');
+            ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('attendances', 0);
+        // Jawaban E6: absen di luar radius semua titik tidak lagi ditolak,
+        // tetapi tetap tercatat dan diberi tanda supaya terbaca di rekap.
+        $this->assertDatabaseCount('attendances', 1);
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $emp->id,
+            'jenis_kerja' => 'WFO',
+            'di_luar_titik' => true,
+        ]);
     }
 
     public function test_approver_mencakup_admin_di_titik_tambahan(): void

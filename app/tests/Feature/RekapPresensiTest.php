@@ -256,10 +256,10 @@ class RekapPresensiTest extends TestCase
         $this->assertContains(['Hadir', '1'], $baris);
 
         $header = $baris[array_search('Tanggal', array_column($baris, 0), true)];
-        $this->assertSame(['Tanggal', 'Hari', 'Jam masuk', 'Jam pulang', 'Keterangan', 'Catatan pekerjaan'], $header);
+        $this->assertSame(['Tanggal', 'Hari', 'Jenis kerja', 'Jam masuk', 'Jam pulang', 'Lembur (menit)', 'Keterangan', 'Catatan pekerjaan'], $header);
 
         $harian = collect($baris)->firstWhere(0, '2026-09-01');
-        $this->assertSame(['2026-09-01', 'Sel', '07:25', '16:10', 'Hadir tepat waktu', ''], $harian);
+        $this->assertSame(['2026-09-01', 'Sel', 'WFO', '07:25', '16:10', '0', 'Hadir tepat waktu', ''], $harian);
     }
 
     public function test_admin_wilayah_bisa_mengunduh_rekap_karyawan_wilayahnya(): void

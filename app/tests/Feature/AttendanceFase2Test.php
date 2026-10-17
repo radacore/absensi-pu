@@ -70,8 +70,10 @@ class AttendanceFase2Test extends TestCase
         $emp = Employee::where('region_id', 2)->first(); // has site
         $site = $emp->site;
 
-        // outside radius → 422 validation error (distance key)
-        $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-in', ['lat'=> $site->lat + 0.02, 'lng'=> $site->lng, 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200)])->assertSessionHasErrors('distance');
+        // di luar radius semua titik → tetap dicatat, hanya ditandai (E6)
+        $lain = Employee::where('region_id', 2)->where('id', '!=', $emp->id)->firstOrFail();
+        $this->actingAs($lain, 'employee')->post('/karyawan/absensi/clock-in', ['lat'=> $site->lat + 0.02, 'lng'=> $site->lng, 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200)])->assertSessionHas('success');
+        $this->assertDatabaseHas('attendances', ['employee_id'=>$lain->id, 'di_luar_titik'=>true]);
 
         // inside radius → success
         $this->actingAs($emp, 'employee')->post('/karyawan/absensi/clock-in', ['lat'=> $site->lat, 'lng'=> $site->lng, 'selfie' => UploadedFile::fake()->image('selfie.jpg', 200, 200)])->assertSessionHas('success');

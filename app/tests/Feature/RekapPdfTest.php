@@ -237,7 +237,7 @@ class RekapPdfTest extends TestCase
             ->get("/super-admin/employees/{$e->id}/rekap/unduh?bulan=".self::BULAN)
             ->streamedContent();
 
-        $this->assertStringContainsString('Tanggal;Hari;Shift;"Jam masuk";"Jam pulang";Keterangan;"Catatan pekerjaan"', $csv);
+        $this->assertStringContainsString('Tanggal;Hari;Shift;"Jenis kerja";"Jam masuk";"Jam pulang";"Lembur (menit)";Keterangan;"Catatan pekerjaan"', $csv);
         $this->assertStringContainsString('Pagi', $csv);
         $this->assertStringContainsString('Libur', $csv);
     }
@@ -251,7 +251,7 @@ class RekapPdfTest extends TestCase
             ->get("/super-admin/employees/{$e->id}/rekap/unduh?bulan=".self::BULAN)
             ->streamedContent();
 
-        $this->assertStringContainsString('Tanggal;Hari;"Jam masuk";"Jam pulang";Keterangan;"Catatan pekerjaan"', $csv);
+        $this->assertStringContainsString('Tanggal;Hari;"Jenis kerja";"Jam masuk";"Jam pulang";"Lembur (menit)";Keterangan;"Catatan pekerjaan"', $csv);
         $this->assertStringNotContainsString('Tanggal;Hari;Shift', $csv);
     }
 
