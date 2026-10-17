@@ -43,8 +43,8 @@ class AttendanceFase2Test extends TestCase
         Attendance::create(['employee_id'=>$gowaEmp->id,'work_date'=>$today,'clock_in_at'=>'07:38:00','status'=>'on_time','lat_in'=>$gowaEmp->site->lat,'lng_in'=>$gowaEmp->site->lng,'distance_in_m'=>20,'site_id'=>$gowaEmp->site_id,'region_id'=>$gowaEmp->region_id]);
         Attendance::create(['employee_id'=>$marosEmp->id,'work_date'=>$today,'clock_in_at'=>'07:40:00','status'=>'on_time','lat_in'=>99,'lng_in'=>99,'distance_in_m'=>10,'site_id'=>$marosEmp->site_id,'region_id'=>$marosEmp->region_id]);
 
-        $this->actingAs($this->superAdmin())->get('/super-admin/attendances')->assertOk()->assertInertia(fn (Assert $p) => $p->component('Admin/Attendances')->has('attendances', 2));
-        $this->actingAs($this->adminGowa())->get('/admin/attendances')->assertOk()->assertInertia(fn (Assert $p) => $p->component('Admin/Attendances')->has('attendances', 1)->where('attendances.0.wilayah', 'Kab. Gowa'));
+        $this->actingAs($this->superAdmin())->get('/super-admin/attendances')->assertOk()->assertInertia(fn (Assert $p) => $p->component('Admin/Attendances')->has('attendances', 2)->where('todayISO', $today));
+        $this->actingAs($this->adminGowa())->get('/admin/attendances')->assertOk()->assertInertia(fn (Assert $p) => $p->component('Admin/Attendances')->has('attendances', 1)->where('attendances.0.wilayah', 'Kab. Gowa')->where('todayISO', $today));
     }
 
     public function test_wilayah_cannot_delete_attendance_out_of_scope(): void

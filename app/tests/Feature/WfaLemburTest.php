@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\OvertimeClaim;
 use App\Models\Site;
 use App\Models\User;
+use App\Support\AdminPresenter;
 use App\Support\RekapPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -361,5 +362,86 @@ class WfaLemburTest extends TestCase
                 ->where('isShift', true)
                 ->has('minggu', 4)
                 ->where('minggu.0.hari.0.label', 'Belum dijadwalkan'));
+    }
+
+    // ── Regresi tampilan ───────────────────────────────────────────────────
+
+    public function test_halaman_lembur_karyawan_terbuka_dengan_riwayat_kosong(): void
+    {
+        $emp = $this->empGowa();
+
+        $this->actingAs($emp, 'employee')
+            ->get('/karyawan/lembur')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Karyawan/Lembur')
+                ->where('requests', [])
+                ->where('menitBulanIni', 0));
+    }
+
+    public function test_riwayat_absen_menandai_pulang_di_luar_radius(): void
+    {
+        $emp = $this->empGowa();
+        $emp->update(['boleh_pindah_titik' => true]);
+        $site = Site::findOrFail(201);
+
+        $this->jamKe('08:00:00');
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-in', [
+                'lat' => $site->lat,
+                'lng' => $site->lng,
+                'selfie' => UploadedFile::fake()->image('masuk.jpg', 200, 200),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->jamKe('16:30:00');
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-out', [
+                'lat' => $site->lat + 0.2,
+                'lng' => $site->lng + 0.2,
+                'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200),
+                'catatan_pulang' => 'Pemeriksaan pintu air di luar titik',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($emp, 'employee')
+            ->get('/karyawan/absensi')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Karyawan/Absensi')
+                ->where('history.0.diLuarTitikPulang', true));
+    }
+
+    public function test_daftar_absensi_admin_memuat_tanda_di_luar_radius(): void
+    {
+        $emp = $this->empGowa();
+        $emp->update(['boleh_pindah_titik' => true]);
+        $site = Site::findOrFail(201);
+
+        $this->jamKe('08:00:00');
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-in', [
+                'lat' => $site->lat + 0.2,
+                'lng' => $site->lng + 0.2,
+                'selfie' => UploadedFile::fake()->image('masuk.jpg', 200, 200),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->jamKe('16:30:00');
+        $this->actingAs($emp, 'employee')
+            ->post('/karyawan/absensi/clock-out', [
+                'lat' => $site->lat + 0.2,
+                'lng' => $site->lng + 0.2,
+                'selfie_pulang' => UploadedFile::fake()->image('pulang.jpg', 200, 200),
+                'catatan_pulang' => 'Pemeriksaan pintu air di luar titik',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $rows = AdminPresenter::attendancesFor(null);
+        $baris = collect($rows)->firstWhere('employee_id', $emp->id);
+
+        $this->assertNotNull($baris);
+        $this->assertTrue($baris['di_luar_titik']);
+        $this->assertTrue($baris['di_luar_titik_pulang']);
     }
 }
