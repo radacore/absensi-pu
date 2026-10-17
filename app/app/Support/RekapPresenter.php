@@ -8,6 +8,7 @@ use App\Models\DinasClaim;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Leave;
+use App\Models\OvertimeClaim;
 use App\Models\ShiftSchedule;
 use App\Models\ToleranceClaim;
 use Illuminate\Support\Carbon;
@@ -107,6 +108,18 @@ class RekapPresenter
             $dispensasiCounts[$label] = ($dispensasiCounts[$label] ?? 0) + 1;
         }
 
+        // Lembur disetujui bulan itu. Dihitung tersendiri, tidak digabung ke
+        // jam kerja biasa (A8).
+        $lemburPerTanggal = OvertimeClaim::where('employee_id', $emp->id)
+            ->where('status', 'Disetujui')
+            ->whereYear('tanggal', $year)
+            ->whereMonth('tanggal', $month)
+            ->get()
+            ->groupBy(fn (OvertimeClaim $o) => Carbon::parse($o->tanggal)->format('Y-m-d'))
+            ->map(fn ($rows) => (int) $rows->sum('menit'))
+            ->all();
+        $totalLemburMenit = array_sum($lemburPerTanggal);
+
         // Libur nasional bulan itu
         $holidays = Holiday::whereBetween('tanggal', [$start, $end])->get()
             ->mapWithKeys(fn (Holiday $h) => [$h->tanggal->format('Y-m-d') => ['nama' => $h->nama, 'cuti_bersama' => $h->cuti_bersama]])
@@ -142,6 +155,9 @@ class RekapPresenter
         // Dihitung terpisah supaya rincian zona selalu berjumlah sama dengan
         // "Total kehadiran" — tanpa ini selisihnya terlihat seperti salah hitung.
         $tanpaJamMasuk = 0;
+        // Hari WFA pada periode ini (dihitung terpisah dari kehadiran biasa).
+        $hariWfa = 0;
+        $hariDiLuarTitik = 0;
 
         $harian = [];
         $keterlambatan = [];
@@ -200,6 +216,8 @@ class RekapPresenter
             $trenMasukMin = null;
             $trenPulangMin = null;
             $zonaMasuk = null;
+            // Lembur disetujui pada tanggal ini (menit), 0 bila tidak ada.
+            $lemburHariIni = 0;
             // Titik yang benar-benar dipakai hari itu (bisa berbeda masuk/pulang).
             $pindahLokasi = false;
             $lokasiMasuk = null;
@@ -346,6 +364,19 @@ class RekapPresenter
                     $catatan .= ($catatan ? ' · ' : '').'Berpindah lokasi: '.$lokasiMasuk.' ke '.$lokasiPulang;
                 }
 
+                // WFA dan absen di luar radius titik sama-sama ditandai di
+                // rekap, tidak disembunyikan (C1, E6).
+                if ($att->isWfa()) {
+                    $hariWfa++;
+                    $catatan .= ($catatan ? ' · ' : '').'WFA';
+                    if ($att->wfa_status) {
+                        $catatan .= ' ('.$att->wfa_status.')';
+                    }
+                } elseif ($att->di_luar_titik || $att->di_luar_titik_pulang) {
+                    $hariDiLuarTitik++;
+                    $catatan .= ($catatan ? ' · ' : '').'Di luar radius titik';
+                }
+
                 // Detail per hari untuk kartu detail
                 $detailHari[] = self::buildDetailHari($att, $date, $hariFull, $zonaMasuk, $emp);
             } else {
@@ -361,6 +392,14 @@ class RekapPresenter
                     $tanpaKeteranganCount++;
                     $catatan = 'Tidak ada absen masuk · Tidak ada absen pulang';
                 }
+            }
+
+            // Lembur disetujui tetap terbaca walau hari itu tidak ada baris
+            // absensi (mis. karyawan lupa absen masuk). Dihitung terpisah
+            // dari kehadiran (A8).
+            $lemburHariIni = (int) ($lemburPerTanggal[$dateKey] ?? 0);
+            if ($lemburHariIni > 0) {
+                $catatan .= ($catatan ? ' · ' : '').'Lembur '.$lemburHariIni.' menit';
             }
 
             $harian[] = [
@@ -386,6 +425,11 @@ class RekapPresenter
                 'shift_jam' => $shiftMulaiMin !== null ? sprintf('%02d:%02d', intdiv($shiftMulaiMin, 60), $shiftMulaiMin % 60) : null,
                 'is_libur_jadwal' => $liburJadwal,
                 'is_hari_kerja' => $masukHariIni,
+                // Jenis kerja & tanda luar titik (C1, E6).
+                'jenis_kerja' => $att?->jenis_kerja,
+                'wfa_status' => $att?->wfa_status,
+                'di_luar_titik' => (bool) ($att?->di_luar_titik || $att?->di_luar_titik_pulang),
+                'lembur_menit' => $lemburHariIni,
                 'dinas' => $isDinas ? $dinasDates[$dateKey] : null,
                 'cuti' => $isCuti ? $cutiDates[$dateKey] : null,
                 'holiday' => $isHoliday ? $holidays[$dateKey] : null,
@@ -468,6 +512,11 @@ class RekapPresenter
             'keterlambatan' => $keterlambatan,
             'total_keterlambatan' => array_sum(array_column($keterlambatan, 'menit_terlambat')),
             'total_psw' => array_sum(array_column($keterlambatan, 'menit_psw')),
+            // Lembur & WFA dihitung tersendiri, tidak menambah/mengurangi
+            // hitungan kehadiran biasa.
+            'total_lembur_menit' => $totalLemburMenit,
+            'hari_wfa' => $hariWfa,
+            'hari_di_luar_titik' => $hariDiLuarTitik,
             'ada_pulang_cepat' => collect($harian)->contains(fn ($h) => str_contains((string) $h['catatan'], 'Pulang cepat')),
             'harian' => $harian,
             'tren' => $tren,
@@ -507,6 +556,9 @@ class RekapPresenter
 
         $unitKerja = $emp->unit_kerja;
 
+        $isWfa = $att->isWfa();
+        $lokasiWfa = 'WFA (di luar kantor)';
+
         $masuk = null;
         if ($att->clock_in_at) {
             // Baris sintetis dari klaim toleransi tidak punya koordinat
@@ -514,17 +566,22 @@ class RekapPresenter
             // absen dari Teluk Guinea, jadi ditandai sebagai isian manual.
             $adaKoordinat = $att->lat_in !== null && $att->lng_in !== null;
             $masuk = [
-                'jenis_absen' => $adaKoordinat ? 'WFO' : 'Isian manual',
+                // WFA tetap merekam koordinat; yang berbeda hanya labelnya
+                // karena radius kantor tidak berlaku (C1).
+                'jenis_absen' => $adaKoordinat ? ($isWfa ? 'WFA' : 'WFO') : 'Isian manual',
                 'jam' => Carbon::parse($att->clock_in_at)->format('H:i:s'),
-                'lokasi' => $siteName,
+                'lokasi' => $isWfa ? $lokasiWfa : $siteName,
                 'timezone' => 'Asia/Makassar',
                 'koordinat' => $adaKoordinat
                     ? sprintf('%.6f, %.6f', (float) $att->lat_in, (float) $att->lng_in)
                     : null,
-                'radius' => $adaKoordinat ? (int) ($att->distance_in_m ?? 0) : null,
-                'nama_lokasi_aktif' => $siteName,
+                'radius' => $adaKoordinat && ! $isWfa ? (int) ($att->distance_in_m ?? 0) : null,
+                'nama_lokasi_aktif' => $isWfa ? $lokasiWfa : $siteName,
                 'koordinat_lokasi_aktif' => sprintf('%.6f, %.6f', $siteLat, $siteLng),
                 'unit_kerja' => $unitKerja,
+                'di_luar_titik' => (bool) $att->di_luar_titik,
+                'wfa_status' => $att->wfa_status,
+                'wfa_alasan' => $att->wfa_alasan,
                 'selfie_url' => $att->selfieRouteUrl('masuk'),
             ];
         }
@@ -536,7 +593,7 @@ class RekapPresenter
             // karyawan benar-benar absen pulang. Memakai titik masuk membuat
             // absensi sah di titik lain terbaca seperti di luar radius.
             $radiusPulang = null;
-            if ($adaKoordinat && $sitePulang) {
+            if ($adaKoordinat && $sitePulang && ! $isWfa) {
                 $radiusPulang = AdminPresenter::haversineM(
                     (float) $att->lat_out,
                     (float) $att->lng_out,
@@ -545,17 +602,18 @@ class RekapPresenter
                 );
             }
             $pulang = [
-                'jenis_absen' => $adaKoordinat ? 'WFO' : 'Isian manual',
+                'jenis_absen' => $adaKoordinat ? ($isWfa ? 'WFA' : 'WFO') : 'Isian manual',
                 'jam' => Carbon::parse($att->clock_out_at)->format('H:i:s'),
-                'lokasi' => $namaPulang,
+                'lokasi' => $isWfa ? $lokasiWfa : $namaPulang,
                 'timezone' => 'Asia/Makassar',
                 'koordinat' => $adaKoordinat
                     ? sprintf('%.6f, %.6f', (float) $att->lat_out, (float) $att->lng_out)
                     : null,
                 'radius' => $radiusPulang,
-                'nama_lokasi_aktif' => $namaPulang,
+                'nama_lokasi_aktif' => $isWfa ? $lokasiWfa : $namaPulang,
                 'koordinat_lokasi_aktif' => sprintf('%.6f, %.6f', $latPulang, $lngPulang),
                 'unit_kerja' => $unitKerja,
+                'di_luar_titik' => (bool) $att->di_luar_titik_pulang,
                 'catatan' => $att->catatan_pulang,
                 'selfie_url' => $att->selfieRouteUrl('pulang'),
             ];

@@ -111,6 +111,10 @@ class EmployeeRekapController extends Controller
             $tulis(['Dinas', $d['dinas']]);
             $tulis(['Cuti', $d['cuti']]);
             $tulis(['Tanpa keterangan', $d['tanpa_keterangan']]);
+            // Lembur dan WFA adalah angka tersendiri, bukan bagian kehadiran.
+            $tulis(['Lembur disetujui (menit)', $rekap['total_lembur_menit'] ?? 0]);
+            $tulis(['Hari WFA', $rekap['hari_wfa'] ?? 0]);
+            $tulis(['Hari di luar radius titik', $rekap['hari_di_luar_titik'] ?? 0]);
             $tulis([]);
 
             $tulis(['Rincian kehadiran']);
@@ -126,13 +130,29 @@ class EmployeeRekapController extends Controller
             // Kolom Shift hanya muncul untuk pekerja shift, sama seperti di
             // layar dan di PDF, supaya berkas tidak berbeda isi.
             $isShift = (bool) $k['is_shift'];
-            $tulis(array_merge(['Tanggal', 'Hari'], $isShift ? ['Shift'] : [], ['Jam masuk', 'Jam pulang', 'Keterangan', 'Catatan pekerjaan']));
+            $tulis(array_merge(
+                ['Tanggal', 'Hari'],
+                $isShift ? ['Shift'] : [],
+                ['Jenis kerja', 'Jam masuk', 'Jam pulang', 'Lembur (menit)', 'Keterangan', 'Catatan pekerjaan']
+            ));
             foreach ($rekap['harian'] as $hari) {
                 $shift = $hari['is_libur_jadwal'] ? 'Libur' : ($hari['shift'] ?? 'Belum dijadwalkan');
+                $jenisKerja = ($hari['jenis_kerja'] ?? null) === 'WFA'
+                    ? 'WFA'.(! empty($hari['wfa_status']) ? ' ('.$hari['wfa_status'].')' : '')
+                    : (($hari['jenis_kerja'] ?? null) === 'WFO'
+                        ? 'WFO'.(! empty($hari['di_luar_titik']) ? ' - di luar titik' : '')
+                        : '');
                 $tulis(array_merge(
                     [$hari['iso'], $hari['hari']],
                     $isShift ? [$shift] : [],
-                    [$hari['jam_masuk'], $hari['jam_pulang'], (string) ($hari['catatan'] ?? ''), (string) ($hari['catatan_pulang'] ?? '')],
+                    [
+                        $jenisKerja,
+                        $hari['jam_masuk'],
+                        $hari['jam_pulang'],
+                        (int) ($hari['lembur_menit'] ?? 0),
+                        (string) ($hari['catatan'] ?? ''),
+                        (string) ($hari['catatan_pulang'] ?? ''),
+                    ],
                 ));
             }
 

@@ -18,12 +18,23 @@ class Attendance extends Model
         'clock_out_at',
         // Snapshot shift yang berlaku saat absen masuk (null = bukan pekerja shift).
         'shift_ke',
+        // WFO (bawaan) atau WFA. WFA hanya untuk karyawan non-shift.
+        'jenis_kerja',
+        'wfa_alasan',
+        'wfa_status',
+        'wfa_note',
+        'wfa_approved_by',
+        'wfa_approved_at',
         'status',
         'lat_in',
         'lng_in',
         'lat_out',
         'lng_out',
         'distance_in_m',
+        // Absen WFO di luar radius titik terdaftar tetap dicatat, hanya
+        // ditandai (jawaban E6).
+        'di_luar_titik',
+        'di_luar_titik_pulang',
         // CATATAN: kedua kolom ini menyimpan PATH berkas di disk privat
         // (bukan URL publik). URL-nya dibentuk lewat selfieRouteUrl().
         'selfie_url',
@@ -41,6 +52,9 @@ class Attendance extends Model
     {
         return [
             'work_date' => 'date',
+            'di_luar_titik' => 'boolean',
+            'di_luar_titik_pulang' => 'boolean',
+            'wfa_approved_at' => 'datetime',
         ];
     }
 
@@ -99,5 +113,17 @@ class Attendance extends Model
     public function toleranceClaim(): BelongsTo
     {
         return $this->belongsTo(ToleranceClaim::class);
+    }
+
+    /** Admin yang memutuskan pengajuan WFA pada baris absensi ini. */
+    public function wfaApprovedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'wfa_approved_by');
+    }
+
+    /** Apakah baris ini dicatat sebagai kerja dari luar kantor. */
+    public function isWfa(): bool
+    {
+        return $this->jenis_kerja === 'WFA';
     }
 }

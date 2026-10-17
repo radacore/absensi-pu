@@ -12,12 +12,14 @@ use App\Http\Controllers\Admin\EmployeeImportController;
 use App\Http\Controllers\Admin\EmployeeRekapController;
 use App\Http\Controllers\Admin\HolidayController;
 use App\Http\Controllers\Admin\LoveController as AdminLoveController;
+use App\Http\Controllers\Admin\OvertimeController as AdminOvertimeController;
 use App\Http\Controllers\Admin\PengumumanController as AdminPengumumanController;
 use App\Http\Controllers\Admin\RegionController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\ShiftPatternController;
 use App\Http\Controllers\Admin\ShiftScheduleController;
 use App\Http\Controllers\Admin\SiteController;
+use App\Http\Controllers\Admin\WfaController as AdminWfaController;
 use App\Http\Controllers\AttendanceSelfieController;
 use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\Auth\EmployeeAuthController;
@@ -29,8 +31,10 @@ use App\Http\Controllers\Karyawan\DashboardController as KaryawanDashboardContro
 use App\Http\Controllers\Karyawan\DinasController as KaryawanDinasController;
 use App\Http\Controllers\Karyawan\EarlyLeaveController as KaryawanEarlyLeaveController;
 use App\Http\Controllers\Karyawan\LoveController as KaryawanLoveController;
+use App\Http\Controllers\Karyawan\OvertimeController as KaryawanOvertimeController;
 use App\Http\Controllers\Karyawan\PengumumanController as KaryawanPengumumanController;
 use App\Http\Controllers\Karyawan\ProfilController as KaryawanProfilController;
+use App\Http\Controllers\Karyawan\ScheduleController as KaryawanScheduleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -78,6 +82,12 @@ Route::prefix('karyawan')->group(function () {
         Route::post('/absensi/clock-out', [KaryawanAttendanceController::class, 'clockOut'])->name('karyawan.absensi.clock_out');
         Route::get('/rekap', [KaryawanAttendanceController::class, 'rekap'])->name('karyawan.rekap');
         Route::get('/rekap/pdf', [KaryawanAttendanceController::class, 'rekapPdf'])->name('karyawan.rekap.pdf');
+        // Jadwal kerja sendiri (A7): shift 4 minggu atau hari kerja non-shift.
+        Route::get('/jadwal', [KaryawanScheduleController::class, 'index'])->name('karyawan.jadwal');
+        // Lembur (A8): diajukan karyawan, disetujui Admin Wilayah.
+        Route::get('/lembur', [KaryawanOvertimeController::class, 'index'])->name('karyawan.lembur');
+        Route::post('/lembur', [KaryawanOvertimeController::class, 'store'])->name('karyawan.lembur.store');
+        Route::delete('/lembur/{lembur}', [KaryawanOvertimeController::class, 'destroy'])->name('karyawan.lembur.destroy');
         Route::get('/cuti', [KaryawanCutiController::class, 'index'])->name('karyawan.cuti');
         Route::post('/cuti', [KaryawanCutiController::class, 'store'])->name('karyawan.cuti.store');
         Route::delete('/cuti/{cuti}', [KaryawanCutiController::class, 'destroy'])->name('karyawan.cuti.destroy');
@@ -145,6 +155,16 @@ if (! function_exists('adminMasterRoutes')) {
             Route::get('/pulang-cepat', [AdminEarlyLeaveController::class, 'index'])->name("{$label}.pulang-cepat");
             Route::put('/pulang-cepat/{pulangCepat}/approve', [AdminEarlyLeaveController::class, 'approve'])->name("{$label}.pulang-cepat.approve");
             Route::put('/pulang-cepat/{pulangCepat}/reject', [AdminEarlyLeaveController::class, 'reject'])->name("{$label}.pulang-cepat.reject");
+
+            // WFA (C4): pengajuan dibuat karyawan saat absen masuk.
+            Route::get('/wfa', [AdminWfaController::class, 'index'])->name("{$label}.wfa");
+            Route::put('/wfa/{attendance}/approve', [AdminWfaController::class, 'approve'])->name("{$label}.wfa.approve");
+            Route::put('/wfa/{attendance}/reject', [AdminWfaController::class, 'reject'])->name("{$label}.wfa.reject");
+
+            // Lembur (A8): pengajuan dibuat karyawan, disetujui di sini.
+            Route::get('/lembur', [AdminOvertimeController::class, 'index'])->name("{$label}.lembur");
+            Route::put('/lembur/{lembur}/approve', [AdminOvertimeController::class, 'approve'])->name("{$label}.lembur.approve");
+            Route::put('/lembur/{lembur}/reject', [AdminOvertimeController::class, 'reject'])->name("{$label}.lembur.reject");
             Route::get('/dinas', [AdminDinasController::class, 'index'])->name("{$label}.dinas");
             Route::put('/dinas/{dinas}/approve', [AdminDinasController::class, 'approve'])->name("{$label}.dinas.approve");
             Route::put('/dinas/{dinas}/reject', [AdminDinasController::class, 'reject'])->name("{$label}.dinas.reject");

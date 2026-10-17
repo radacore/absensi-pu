@@ -49,6 +49,9 @@ class AttendanceController extends Controller
                 'jarak' => (int) ($a->distance_in_m ?? 0),
                 'selfie' => $a->selfieRouteUrl('masuk'),
                 'shift' => ($pattern && $a->shift_ke) ? $pattern->labelShift((int) $a->shift_ke) : null,
+                'jenisKerja' => $a->jenis_kerja ?: 'WFO',
+                'wfaStatus' => $a->wfa_status,
+                'diLuarTitik' => (bool) $a->di_luar_titik,
             ])->values()->all();
 
         $assigned = $me->site ? [
@@ -187,7 +190,20 @@ class AttendanceController extends Controller
             // Disimpan di disk PRIVAT — hanya bisa dilihat lewat route
             // ber-otorisasi (AttendanceSelfieController), bukan URL publik.
             'selfie' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+            // WFO (bawaan) atau WFA. WFA dipilih karyawan saat absen (C2).
+            'jenis_kerja' => ['nullable', 'in:WFO,WFA'],
+            'wfa_alasan' => ['nullable', 'string', 'max:500', 'required_if:jenis_kerja,WFA'],
         ]);
+
+        $jenisKerja = $data['jenis_kerja'] ?? 'WFO';
+
+        // Pekerja shift bekerja menurut jadwal dan titik yang ditetapkan, jadi
+        // tidak mengenal WFA (C8).
+        if ($jenisKerja === 'WFA' && $me->is_shift) {
+            throw ValidationException::withMessages([
+                'jenis_kerja' => 'Pekerja shift tidak memakai WFA — absen mengikuti jadwal shift.',
+            ]);
+        }
 
         $now = now('Asia/Makassar');
         $settings = AttendanceSetting::first();
@@ -199,9 +215,9 @@ class AttendanceController extends Controller
         $site = $terdekat['site'];
         $dist = $terdekat['jarak'];
 
-        if ($dist > (int) $site->radius_m) {
-            throw ValidationException::withMessages(['distance' => "{$dist} m / {$site->radius_m} m — di luar radius."]);
-        }
+        // WFA: radius kantor tidak berlaku (C1). WFO di luar radius semua titik
+        // terdaftar tetap DICATAT, hanya ditandai (E6) — bukan ditolak.
+        $diLuarTitik = $jenisKerja === 'WFO' && $dist > (int) $site->radius_m;
 
         // Pekerja shift mengikuti jadwal shift; karyawan lain mengikuti jam
         // masuk global. `$shift` berisi rentang shift yang sedang berlaku —
@@ -261,10 +277,15 @@ class AttendanceController extends Controller
                 'work_date' => $workDate,
                 'clock_in_at' => $now->format('H:i:s'),
                 'shift_ke' => $shiftKe,
+                'jenis_kerja' => $jenisKerja,
+                'wfa_alasan' => $jenisKerja === 'WFA' ? $data['wfa_alasan'] : null,
+                // WFA dicatat dulu, persetujuan menyusul (C4).
+                'wfa_status' => $jenisKerja === 'WFA' ? 'Menunggu' : null,
                 'status' => $status,
                 'lat_in' => $data['lat'],
                 'lng_in' => $data['lng'],
                 'distance_in_m' => $dist,
+                'di_luar_titik' => $diLuarTitik,
                 'selfie_url' => $selfiePath,
                 'site_id' => $site->id,
                 'region_id' => $me->region_id,
@@ -286,6 +307,12 @@ class AttendanceController extends Controller
         if ($shift) {
             $pesan = 'Absen tercatat — '.$shift['pattern']->labelShift($shiftKe)
                 .($status === 'late' ? ' • Terlambat' : ' • Tepat waktu');
+        }
+
+        if ($jenisKerja === 'WFA') {
+            $pesan = 'Absen WFA tercatat — menunggu persetujuan atasan.';
+        } elseif ($diLuarTitik) {
+            $pesan .= " • Di luar radius ({$dist} m), tetap dicatat dan ditandai.";
         }
 
         return back()->with('success', $pesan);
@@ -341,48 +368,59 @@ class AttendanceController extends Controller
         //   boleh_pindah_titik = mati → hanya titik tempat ia absen masuk;
         //   boleh_pindah_titik = hidup → titik terdaftar mana pun.
         // Titik tetap ditentukan server dari koordinat yang dikirim.
-        $titikMasuk = $row->site_id ? Site::find($row->site_id) : null;
+        //
+        // WFA tidak terikat titik kantor (C1), jadi pemeriksaan radius dilewati
+        // sama sekali. Absen WFO di luar radius tetap dicatat dan ditandai
+        // (E6), tidak lagi ditolak.
+        $siteKeluar = null;
+        $diLuarTitikPulang = false;
 
-        if ($titikMasuk !== null && ! $me->boleh_pindah_titik) {
-            $siteKeluar = $titikMasuk;
-            $dist = AdminPresenter::haversineM(
-                (float) $data['lat'],
-                (float) $data['lng'],
-                (float) $titikMasuk->lat,
-                (float) $titikMasuk->lng
-            );
+        if (! $row->isWfa()) {
+            $titikMasuk = $row->site_id ? Site::find($row->site_id) : null;
 
-            if ($dist > (int) $titikMasuk->radius_m) {
-                throw ValidationException::withMessages([
-                    'distance' => "{$dist} m / {$titikMasuk->radius_m} m — di luar radius titik masuk ({$titikMasuk->nama_lokasi}). Absen pulang hanya boleh di titik tempat Anda absen masuk.",
-                ]);
-            }
-        } else {
-            if ($titikMasuk === null) {
-                // Titik masuknya sudah dihapus admin di tengah hari. Acuan jarak
-                // tidak ada lagi, jadi untuk hari itu karyawan boleh pulang di
-                // titik terdaftar mana pun — lebih baik daripada terkunci
-                // tidak bisa absen pulang. Kejadiannya tetap tercatat.
-                Audit::log(
-                    'attendance.clock_out_titik_hilang',
-                    subject: $row,
-                    label: $me->name,
-                    description: 'Absen pulang dilonggarkan karena titik masuk sudah dihapus',
-                    meta: ['employee_id' => $me->id, 'site_id' => $row->site_id]
+            if ($titikMasuk !== null && ! $me->boleh_pindah_titik) {
+                $siteKeluar = $titikMasuk;
+                $dist = AdminPresenter::haversineM(
+                    (float) $data['lat'],
+                    (float) $data['lng'],
+                    (float) $titikMasuk->lat,
+                    (float) $titikMasuk->lng
                 );
-            }
 
-            $terdekat = $this->titikTerdekat(
-                $me,
-                (float) $data['lat'],
-                (float) $data['lng'],
-                $titikMasuk !== null ? [$titikMasuk] : []
-            );
-            $siteKeluar = $terdekat['site'];
-            $dist = $terdekat['jarak'];
+                // Izin pindah titik mati berarti karyawan hanya boleh pulang
+                // di titik tempat ia absen masuk. Ini aturan tersendiri,
+                // terpisah dari E6: titiknya tetap titik terdaftar, hanya
+                // posisinya yang jauh dari titik itu.
+                if ($dist > (int) $titikMasuk->radius_m) {
+                    throw ValidationException::withMessages([
+                        'distance' => 'Absen pulang harus di titik tempat Anda absen masuk ('.$titikMasuk->nama_lokasi.'). '
+                            .'Minta Admin Wilayah mengaktifkan izin pindah titik bila memang perlu pulang dari titik lain.',
+                    ]);
+                }
+            } else {
+                if ($titikMasuk === null) {
+                    // Titik masuknya sudah dihapus admin di tengah hari. Acuan
+                    // jarak tidak ada lagi, jadi untuk hari itu karyawan boleh
+                    // pulang di titik terdaftar mana pun. Kejadiannya tetap
+                    // tercatat.
+                    Audit::log(
+                        'attendance.clock_out_titik_hilang',
+                        subject: $row,
+                        label: $me->name,
+                        description: 'Absen pulang dilonggarkan karena titik masuk sudah dihapus',
+                        meta: ['employee_id' => $me->id, 'site_id' => $row->site_id]
+                    );
+                }
 
-            if ($dist > (int) $siteKeluar->radius_m) {
-                throw ValidationException::withMessages(['distance' => "{$dist} m / {$siteKeluar->radius_m} m — di luar radius."]);
+                $terdekat = $this->titikTerdekat(
+                    $me,
+                    (float) $data['lat'],
+                    (float) $data['lng'],
+                    $titikMasuk !== null ? [$titikMasuk] : []
+                );
+                $siteKeluar = $terdekat['site'];
+                $dist = $terdekat['jarak'];
+                $diLuarTitikPulang = $dist > (int) $siteKeluar->radius_m;
             }
         }
 
@@ -398,10 +436,18 @@ class AttendanceController extends Controller
             'lng_out' => $data['lng'],
             'selfie_pulang_url' => $pulangPath,
             'catatan_pulang' => $data['catatan_pulang'],
-            'site_out_id' => $siteKeluar->id,
+            'site_out_id' => $siteKeluar?->id,
+            'di_luar_titik_pulang' => $diLuarTitikPulang,
         ]);
 
-        return back()->with('success', 'Absen pulang tercatat');
+        $pesan = 'Absen pulang tercatat';
+        if ($row->isWfa()) {
+            $pesan .= ' — WFA';
+        } elseif ($diLuarTitikPulang) {
+            $pesan .= ' — di luar radius titik, tetap dicatat dan ditandai';
+        }
+
+        return back()->with('success', $pesan);
     }
 
     /**

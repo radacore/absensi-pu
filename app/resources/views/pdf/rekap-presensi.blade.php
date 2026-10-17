@@ -98,6 +98,9 @@
     // Kelompok baris harian per minggu supaya jadwal shift mudah dibaca.
     $hariKerjaShift = collect($harian)->filter(fn ($h) => $h['is_shift'] && $h['shift_ke'] !== null)->count();
     $hariLiburJadwal = collect($harian)->filter(fn ($h) => $h['is_shift'] && $h['shift_ke'] === null && $h['shift'] === null && $h['catatan'] === 'Libur (jadwal shift)')->count();
+    $lemburJam = intdiv((int) $lemburMenit, 60);
+    $lemburSisa = ((int) $lemburMenit) % 60;
+    $lemburTeks = trim(($lemburJam ? $lemburJam.' jam' : '').($lemburSisa ? ' '.$lemburSisa.' menit' : '')) ?: '—';
 @endphp
 
 {{-- ── Kop ──────────────────────────────────────────────────────────── --}}
@@ -206,6 +209,10 @@
                         <tr><td>Tanpa keterangan</td><td class="v">{{ $d['tanpa_keterangan'] }}</td></tr>
                         <tr><td>Cuti</td><td class="v">{{ $d['cuti'] }}</td></tr>
                         <tr><td>Dinas</td><td class="v">{{ $d['dinas'] }}</td></tr>
+                        {{-- WFA dan lembur bukan bagian distribusi kehadiran. --}}
+                        <tr><td>Hari WFA</td><td class="v">{{ $hariWfa }}</td></tr>
+                        <tr><td>Hari di luar radius titik</td><td class="v">{{ $hariDiLuarTitik }}</td></tr>
+                        <tr><td>Lembur disetujui</td><td class="v">{{ $lemburTeks }}</td></tr>
                         @if ($k['is_shift'])
                             <tr><td>Pulang cepat (disetujui)</td><td class="v">{{ $adaPulangCepat ? 'Ada' : '—' }}</td></tr>
                         @endif
@@ -345,6 +352,10 @@
             @endforeach
         </tbody>
     </table>
+    <p class="small muted" style="margin-top: 4px;">
+        Tanda &ldquo;WFA&rdquo;, &ldquo;di luar titik&rdquo;, dan &ldquo;Lembur &hellip; menit&rdquo; pada kolom
+        keterangan berasal dari pengajuan yang sudah disetujui dan dihitung terpisah dari kehadiran.
+    </p>
 </div>
 
 {{-- ── Detail harian (kartu per hari + swafoto) ────────────────────── --}}

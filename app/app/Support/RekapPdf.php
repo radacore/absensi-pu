@@ -64,6 +64,11 @@ class RekapPdf
             'totalKeterlambatan' => $rekap['total_keterlambatan'],
             'totalPsw' => $rekap['total_psw'],
             'adaPulangCepat' => $rekap['ada_pulang_cepat'],
+            // Lembur dan WFA adalah angka tersendiri, tidak digabung ke
+            // distribusi kehadiran (A8, C4).
+            'lemburMenit' => $rekap['total_lembur_menit'] ?? 0,
+            'hariWfa' => $rekap['hari_wfa'] ?? 0,
+            'hariDiLuarTitik' => $rekap['hari_di_luar_titik'] ?? 0,
             'logoSrc' => self::logoSrc(),
             'tanggalCetak' => self::tanggalCetak(),
             'trenMasukImg' => TrenJamSvg::dataUri($rekap['tren'], 'masuk', $s),
