@@ -33,7 +33,7 @@
 <table class="meta">
   <tr><td class="k">Berlaku untuk</td><td>Super Admin, Admin Wilayah, dan Karyawan</td></tr>
   <tr><td class="k">Alamat aplikasi</td><td>https://siappomjen.id</td></tr>
-  <tr><td class="k">Versi dokumen</td><td>1.0, Oktober 2026</td></tr>
+  <tr><td class="k">Versi dokumen</td><td>1.1, Oktober 2026</td></tr>
   <tr><td class="k">Disusun oleh</td><td>Rahmat Dani S</td></tr>
 </table>
 
@@ -175,7 +175,9 @@
   <thead><tr><th style="width:36mm">Istilah</th><th>Artinya</th></tr></thead>
   <tbody>
     <tr><td><strong>Titik absen</strong></td><td>Lokasi resmi tempat absen boleh dilakukan, ditandai dengan titik di peta dan radius tertentu. Setiap karyawan punya satu titik utama, dan boleh ditambah titik lain di wilayah yang sama.</td></tr>
-    <tr><td><strong>Radius</strong></td><td>Jarak maksimal dari titik absen yang masih diterima, antara 50 dan 1000 meter. Di luar jarak itu, absen ditolak.</td></tr>
+    <tr><td><strong>Radius</strong></td><td>Jarak maksimal dari titik absen yang masih dianggap di dalam titik, antara 50 dan 1000 meter. Di luar jarak itu, absen masuk tetap tercatat tetapi diberi tanda <strong>di luar radius titik</strong> untuk ditinjau admin.</td></tr>
+    <tr><td><strong>WFA</strong></td><td>Bekerja dari luar kantor, dipilih karyawan saat absen masuk disertai alasan. Radius tidak menjadi syarat, tetapi absennya menunggu persetujuan Admin Wilayah.</td></tr>
+    <tr><td><strong>Lembur</strong></td><td>Jam kerja tambahan di luar jadwal, diajukan terpisah dari absensi dan dihitung tersendiri pada rekap setelah disetujui.</td></tr>
     <tr><td><strong>Izin pulang lintas titik</strong></td><td>Izin per karyawan untuk absen pulang di titik terdaftar yang berbeda dari titik masuk. Bawaannya mati, jadi pulang hanya bisa di titik tempat ia masuk.</td></tr>
     <tr><td><strong>Jam masuk dan jam pulang</strong></td><td>Acuan waktu kerja untuk pekerja bukan shift, diatur di Pengaturan.</td></tr>
     <tr><td><strong>Kelonggaran</strong></td><td>Jumlah menit setelah jam masuk yang masih dianggap tepat waktu, antara 0 dan 60 menit.</td></tr>
@@ -185,7 +187,7 @@
     <tr><td><strong>Toleransi</strong></td><td>Klaim saat lupa absen datang atau lupa absen pulang. Jumlahnya dibatasi per bulan.</td></tr>
     <tr><td><strong>Pulang cepat</strong></td><td>Izin pulang sebelum jam selesai, diajukan sebelum absen pulang.</td></tr>
     <tr><td><strong>Dinas</strong></td><td>Perjalanan tugas ke luar titik absen, dibuktikan dengan surat tugas yang diunggah.</td></tr>
-    <tr><td><strong>Rekap</strong></td><td>Ringkasan kehadiran satu bulan: hadir, terlambat, cuti, dinas, dan hari tanpa keterangan.</td></tr>
+    <tr><td><strong>Rekap</strong></td><td>Ringkasan kehadiran satu bulan: hadir, terlambat, cuti, dinas, hari tanpa keterangan, hari WFA, hari di luar radius titik, dan lembur disetujui.</td></tr>
   </tbody>
 </table>
 
@@ -193,14 +195,14 @@
 
 <div class="key">
   <div class="t">Yang berlaku saat ini</div>
-  <p>Satu karyawan boleh terdaftar di <strong>beberapa titik absen dalam satu wilayah</strong>. Saat absen, aplikasi memilih titik terdekat dari posisi ponsel secara otomatis. Bila jaraknya melebihi radius titik terdekat, absen ditolak dan muncul pesan <em>di luar radius</em> beserta nama titiknya.</p>
+  <p>Satu karyawan boleh terdaftar di <strong>beberapa titik absen dalam satu wilayah</strong>. Saat absen, aplikasi memilih titik terdekat dari posisi ponsel secara otomatis. Bila jaraknya melebihi radius semua titik, absen masuk tetap tercatat dan diberi tanda <em>di luar radius titik</em>, bukan ditolak. Admin Wilayah dapat meninjaunya dari rekap.</p>
 </div>
 
 <p>Karyawan yang bekerja di lebih dari satu tempat, misalnya kantor dan lokasi proyek, tidak perlu dipindah-pindahkan setiap hari. Admin cukup menambahkan titik lain satu kali.</p>
 
 <div class="key">
   <div class="t">Pulang di titik berbeda perlu izin</div>
-  <p>Bawaannya, absen pulang hanya diterima di <strong>titik tempat karyawan absen masuk</strong>. Izin pulang di titik lain diberikan admin per karyawan, dan tetap terbatas pada titik yang terdaftar untuk karyawan itu. Jadi tidak ada absen di sembarang tempat.</p>
+  <p>Bawaannya, absen pulang hanya diterima di <strong>titik tempat karyawan absen masuk</strong>. Izin pulang di titik lain diberikan admin per karyawan, dan tetap terbatas pada titik yang terdaftar untuk karyawan itu. Jadi tidak ada absen di sembarang tempat. Dengan izin itu, bila posisinya di luar radius semua titik, absen pulang tetap tercatat dan diberi tanda <strong>di luar radius titik</strong>.</p>
 </div>
 
 <div class="note">
@@ -301,7 +303,7 @@
   <thead><tr><th style="width:56mm">Pesan</th><th>Artinya</th><th>Yang perlu dilakukan</th></tr></thead>
   <tbody>
     <tr><td><em>Belum ada titik absensi</em></td><td>Akun karyawan belum dihubungkan ke titik absen mana pun.</td><td>Hubungi Admin Wilayah agar karyawan dimasukkan ke titik yang benar.</td></tr>
-    <tr><td><em>... m / ... m, di luar radius</em></td><td>Posisi ponsel lebih jauh dari radius titik terdekat.</td><td>Dekatkan diri ke salah satu titik yang terdaftar, atau ajukan dinas bila sedang bertugas di tempat lain.</td></tr>
+    <tr><td><em>... m / ... m, di luar radius</em></td><td>Posisi ponsel lebih jauh dari radius titik terdekat.</td><td>Absen masuk tetap tercatat dan ditandai. Dekatkan diri ke salah satu titik bila memungkinkan, atau pilih WFA bila memang bekerja dari luar kantor.</td></tr>
     <tr><td><em>Lokasi belum siap, aktifkan GPS</em></td><td>Ponsel belum memberikan posisi.</td><td>Nyalakan lokasi, keluar ke area terbuka, lalu muat ulang halaman.</td></tr>
     <tr><td><em>Gagal membaca GPS</em></td><td>Izin lokasi ditolak atau sinyal tidak memadai.</td><td>Izinkan lokasi untuk situs ini di pengaturan peramban.</td></tr>
     <tr><td><em>Ambil foto selfie dulu</em></td><td>Absen memerlukan swafoto langsung dari kamera.</td><td>Tekan tombol kamera dan ambil foto saat itu, bukan dari galeri.</td></tr>
@@ -320,8 +322,8 @@
   <thead><tr><th style="width:30mm">Peran</th><th style="width:42mm">Alamat</th><th>Kewenangan pokok</th></tr></thead>
   <tbody>
     <tr><td><strong>Super Admin</strong></td><td><span class="url">/super-admin</span></td><td>Seluruh wilayah, pengaturan global, hari libur, akun admin wilayah, dan catatan audit.</td></tr>
-    <tr><td><strong>Admin Wilayah</strong></td><td><span class="url">/admin</span></td><td>Satu wilayah saja: titik absen, karyawan, persetujuan, jadwal shift. Pengaturan hanya bisa dilihat.</td></tr>
-    <tr><td><strong>Karyawan</strong></td><td><span class="url">/karyawan</span></td><td>Absen harian, pengajuan cuti, toleransi, pulang cepat, dinas, rekap, dan profil sendiri.</td></tr>
+    <tr><td><strong>Admin Wilayah</strong></td><td><span class="url">/admin</span></td><td>Satu wilayah saja: titik absen, karyawan, persetujuan termasuk WFA dan lembur, jadwal shift. Pengaturan hanya bisa dilihat.</td></tr>
+    <tr><td><strong>Karyawan</strong></td><td><span class="url">/karyawan</span></td><td>Absen harian termasuk WFA, melihat jadwal, pengajuan cuti, toleransi, pulang cepat, dinas, lembur, rekap, dan profil sendiri.</td></tr>
   </tbody>
 </table>
 
@@ -341,7 +343,7 @@
 </table>
 
 <div class="end">
-  <p><strong>Panduan Umum, versi 1.0.</strong> Disusun oleh Rahmat Dani S, Oktober 2026. Berkas ini menjelaskan aplikasi sebagaimana berjalan pada tanggal tersebut. Bila ada perubahan menu atau aturan, panduan akan diperbarui.</p>
+  <p><strong>Panduan Umum, versi 1.1.</strong> Disusun oleh Rahmat Dani S, Oktober 2026. Berkas ini menjelaskan aplikasi sebagaimana berjalan pada tanggal tersebut. Bila ada perubahan menu atau aturan, panduan akan diperbarui.</p>
 </div>
 
 </body>

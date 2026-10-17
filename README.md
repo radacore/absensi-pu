@@ -1,10 +1,10 @@
 # BBWS Pompengan Jeneberang — Absensi & HR
 
-Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pusat di **Makassar** + kantor wilayah se-Sulawesi Selatan — dengan portal HR multi-tenant dan **PWA Karyawan** (login email, absensi GPS + selfie dengan radius kantor, *love system*, cuti berjenjang, rekap bulanan, pengumuman, dan pengajuan **perjalanan dinas** dengan unggah dokumen).
+Aplikasi kepegawaian **Balai Besar Wilayah Sungai Pompengan Jeneberang** — pusat di **Makassar** + kantor wilayah se-Sulawesi Selatan — dengan portal HR multi-tenant dan **PWA Karyawan** (login email, absensi GPS + selfie dengan radius kantor dan penandaan absen di luar radius, **WFA** dengan persetujuan, *love system*, cuti berjenjang, **lembur** terpisah dari absensi, jadwal kerja, rekap bulanan, pengumuman, dan pengajuan **perjalanan dinas** dengan unggah dokumen).
 
-> **Status dokumen ini:** seluruh versi, jumlah tabel, jumlah route, dan perilaku penyimpanan di bawah **sudah diverifikasi langsung dari kode dan dari basis data yang berjalan**. Angka-angka di bagian [Basis Data](#basis-data-mysql--mariadb) berasal dari verifikasi 20 Sep 2026; jumlah berkas migrasi/seeder/tabel/route/tes di bawah sudah dihitung ulang pada 15 Okt 2026.
+> **Status dokumen ini:** seluruh versi, jumlah tabel, jumlah route, dan perilaku penyimpanan di bawah **sudah diverifikasi langsung dari kode dan dari basis data yang berjalan**. Angka-angka di bagian [Basis Data](#basis-data-mysql--mariadb) berasal dari verifikasi 20 Sep 2026; jumlah berkas migrasi/seeder/tabel/route/tes di bawah sudah dihitung ulang pada 18 Okt 2026.
 >
-> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **35 berkas migrasi + 8 seeder**, **24 tabel**, **231 route**, dan **327 tes (322 lulus, 5 di-skip)**. Simulasi HTTP nyata **68/68 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
+> Basis data **sudah benar-benar pindah ke MySQL/MariaDB** — bukan lagi rencana. Bukti eksekusi ada di bagian [Basis Data](#basis-data-mysql--mariadb): **42 berkas migrasi + 8 seeder**, **25 tabel**, **272 route**, dan **423 tes (418 lulus, 5 di-skip)**. Simulasi HTTP nyata **68/68 lulus**. Bagian yang belum bisa diuji tanpa server produksi tetap ditandai **[BELUM DIVERIFIKASI]**.
 >
 > Laporan simulasi end-to-end lengkap (6 celah keamanan yang ditemukan & diperbaiki, plus 13 temuan tambahan): **[`docs/laporan-simulasi.md`](docs/laporan-simulasi.md)**.
 >
@@ -208,8 +208,22 @@ Satu karyawan boleh terdaftar di beberapa titik absen, tetapi semuanya **dalam s
 | :--- | :--- |
 | Titik pulang | Bawaannya hanya titik tempat absen masuk. Boleh di titik terdaftar lain bila `employees.boleh_pindah_titik` dinyalakan admin untuk orang itu. |
 | Titik masuk hilang | Bila titik masuk dihapus di tengah hari, absen pulang dilonggarkan untuk hari itu dan dicatat sebagai `attendance.clock_out_titik_hilang` di audit log. |
-| Radius | 200 meter untuk semua titik (`radius_m`), dapat diubah per titik lewat halaman Wilayah. |
+| Radius | 200 meter untuk semua titik (`radius_m`), dapat diubah per titik lewat halaman Wilayah. Absen di luar semua radius **tetap dicatat** dan ditandai `di_luar_titik` / `di_luar_titik_pulang`, bukan ditolak. |
 | Lintas wilayah | Sengaja tidak didukung. Titik selalu ditentukan admin wilayah pemilik titik, jadi tidak ada pilihan "bebas wilayah" bagi karyawan. |
+
+### 8. WFA dan lembur (18 Okt 2026)
+
+WFA (bekerja dari luar kantor) dipilih karyawan saat absen masuk, dan lembur diajukan terpisah dari absensi. Keduanya butuh persetujuan Admin Wilayah.
+
+| Aspek | Aturan |
+| :--- | :--- |
+| Kolom WFA | `attendances.jenis_kerja` (`WFO`/`WFA`), `wfa_alasan`, `wfa_status` (`Menunggu`/`Disetujui`/`Ditolak`), `wfa_note`, `wfa_approved_by`, `wfa_approved_at`. |
+| Syarat WFA | Alasan wajib. Radius dilewati, tetapi koordinat dan swafoto tetap dicatat. Tidak ada kuota bulanan. Pekerja shift (`is_shift`) tidak boleh memakai WFA. |
+| Menolak WFA | Absen tidak dihapus dan tetap dihitung hadir; hanya status dan catatannya yang berubah. |
+| Tabel lembur | `overtime_claims` (`employee_id`, `region_id`, `site_id`, `tanggal`, `jam_mulai`, `jam_selesai`, `menit`, `keterangan`, `approver_id`, `status`, `note`, `approved_by`, `approved_at`). |
+| Batas lembur | 15 menit sampai 720 menit per pengajuan, boleh melewati tengah malam, satu pengajuan menunggu per tanggal, tanggal mundur maksimal 30 hari. |
+| Pengaruh ke rekap | Lembur disetujui tampil sebagai angka tersendiri (`total_lembur_menit`) dan keterangan per tanggal; tidak mengubah angka Hadir/Terlambat. |
+| Rekap | Ringkasan tambahan: `hari_wfa`, `hari_di_luar_titik`, `total_lembur_menit`. CSV menambah kolom `Jenis kerja` dan `Lembur (menit)`; PDF menampilkan tiga baris ringkasan itu. |
 
 ---
 

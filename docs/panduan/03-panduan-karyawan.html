@@ -26,16 +26,16 @@
 <div class="band">
   <div class="eyebrow">Panduan Pengguna</div>
   <h1>Panduan Karyawan</h1>
-  <p class="sub">Absen harian dari ponsel, mengajukan cuti, toleransi, pulang cepat, dan dinas, lalu memeriksa rekap kehadiran sendiri.</p>
+  <p class="sub">Absen harian dari ponsel, bekerja dari luar kantor, melihat jadwal, mengajukan cuti dan lembur, lalu memeriksa rekap kehadiran sendiri.</p>
   <span class="role">Karyawan</span>
 </div>
 
 <table class="meta">
   <tr><td class="k">Peran</td><td>Karyawan</td></tr>
   <tr><td class="k">Alamat aplikasi</td><td>https://siappomjen.id/karyawan</td></tr>
-  <tr><td class="k">Jumlah halaman</td><td>8 menu utama, ditambah halaman Rekap</td></tr>
+  <tr><td class="k">Jumlah halaman</td><td>8 menu utama, ditambah halaman Jadwal, Lembur, dan Rekap</td></tr>
   <tr><td class="k">Perlu izin ponsel</td><td>Lokasi dan kamera</td></tr>
-  <tr><td class="k">Versi dokumen</td><td>1.0, Oktober 2026</td></tr>
+  <tr><td class="k">Versi dokumen</td><td>1.1, Oktober 2026</td></tr>
   <tr><td class="k">Disusun oleh</td><td>Rahmat Dani S</td></tr>
 </table>
 
@@ -52,14 +52,16 @@
     <li><a href="#s4">Beranda</a></li>
     <li><a href="#s5">Absen masuk</a></li>
     <li><a href="#s6">Absen pulang</a></li>
-    <li><a href="#s7">Rekap bulanan</a></li>
-    <li><a href="#s8">Cuti</a></li>
-    <li><a href="#s9">Toleransi</a></li>
-    <li><a href="#s10">Pulang cepat</a></li>
-    <li><a href="#s11">Dinas</a></li>
-    <li><a href="#s12">Info dan pengumuman</a></li>
-    <li><a href="#s13">Profil dan kata sandi</a></li>
-    <li><a href="#s14">Jika ada masalah</a></li>
+    <li><a href="#s7">Jadwal kerja</a></li>
+    <li><a href="#s8">Lembur</a></li>
+    <li><a href="#s9">Rekap bulanan</a></li>
+    <li><a href="#s10">Cuti</a></li>
+    <li><a href="#s11">Toleransi</a></li>
+    <li><a href="#s12">Pulang cepat</a></li>
+    <li><a href="#s13">Dinas</a></li>
+    <li><a href="#s14">Info dan pengumuman</a></li>
+    <li><a href="#s15">Profil dan kata sandi</a></li>
+    <li><a href="#s16">Jika ada masalah</a></li>
   </ol>
 </div>
 
@@ -69,6 +71,9 @@
   <thead><tr><th style="width:52mm">Pekerjaan</th><th>Halaman</th><th>Perlu persetujuan</th></tr></thead>
   <tbody>
     <tr><td>Absen masuk dan pulang</td><td>Absensi</td><td>Tidak</td></tr>
+    <tr><td>Bekerja dari luar kantor (WFA)</td><td>Absensi</td><td>Ya, sesudah absen</td></tr>
+    <tr><td>Melihat jadwal kerja</td><td>Jadwal</td><td>Tidak</td></tr>
+    <tr><td>Mengajukan lembur</td><td>Lembur</td><td>Ya, satu level</td></tr>
     <tr><td>Melihat rekap dan mengunduh PDF</td><td>Rekap</td><td>Tidak</td></tr>
     <tr><td>Mengajukan cuti</td><td>Cuti</td><td>Ya, bertingkat</td></tr>
     <tr><td>Klaim lupa absen</td><td>Toleransi</td><td>Ya, satu level</td></tr>
@@ -81,13 +86,15 @@
 
 <h2 id="s2"><span class="num">2</span>Peta menu</h2>
 
-<p>Semua alamat diawali <span class="url">https://siappomjen.id</span>. Menu tampil di bagian bawah layar pada ponsel. Halaman Rekap tidak berada di menu bawah, melainkan dibuka dari pintasan pada Beranda.</p>
+<p>Semua alamat diawali <span class="url">https://siappomjen.id</span>. Menu tampil di bagian bawah layar pada ponsel. Tiga halaman, yaitu <strong>Jadwal</strong>, <strong>Lembur</strong>, dan <strong>Rekap</strong>, tidak berada di menu bawah, melainkan dibuka dari pintasan pada Beranda.</p>
 
 <table class="grid compact">
   <thead><tr><th style="width:32mm">Menu</th><th style="width:52mm">Alamat</th><th>Kegunaan</th></tr></thead>
   <tbody>
     <tr><td>Beranda</td><td><span class="url">/karyawan</span></td><td>Ringkasan hari ini dan pintasan absen.</td></tr>
-    <tr><td>Absensi</td><td><span class="url">/karyawan/absensi</span></td><td>Absen masuk dan pulang.</td></tr>
+    <tr><td>Absensi</td><td><span class="url">/karyawan/absensi</span></td><td>Absen masuk dan pulang, termasuk pilihan WFA.</td></tr>
+    <tr><td>Jadwal</td><td><span class="url">/karyawan/jadwal</span></td><td>Jadwal shift atau hari kerja Anda. Dibuka dari Beranda.</td></tr>
+    <tr><td>Lembur</td><td><span class="url">/karyawan/lembur</span></td><td>Pengajuan dan riwayat lembur. Dibuka dari Beranda.</td></tr>
     <tr><td>Rekap</td><td><span class="url">/karyawan/rekap</span></td><td>Rekap bulanan dan unduh PDF. Dibuka dari Beranda.</td></tr>
     <tr><td>Cuti</td><td><span class="url">/karyawan/cuti</span></td><td>Pengajuan dan riwayat cuti.</td></tr>
     <tr><td>Toleransi</td><td><span class="url">/karyawan/love</span></td><td>Klaim lupa absen datang atau pulang.</td></tr>
@@ -125,6 +132,8 @@
 
 <p>Beranda menampilkan ringkasan keadaan hari ini: apakah Anda sudah absen masuk, jam berapa, serta pintasan menuju halaman absensi. Dari sini Anda juga dapat melihat pengumuman terbaru dan pengajuan yang masih menunggu persetujuan.</p>
 
+<p>Dua kartu tambahan membuka halaman yang tidak ada di menu bawah: <strong>Jadwal Kerja</strong> untuk melihat jadwal shift atau hari kerja Anda, dan <strong>Lembur</strong> untuk mengajukan serta memantau lembur.</p>
+
 <ol class="steps">
   <li>Periksa daftar titik absensi Anda dan radius masing-masing.</li>
   <li>Bila belum absen, tekan pintasan <strong>Absensi</strong>.</li>
@@ -134,11 +143,12 @@
 <h2 id="s5"><span class="num">5</span>Absen masuk</h2>
 <p class="path">/karyawan/absensi</p>
 
-<p>Absen masuk memerlukan tiga hal sekaligus: posisi ponsel di dalam radius salah satu titik absensi Anda, swafoto langsung dari kamera, dan koneksi internet. Bila salah satu tidak terpenuhi, absen tidak dikirim.</p>
+<p>Absen masuk memerlukan swafoto langsung dari kamera dan koneksi internet. Posisi ponsel menentukan titik absensi yang dipakai: bila Anda berada di dalam radius salah satu titik, titik itu yang tercatat. Bila Anda berada di luar semua radius, absen tetap tercatat dan diberi keterangan <strong>di luar radius titik</strong>, lalu Admin Wilayah dapat meninjaunya.</p>
 
 <ol class="steps">
   <li>Buka menu <strong>Absensi</strong>. Halaman menampilkan seluruh titik absensi Anda, radius, serta jarak ponsel ke tiap titik.</li>
-  <li>Aplikasi memilih titik terdekat otomatis. Pastikan jarak ke titik itu tidak melebihi radiusnya.</li>
+  <li>Aplikasi memilih titik terdekat otomatis. Periksa jaraknya. Bila melebihi radius, absen masih bisa dikirim, tetapi akan ditandai.</li>
+  <li>Pilih jenis kerja: <strong>Di kantor</strong> atau <strong>Di luar kantor</strong>. Untuk WFA, tuliskan alasannya.</li>
   <li>Tekan tombol <strong>Absen Masuk</strong>.</li>
   <li>Ambil swafoto saat itu juga. Foto dari galeri tidak diterima.</li>
   <li>Tunggu sampai muncul konfirmasi bahwa absen tercatat.</li>
@@ -157,6 +167,11 @@
   <p>Setelah absen masuk tercatat, tombol absen masuk tidak berlaku lagi untuk hari itu. Bila Anda merasa absen tidak tercatat padahal sudah menekan tombol, jangan mengulang berulang kali. Periksa di halaman Rekap, lalu gunakan klaim toleransi bila memang tidak ada catatannya.</p>
 </div>
 
+<h3>Bekerja dari luar kantor (WFA)</h3>
+<p>Bila hari itu Anda bekerja dari rumah atau tempat lain di luar kantor, pilih <strong>Di luar kantor</strong> sebelum menekan Absen Masuk, lalu tuliskan alasan singkat. Posisi dan swafoto tetap diminta, tetapi radius titik tidak lagi menjadi syarat. Absen WFA tercatat lebih dulu, lalu menunggu persetujuan Admin Wilayah. Selama masih menunggu, rekap menampilkan tanda <strong>WFA (Menunggu)</strong>.</p>
+
+<p>WFA tidak memakai kuota bulanan. Pekerja shift tidak memakai WFA karena jam kerjanya sudah diatur lewat jadwal shift.</p>
+
 <h3>Absen di hari libur</h3>
 <p>Pada hari libur atau di luar hari kerja, absen dapat ditolak dengan pesan bahwa hari tersebut libur. Bila Anda memang dijadwalkan bekerja, hal ini biasanya sudah diatur lewat jadwal shift. Bila tetap tidak bisa absen, hubungi Admin Wilayah.</p>
 
@@ -166,7 +181,7 @@
 
 <div class="key">
   <div class="t">Titik mana yang bisa dipakai untuk pulang</div>
-  <p>Bawaannya, absen pulang hanya diterima di <strong>titik tempat Anda absen masuk</strong>. Bila pekerjaan Anda memang berpindah tempat dalam satu hari, admin dapat memberi izin pulang di titik lain. Izin itu tetap terbatas pada titik yang terdaftar untuk Anda, dan posisinya harus di dalam radius titik tersebut. Bila izin belum diberikan, layar Absensi menandai titik pulang yang berlaku.</p>
+  <p>Bawaannya, absen pulang hanya diterima di <strong>titik tempat Anda absen masuk</strong>. Bila Anda berada jauh dari titik itu, absen pulang ditolak dan Anda diminta menghubungi Admin Wilayah. Bila pekerjaan Anda memang berpindah tempat dalam satu hari, admin dapat memberi izin pulang di titik lain. Dengan izin itu, titik terdaftar terdekat yang dipakai; bila Anda di luar semua radius, absen tetap tercatat dan diberi keterangan <strong>di luar radius titik</strong>. Izin tetap terbatas pada titik yang terdaftar untuk Anda.</p>
 </div>
 
 <ol class="steps">
@@ -183,10 +198,48 @@
   <p>Sebelum jam selesai, tombol absen pulang menolak dengan pesan belum waktunya pulang. Bila Anda memang harus pulang lebih awal, ajukan <strong>Pulang Cepat</strong> lebih dulu, lalu tunggu persetujuan. Setelah disetujui, absen pulang dapat dilakukan.</p>
 </div>
 
-<h2 id="s7"><span class="num">7</span>Rekap bulanan</h2>
+<h2 id="s7"><span class="num">7</span>Jadwal kerja</h2>
+<p class="path">/karyawan/jadwal</p>
+
+<p>Halaman ini memperlihatkan jadwal Anda empat minggu ke depan, dihitung dari hari Senin pada minggu berjalan. Halaman bersifat baca saja; perubahan jadwal dilakukan Admin Wilayah.</p>
+
+<p>Bila Anda pekerja shift, setiap tanggal menampilkan nama shift beserta jam mulai dan jam selesainya, atau keterangan <strong>Libur</strong> bila hari itu memang libur jadwal. Bila jadwal belum diisi, tanggal tersebut bertanda <strong>Belum dijadwalkan</strong>. Hubungi Admin Wilayah sebelum hari kerja dimulai agar absen Anda tidak tertolak.</p>
+
+<p>Bila Anda bukan pekerja shift, halaman menampilkan hari kerja yang berlaku bagi Anda, jam masuk dan jam pulang kantor, serta daftar hari libur nasional pada rentang yang sama.</p>
+
+<div class="note">
+  <div class="t">Jadwal shift dan hari libur berbeda</div>
+  <p>Libur jadwal berarti Anda tidak dijadwalkan masuk pada tanggal itu. Hari libur nasional mengikuti kalender pemerintah. Keduanya bisa jatuh pada tanggal yang sama, dan keduanya sah. Bila Anda tetap dijadwalkan masuk pada hari libur nasional, ikuti jadwal shift.</p>
+</div>
+
+<h2 id="s8"><span class="num">8</span>Lembur</h2>
+<p class="path">/karyawan/lembur</p>
+
+<p>Lembur diajukan terpisah dari absensi. Jam lembur tidak mengubah status masuk atau pulang Anda, dan tidak menutupi keterlambatan. Lembur yang disetujui hanya menambah angka lembur pada rekap bulanan.</p>
+
+<ol class="steps">
+  <li>Buka kartu <strong>Lembur</strong> pada Beranda.</li>
+  <li>Isi tanggal lembur. Tanggal yang bisa dipilih adalah hari ini sampai 30 hari ke belakang, bukan tanggal yang akan datang.</li>
+  <li>Isi jam mulai dan jam selesai.</li>
+  <li>Tuliskan keterangan pekerjaan, paling sedikit 5 karakter. Sebutkan pekerjaan yang benar-benar dikerjakan.</li>
+  <li>Pilih atasan atau Admin Wilayah yang akan memutuskan.</li>
+  <li>Kirim pengajuan, lalu tunggu keputusan.</li>
+</ol>
+
+<h3>Aturan durasi</h3>
+<p>Durasi lembur dihitung dari selisih jam mulai dan jam selesai. Bila jam selesai lebih kecil dari jam mulai, aplikasi menganggap lembur melewati tengah malam. Contoh: 22.00 sampai 01.00 dihitung 180 menit.</p>
+
+<p>Durasi paling sedikit 15 menit dan paling banyak 720 menit atau 12 jam untuk satu pengajuan. Untuk tanggal yang sama, hanya boleh ada satu pengajuan yang masih menunggu. Pengajuan yang masih menunggu dapat Anda batalkan sendiri; pengajuan yang sudah diputuskan tidak dapat dibatalkan.</p>
+
+<h3>Setelah diputuskan</h3>
+<p>Bila disetujui, menit lembur muncul pada rekap bulanan sebagai angka <strong>Lembur disetujui</strong>, terpisah dari jumlah kehadiran. Bila ditolak, alasan penolakan tampil pada riwayat pengajuan di halaman Lembur.</p>
+
+<h2 id="s9"><span class="num">9</span>Rekap bulanan</h2>
 <p class="path">/karyawan/rekap</p>
 
-<p>Rekap menampilkan kehadiran Anda satu bulan penuh. Angka di bagian atas menunjukkan jumlah Hadir, Terlambat, dan Cuti. Di bawahnya, setiap tanggal ditampilkan beserta statusnya.</p>
+<p>Rekap menampilkan kehadiran Anda satu bulan penuh. Angka di bagian atas menunjukkan jumlah Hadir, Terlambat, dan Cuti, ditambah tiga angka ringkasan: <strong>Hari WFA</strong>, <strong>Hari di luar radius titik</strong>, dan <strong>Lembur disetujui</strong>. Di bawahnya, setiap tanggal ditampilkan beserta statusnya.</p>
+
+<p>Hari WFA ditandai pada tanggal yang bersangkutan beserta status persetujuannya. Hari ketika absen Anda di luar semua radius titik diberi keterangan <strong>di luar radius titik</strong>. Menit lembur yang disetujui juga tampil pada tanggalnya, tetapi tidak mengubah status kehadiran.</p>
 
 <p>Bila Anda diberi izin pulang di titik lain, hari dengan titik masuk dan pulang berbeda tetap dihitung satu kehadiran dan diberi tanda <strong>Berpindah lokasi</strong>. Buka detail hari itu untuk melihat titik masuk dan titik pulang beserta jaraknya masing-masing.</p>
 
@@ -202,7 +255,7 @@
   <p>Hari kerja yang tidak memiliki absen, cuti, atau dinas akan tampil sebagai tanpa keterangan. Bila itu terjadi karena Anda lupa absen, segera ajukan klaim toleransi pada bulan yang sama. Klaim yang disetujui akan memperbaiki catatan tersebut.</p>
 </div>
 
-<h2 id="s8"><span class="num">8</span>Cuti</h2>
+<h2 id="s10"><span class="num">10</span>Cuti</h2>
 <p class="path">/karyawan/cuti</p>
 
 <p>Cuti diajukan sebelum tanggalnya, bukan setelah cuti dijalani. Sisa kuota tahunan tampil di bagian atas halaman.</p>
@@ -236,7 +289,7 @@
 
 <p>Bila cuti ditolak, Anda dapat mengajukan ulang dengan tanggal atau alasan yang berbeda. Pengajuan yang sudah diputuskan tidak dapat diubah sendiri.</p>
 
-<h2 id="s9"><span class="num">9</span>Toleransi</h2>
+<h2 id="s11"><span class="num">11</span>Toleransi</h2>
 <p class="path">/karyawan/love</p>
 
 <p>Toleransi dipakai ketika Anda lupa absen datang atau lupa absen pulang. Setiap klaim memakai satu jatah dari kuota bulanan. Sisa kuota tampil di bagian atas halaman.</p>
@@ -256,7 +309,7 @@
   <p>Bila sisa toleransi nol, pengajuan tidak dapat dikirim. Kuota diperbarui setiap awal bulan. Klaim yang masih menunggu sudah menahan satu jatah, jadi sisa kuota bisa berkurang sebelum klaim disetujui. Bila klaim ditolak, jatahnya kembali.</p>
 </div>
 
-<h2 id="s10"><span class="num">10</span>Pulang cepat</h2>
+<h2 id="s12"><span class="num">12</span>Pulang cepat</h2>
 <p class="path">/karyawan/pulang-cepat</p>
 
 <p>Pulang cepat adalah izin meninggalkan pekerjaan sebelum jam selesai. Persetujuan diperlukan agar absen pulang dapat dilakukan lebih awal.</p>
@@ -275,7 +328,7 @@
   <p>Ajukan izin lebih dulu, tunggu persetujuan, baru absen pulang. Bila Anda menekan absen pulang sebelum izin disetujui, aplikasi akan menolak dengan pesan belum waktunya pulang.</p>
 </div>
 
-<h2 id="s11"><span class="num">11</span>Dinas</h2>
+<h2 id="s13"><span class="num">13</span>Dinas</h2>
 <p class="path">/karyawan/dinas</p>
 
 <p>Dinas dipakai untuk perjalanan tugas ke luar titik absen. Pengajuan wajib disertai surat tugas yang diunggah.</p>
@@ -295,7 +348,7 @@
   <p>Setelah disetujui, tanggal dinas tercatat pada kolom Dinas di rekap, bukan pada kolom Hadir. Bila pada hari itu Anda tetap berada di titik absen, lakukan absen seperti biasa agar kehadiran Anda juga tercatat.</p>
 </div>
 
-<h2 id="s12"><span class="num">12</span>Info dan pengumuman</h2>
+<h2 id="s14"><span class="num">14</span>Info dan pengumuman</h2>
 <p class="path">/karyawan/pengumuman</p>
 
 <p>Halaman Info memuat pengumuman dari pusat dan dari wilayah Anda. Gunakan tab di bagian atas untuk menyaring sumbernya. Pengumuman yang disematkan tampil paling atas.</p>
@@ -307,7 +360,7 @@
   <li>Setelah dibaca, pengumuman ditandai sudah dibaca sehingga tidak lagi dihitung sebagai informasi baru.</li>
 </ol>
 
-<h2 id="s13"><span class="num">13</span>Profil dan kata sandi</h2>
+<h2 id="s15"><span class="num">15</span>Profil dan kata sandi</h2>
 <p class="path">/karyawan/profil</p>
 
 <p>Halaman Profil menampilkan identitas Anda: nama, jabatan, unit, status, golongan, NIK, NIP, dan wilayah. Sebagian data hanya dapat dibaca, karena perubahan data kepegawaian dilakukan admin.</p>
@@ -337,13 +390,15 @@
   <p>Bila akun Anda juga diberi peran admin, tombol ini muncul di halaman Profil. Tekan untuk berpindah ke panel admin. Bila tombol belum terlihat, ganti dulu kata sandi bawaan.</p>
 </div>
 
-<h2 id="s14"><span class="num">14</span>Jika ada masalah</h2>
+<h2 id="s16"><span class="num">16</span>Jika ada masalah</h2>
 
 <table class="grid compact">
   <thead><tr><th style="width:58mm">Gejala</th><th>Kemungkinan sebab dan tindakan</th></tr></thead>
   <tbody>
     <tr><td>Belum ada titik absensi</td><td>Akun Anda belum dihubungkan ke titik. Hubungi Admin Wilayah.</td></tr>
-    <tr><td>Di luar radius</td><td>Posisi ponsel lebih jauh dari radius titik terdekat. Dekatkan diri ke salah satu titik absensi Anda, atau ajukan dinas bila sedang bertugas di tempat lain.</td></tr>
+    <tr><td>Absen bertanda di luar radius</td><td>Posisi ponsel lebih jauh dari semua radius titik. Absen tetap tercatat dan ditandai, lalu ditinjau Admin Wilayah. Dekatkan diri ke salah satu titik bila memungkinkan, atau pilih WFA bila memang bekerja dari luar kantor.</td></tr>
+    <tr><td>WFA tidak bisa dipilih</td><td>Anda pekerja shift, sehingga jam kerja mengikuti jadwal shift. WFA hanya tersedia bagi karyawan bukan shift.</td></tr>
+    <tr><td>Pengajuan lembur ditolak saat dikirim</td><td>Periksa durasi (minimal 15 menit, maksimal 720 menit), tanggal (tidak boleh tanggal yang akan datang), dan apakah sudah ada pengajuan menunggu pada tanggal yang sama.</td></tr>
     <tr><td>Di luar radius titik masuk saat pulang</td><td>Anda berada di titik terdaftar lain, padahal izin pulang lintas titik belum diberikan admin. Lakukan absen pulang di titik tempat Anda absen masuk, atau hubungi Admin Wilayah bila pekerjaan Anda memang berpindah tempat.</td></tr>
     <tr><td>Lokasi belum siap atau gagal membaca GPS</td><td>Nyalakan lokasi dan izinkan akses lokasi untuk situs ini di pengaturan peramban.</td></tr>
     <tr><td>Kamera tidak terbuka saat absen</td><td>Izinkan akses kamera untuk situs ini. Muat ulang halaman setelah mengizinkan.</td></tr>

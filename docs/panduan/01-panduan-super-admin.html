@@ -34,7 +34,7 @@
   <tr><td class="k">Peran</td><td>Super Admin Kantor Pusat</td></tr>
   <tr><td class="k">Alamat panel</td><td>https://siappomjen.id/super-admin</td></tr>
   <tr><td class="k">Jumlah menu</td><td>15 menu</td></tr>
-  <tr><td class="k">Versi dokumen</td><td>1.0, Oktober 2026</td></tr>
+  <tr><td class="k">Versi dokumen</td><td>1.1, Oktober 2026</td></tr>
   <tr><td class="k">Disusun oleh</td><td>Rahmat Dani S</td></tr>
 </table>
 
@@ -90,6 +90,8 @@
     <tr><td>Pola Shift</td><td><span class="url">/super-admin/pola-shift</span></td><td>Aturan jam tiap shift.</td></tr>
     <tr><td>Jadwal Shift</td><td><span class="url">/super-admin/jadwal-shift</span></td><td>Penugasan shift per tanggal.</td></tr>
     <tr><td>Pulang Cepat</td><td><span class="url">/super-admin/pulang-cepat</span></td><td>Izin pulang sebelum jam selesai.</td></tr>
+    <tr><td>WFA</td><td><span class="url">/super-admin/wfa</span></td><td>Persetujuan bekerja dari luar kantor, seluruh wilayah.</td></tr>
+    <tr><td>Lembur</td><td><span class="url">/super-admin/lembur</span></td><td>Persetujuan pengajuan lembur, seluruh wilayah.</td></tr>
     <tr><td>Dinas</td><td><span class="url">/super-admin/dinas</span></td><td>Perjalanan tugas beserta surat tugas.</td></tr>
     <tr><td>Pengumuman</td><td><span class="url">/super-admin/pengumuman</span></td><td>Informasi untuk semua atau satu wilayah.</td></tr>
     <tr><td>Hari Libur</td><td><span class="url">/super-admin/holidays</span></td><td>Libur nasional dan cuti bersama.</td></tr>
@@ -210,7 +212,7 @@
 
 <div class="note">
   <div class="t">Batas izin</div>
-  <p>Izin ini tidak membuka absen di sembarang tempat. Titik pulang tetap harus salah satu titik yang terdaftar untuk karyawan itu, dan posisinya tetap harus di dalam radius titik tersebut. Karyawan yang tidak diberi izin hanya bisa pulang di titik masuknya, walaupun sedang berdiri di titik terdaftar lain.</p>
+  <p>Izin ini tidak membuka absen di sembarang tempat. Titik pulang tetap harus salah satu titik yang terdaftar untuk karyawan itu. Bila posisinya di luar radius semua titik, absen pulang tetap tercatat dan diberi tanda <strong>di luar radius titik</strong>, bukan ditolak. Karyawan yang tidak diberi izin hanya bisa pulang di titik masuknya, walaupun sedang berdiri di titik terdaftar lain.</p>
 </div>
 
 <h4>Menghapus titik</h4>
@@ -465,7 +467,7 @@
 <h2 id="s7"><span class="num">7</span>Rekap per karyawan</h2>
 <p class="path">/super-admin/employees, tombol Rekap pada baris karyawan</p>
 
-<p>Rekap menampilkan satu bulan penuh untuk satu karyawan, lengkap dengan ringkasan angka di bagian atas: Hadir, Terlambat, Cuti, Dinas, dan Tanpa keterangan.</p>
+<p>Rekap menampilkan satu bulan penuh untuk satu karyawan, lengkap dengan ringkasan angka di bagian atas: Hadir, Terlambat, Cuti, Dinas, Tanpa keterangan, serta Hari WFA, Hari di luar radius titik, dan Lembur disetujui.</p>
 
 <ol class="steps">
   <li>Buka menu <strong>Karyawan</strong>, lalu cari nama yang bersangkutan.</li>
@@ -477,7 +479,7 @@
 
 <div class="note">
   <div class="t">Cara membaca angka</div>
-  <p>Hadir menghitung absen yang benar-benar dilakukan. Dinas berdiri sendiri dan tidak menambah angka Hadir, tetapi juga tidak masuk Tanpa keterangan. Cuti hanya dihitung pada hari kerja. Jumlah Hadir, Dinas, Cuti, dan Tanpa keterangan seharusnya sama dengan total hari kerja pada bulan itu.</p>
+  <p>Hadir menghitung absen yang benar-benar dilakukan. Dinas berdiri sendiri dan tidak menambah angka Hadir, tetapi juga tidak masuk Tanpa keterangan. Cuti hanya dihitung pada hari kerja. Jumlah Hadir, Dinas, Cuti, dan Tanpa keterangan seharusnya sama dengan total hari kerja pada bulan itu. Tiga angka lain berdiri sendiri: Hari WFA dan Hari di luar radius titik tidak mengubah angka Hadir, sedangkan Lembur disetujui dinyatakan dalam menit.</p>
 </div>
 
 <h2 id="s8"><span class="num">8</span>Hari libur</h2>
@@ -526,7 +528,7 @@
   <thead><tr><th style="width:62mm">Gejala</th><th>Kemungkinan sebab dan tindakan</th></tr></thead>
   <tbody>
     <tr><td>Karyawan tidak bisa absen, muncul pesan belum ada titik absensi</td><td>Karyawan belum terhubung ke titik. Buka titik yang benar, lalu tambahkan atau pindahkan karyawan tersebut.</td></tr>
-    <tr><td>Absen ditolak karena di luar radius</td><td>Posisi ponsel jauh dari titik, atau radius terlalu kecil. Periksa jarak pada detail absensi, lalu sesuaikan radius bila perlu.</td></tr>
+    <tr><td>Absen tercatat dengan tanda di luar radius</td><td>Posisi ponsel jauh dari semua titik, atau radius terlalu kecil. Periksa jarak pada detail absensi, lalu sesuaikan radius bila perlu. Absen tetap dihitung hadir.</td></tr>
     <tr><td>Admin Wilayah tidak bisa mengubah Pengaturan</td><td>Memang demikian. Pengaturan hanya dapat diubah Super Admin. Admin Wilayah melihat halaman dalam mode baca.</td></tr>
     <tr><td>Akun admin tidak bisa membuka panel</td><td>Akun masih memakai sandi bawaan. Ganti sandi lewat halaman Profil terlebih dahulu.</td></tr>
     <tr><td>Impor gagal seluruhnya</td><td>Periksa kolom wajib, batas 1000 baris dan 5 MB, serta format NIK yang berubah menjadi angka.</td></tr>
@@ -537,7 +539,7 @@
 </table>
 
 <div class="end">
-  <p><strong>Panduan Super Admin, versi 1.0.</strong> Disusun oleh Rahmat Dani S, Oktober 2026. Untuk hal yang berlaku umum di semua peran, termasuk cara masuk dan absen di dua titik, lihat Panduan Umum.</p>
+  <p><strong>Panduan Super Admin, versi 1.1.</strong> Disusun oleh Rahmat Dani S, Oktober 2026. Untuk hal yang berlaku umum di semua peran, termasuk cara masuk dan absen di dua titik, lihat Panduan Umum.</p>
 </div>
 
 </body>
