@@ -304,15 +304,15 @@
     <tr><td>Waktu</td><td>Jam datang dan jam pulang.</td></tr>
     <tr><td>Shift</td><td>Shift yang dijadwalkan, bila pekerja shift.</td></tr>
     <tr><td>Wilayah</td><td>Wilayah karyawan.</td></tr>
-    <tr><td>Titik Proyek</td><td>Nama titik dan radiusnya. Berwarna merah bila absen terjadi di luar radius.</td></tr>
-    <tr><td>Jarak</td><td>Jarak ponsel ke titik saat absen, disertai keterangan Dalam atau Di luar.</td></tr>
+    <tr><td>Titik Proyek</td><td>Titik absen masuk beserta radiusnya. Bila absen pulang dilakukan di titik lain, di bawahnya tertulis <em>Pulang di ...</em>. Berwarna merah bila absen terjadi di luar radius titik yang dipakai.</td></tr>
+    <tr><td>Jarak</td><td>Jarak ponsel ke titik saat absen masuk, disertai keterangan Dalam atau Di luar.</td></tr>
     <tr><td>Status</td><td>Tepat waktu, Terlambat, Toleransi, atau Pulang awal.</td></tr>
     <tr><td>Detail</td><td>Membuka rincian absensi.</td></tr>
   </tbody>
 </table>
 
 <h4>Membaca rincian absensi</h4>
-<p>Tekan <strong>Detail</strong> pada baris yang ingin diperiksa. Rincian menampilkan swafoto datang dan swafoto pulang, jam keduanya, koordinat absen, jarak ke titik beserta batas radiusnya, status, dan catatan pekerjaan.</p>
+<p>Tekan <strong>Detail</strong> pada baris yang ingin diperiksa. Rincian menampilkan swafoto datang dan swafoto pulang, jam keduanya, koordinat absen, jarak ke titik beserta batas radiusnya, status, dan catatan pekerjaan. Bila karyawan masuk dan pulang di titik berbeda, rincian menampilkan kedua titik itu secara terpisah dan menandainya <strong>Berpindah lokasi</strong>.</p>
 
 <h4>Mengoreksi catatan</h4>
 <ol class="steps">
@@ -481,7 +481,7 @@
 
 <p>Audit Log mencatat tindakan pengelola yang mengubah data atau memutuskan pengajuan. Gunakan halaman ini ketika ada data yang berubah dan perlu diketahui siapa pelakunya.</p>
 
-<table class="grid compact">
+<table class="grid compact dense">
   <thead><tr><th style="width:60mm">Yang tercatat</th><th>Contoh tindakan</th></tr></thead>
   <tbody>
     <tr><td>Data karyawan</td><td>Tambah, perbarui, hapus, reset kata sandi.</td></tr>
@@ -500,7 +500,7 @@
 
 <h2 id="s10"><span class="num">10</span>Jika ada masalah</h2>
 
-<table class="grid">
+<table class="grid compact dense">
   <thead><tr><th style="width:62mm">Gejala</th><th>Kemungkinan sebab dan tindakan</th></tr></thead>
   <tbody>
     <tr><td>Karyawan tidak bisa absen, muncul pesan belum ada titik absensi</td><td>Karyawan belum terhubung ke titik. Buka titik yang benar, lalu tambahkan atau pindahkan karyawan tersebut.</td></tr>
