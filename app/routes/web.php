@@ -162,6 +162,7 @@ if (! function_exists('adminMasterRoutes')) {
             Route::put('/sites/{site}', [SiteController::class, 'update'])->name("{$label}.sites.update");
             Route::delete('/sites/{site}', [SiteController::class, 'destroy'])->name("{$label}.sites.destroy");
             Route::post('/sites/{site}/employees', [SiteController::class, 'assignEmployees'])->name("{$label}.sites.employees");
+            Route::delete('/sites/{site}/employees/{employee}', [SiteController::class, 'removeEmployee'])->name("{$label}.sites.employees.remove");
             Route::put('/sites/{site}/move', [SiteController::class, 'move'])->name("{$label}.sites.move");
 
             // Employees

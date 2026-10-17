@@ -30,7 +30,7 @@ export default function Dashboard() {
         if (!activeRegion) return [];
         return sitesForActive.map((s) => ({
             site: s,
-            anggota: employees.filter((e) => e.office_location_id === s.id).length,
+            anggota: employees.filter((e) => (e.site_ids ?? [e.office_location_id]).map(Number).includes(Number(s.id))).length,
         }));
     }, [sitesForActive, employees, activeRegion]);
     const siteCards = siteFilter === 'Semua' ? countsPerSite : countsPerSite.filter((x) => String(x.site.id) === String(siteFilter));

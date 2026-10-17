@@ -44,6 +44,8 @@ export default function Employees() {
         ppk: '',
         region: isWilayah ? OWN_REGION : '',
         office_location_id: null,
+        // Titik tambahan selain titik utama (boleh kosong).
+        office_location_ids: [],
         isShift: false,
         // null = ikut hari kerja umum.
         hariKerja: null,
@@ -75,7 +77,7 @@ export default function Employees() {
         let base2 = scopedList;
         if (!isWilayah && filterRegion !== 'Semua') base2 = base2.filter((e) => e.region === filterRegion);
         if (filterSite !== 'Semua') {
-            base2 = base2.filter((e) => String(e.office_location_id) === String(filterSite));
+            base2 = base2.filter((e) => (e.site_ids ?? [e.office_location_id]).map(String).includes(String(filterSite)));
         }
         if (filterStatus !== 'Semua') base2 = base2.filter((e) => e.status === filterStatus);
         return base2;
@@ -88,12 +90,12 @@ export default function Employees() {
         const r = regionsData.find((x) => x.name === defaultRegion);
         const firstSiteId = r?.locations?.[0]?.id ?? null;
         setEditing(null);
-        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', ppk:'', region: defaultRegion, office_location_id: firstSiteId, isShift: false, hariKerja: null, regu: '' });
+        setForm({ nik:'', nip:'', nama:'', email:'', gol:'-', jabatan:'', unit:'', status:'PNS', ppk:'', region: defaultRegion, office_location_id: firstSiteId, office_location_ids: [], isShift: false, hariKerja: null, regu: '' });
         setPhoto(null); setPreview(null); setOpen(true); setFormErrors({});
     };
     const openEdit = (e) => {
         setEditing(e);
-        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, ppk:e.ppk||'', region:e.region, office_location_id: e.office_location_id ?? null, isShift: !!e.isShift, hariKerja: Array.isArray(e.hariKerja) ? e.hariKerja.map(String) : null, regu: e.regu || '' });
+        setForm({ nik:e.nik, nip:e.nip||'', nama:e.nama, email:e.email, gol:e.gol, jabatan:e.jabatan, unit:e.unit, status:e.status, ppk:e.ppk||'', region:e.region, office_location_id: e.office_location_id ?? null, office_location_ids: (e.site_ids ?? []).map(Number).filter((id)=>id !== Number(e.office_location_id)), isShift: !!e.isShift, hariKerja: Array.isArray(e.hariKerja) ? e.hariKerja.map(String) : null, regu: e.regu || '' });
         setPreview(e.foto); setPhoto(null); setOpen(true); setFormErrors({});
     };
     const close = () => { setOpen(false); setFormErrors({}); };
@@ -113,12 +115,18 @@ export default function Employees() {
         // NIK/NIP kini opsional dan boleh kurang dari 16 digit (mengikuti berkas PPK).
         const nik = String(form.nik ?? '').trim();
         if (nik !== '' && !/^[0-9A-Za-z.\-/]{1,30}$/.test(nik)) { toast.error('NIK/NIP hanya boleh angka, huruf, titik, strip, atau garis miring (maks. 30)'); return; }
-        if (form.office_location_id == null || form.office_location_id === '') { toast.error('Titik proyek wajib dipilih (1 karyawan = 1 titik)'); return; }
+        if (form.office_location_id == null || form.office_location_id === '') { toast.error('Titik utama wajib dipilih'); return; }
         if (!form.region) { toast.error('Pilih wilayah dulu'); return; }
         const regionObj = regionsData.find((r) => r.name === form.region);
         if (!regionObj) { toast.error('Wilayah tidak ditemukan'); return; }
         const ok = regionObj.locations.some((s) => s.id === Number(form.office_location_id));
         if (!ok) { toast.error('Titik tidak sesuai wilayah'); return; }
+        // Titik tambahan harus di wilayah yang sama; titik utama tidak diulang.
+        const extraSites = [...new Set((form.office_location_ids ?? []).map(Number))]
+            .filter((id) => id !== Number(form.office_location_id));
+        if (!extraSites.every((id) => regionObj.locations.some((s) => s.id === id))) {
+            toast.error('Titik tambahan harus berada di wilayah yang sama'); return;
+        }
         if (form.hariKerja !== null && form.hariKerja.length === 0) { toast.error('Pilih minimal satu hari kerja, atau centang "Ikut hari kerja umum"'); return; }
         if (!editing) {
             if (nik !== '' && list.some((x)=>String(x.nik ?? '')===nik)) { toast.error('NIK sudah terdaftar'); return; }
@@ -128,6 +136,7 @@ export default function Employees() {
             nik, nip: form.nip || '', nama: form.nama, email: form.email, gol: form.gol,
             jabatan: form.jabatan, unit: form.unit, status: form.status, ppk: (form.ppk || '').trim(),
             region: form.region, office_location_id: Number(form.office_location_id),
+            office_location_ids: extraSites,
             isShift: !!form.isShift,
             hariKerja: form.hariKerja,
             regu: form.regu.trim(),
@@ -250,6 +259,9 @@ export default function Employees() {
                                                 ) : (
                                                     <span className="inline-flex bg-[#F1F5F9] text-[#64748B] px-2.5 py-1 rounded-full">—</span>
                                                 )}
+                                                {Array.isArray(e.site_names) && e.site_names.length > 1 && (
+                                                    <p className="text-[10px] text-[#64748B] mt-1">+{e.site_names.length - 1} titik lain: {e.site_names.slice(1).join(', ')}</p>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex gap-1 justify-end flex-wrap">
@@ -268,7 +280,7 @@ export default function Employees() {
                     {filtered.length===0 && <p className="text-center text-sm text-[#64748B] py-8">Tidak ada karyawan — coba ubah filter atau tambah di halaman titik.</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
                         <span>{isWilayah ? `Admin Wilayah: tulis hanya ${OWN_REGION}` : 'Super Admin tulis semua • Admin Wilayah tulis own region'}</span>
-                        <span>1 karyawan = 1 titik (wajib)</span>
+                        <span>Karyawan boleh absen di beberapa titik dalam satu wilayah</span>
                     </div>
                 </div>
 
@@ -345,7 +357,7 @@ export default function Employees() {
                                         {isWilayah ? (
                                             <div className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#0F172A] font-medium">{OWN_REGION}</div>
                                         ) : (
-                                            <select value={form.region} onChange={(e)=>setForm({...form, region:e.target.value, office_location_id: null})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
+                                            <select value={form.region} onChange={(e)=>setForm({...form, region:e.target.value, office_location_id: null, office_location_ids: []})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
                                                 <option value="" disabled>— Pilih wilayah —</option>
                                                 {regionsData.map((r)=><option key={r.id} value={r.name}>{r.name} — {r.locations.length} titik</option>)}
                                             </select>
@@ -353,15 +365,38 @@ export default function Employees() {
                                         <Galat pesan={formErrors.region} />
                                     </div>
                                     <div className="col-span-2">
-                                        <label className="text-xs font-medium text-[#334155]">Titik Proyek — 1 karyawan = 1 titik (wajib)</label>
-                                        <select value={form.office_location_id ?? ''} onChange={(e)=>setForm({...form, office_location_id: e.target.value === '' ? '' : Number(e.target.value)})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
+                                        <label className="text-xs font-medium text-[#334155]">Titik utama (wajib)</label>
+                                        <select value={form.office_location_id ?? ''} onChange={(e)=>setForm({...form, office_location_id: e.target.value === '' ? '' : Number(e.target.value), office_location_ids: (form.office_location_ids ?? []).filter((id)=>id !== Number(e.target.value))})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none">
                                             <option value="" disabled>— Pilih titik —</option>
                                             {sitesForFormRegion.map((s)=><option key={s.id} value={String(s.id)}>{s.nama_lokasi} • {s.radius}m • {s.lat.toFixed(3)},{s.lng.toFixed(3)}</option>)}
                                         </select>
                                         <p className="text-xs mt-1">
-                                            <span className="text-[#065F46]"><IconCheck size={13} className="inline-block shrink-0 align-[-0.15em] mr-1" />Akan absen di {sitesForFormRegion.find((s)=>s.id===Number(form.office_location_id))?.nama_lokasi || '— pilih titik'} — dalam radius baru valid.</span>
+                                            <span className="text-[#065F46]"><IconCheck size={13} className="inline-block shrink-0 align-[-0.15em] mr-1" />Titik utama: {sitesForFormRegion.find((s)=>s.id===Number(form.office_location_id))?.nama_lokasi || '— pilih titik'}.</span>
                                         </p>
                                         <Galat pesan={formErrors.office_location_id} />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="text-xs font-medium text-[#334155]">Titik tambahan (opsional)</label>
+                                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                            {sitesForFormRegion.filter((s)=>s.id !== Number(form.office_location_id)).map((s) => {
+                                                const on = (form.office_location_ids ?? []).includes(s.id);
+                                                return (
+                                                    <button
+                                                        key={s.id}
+                                                        type="button"
+                                                        onClick={()=>setForm({...form, office_location_ids: on ? form.office_location_ids.filter((id)=>id!==s.id) : [...(form.office_location_ids ?? []), s.id]})}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${on ? 'bg-[#1E3A8A] text-white border-[#1E3A8A]' : 'bg-white text-[#334155] border-[#E2E8F0]'}`}
+                                                    >
+                                                        {s.nama_lokasi}
+                                                    </button>
+                                                );
+                                            })}
+                                            {sitesForFormRegion.filter((s)=>s.id !== Number(form.office_location_id)).length === 0 && (
+                                                <span className="text-xs text-[#64748B]">Belum ada titik lain di wilayah ini.</span>
+                                            )}
+                                        </div>
+                                        <span className="block text-xs text-[#64748B] mt-1">Karyawan boleh absen di beberapa titik. Semua titik harus di wilayah yang sama.</span>
+                                        <Galat pesan={formErrors.office_location_ids} />
                                     </div>
                                     <div className="col-span-2">
                                         <label className="text-xs font-medium text-[#334155]">Regu (opsional)</label>

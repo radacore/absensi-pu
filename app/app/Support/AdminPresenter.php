@@ -48,7 +48,7 @@ class AdminPresenter
 
     public static function employeesFor(?int $regionId): array
     {
-        $employees = Employee::with('region')
+        $employees = Employee::with(['region', 'site', 'sites'])
             ->when($regionId, fn ($q) => $q->where('region_id', $regionId))
             ->orderBy('id')
             ->get();
@@ -60,6 +60,14 @@ class AdminPresenter
     {
         $regionName = $e->region?->name ?? '';
         $kantor = str_replace(['Kab. ', 'Kota '], '', $regionName);
+
+        // Titik utama lebih dulu, lalu titik tambahan. Dipakai UI untuk
+        // menghitung anggota per titik dan menampilkan daftar titik karyawan.
+        $titik = collect([$e->site])
+            ->filter()
+            ->concat($e->relationLoaded('sites') ? $e->sites : $e->sites()->get())
+            ->unique('id')
+            ->values();
 
         return [
             'id' => $e->id,
@@ -76,6 +84,9 @@ class AdminPresenter
             'region' => $regionName,
             'regionId' => $e->region_id,
             'office_location_id' => $e->site_id,
+            // Satu karyawan boleh absen di beberapa titik.
+            'site_ids' => $titik->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
+            'site_names' => $titik->pluck('nama_lokasi')->values()->all(),
             'kantor' => $kantor,
             'foto' => $e->foto_url ?: self::DEFAULT_AVATAR,
             // K4: penanda pekerja shift hanya per orang.

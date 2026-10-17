@@ -9,6 +9,7 @@ use App\Models\Site;
 use App\Support\AdminPresenter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -49,24 +50,12 @@ class SiteController extends Controller
             ])
             ->all();
 
-        $employees = Employee::with('region')
+        $employees = Employee::with(['region', 'site', 'sites'])
             ->when($scope, fn ($q) => $q->where('region_id', $scope))
+            ->orderBy('id')
             ->get()
-            ->map(fn ($e) => [
-                'id' => $e->id,
-                'nik' => $e->nik,
-                'nip' => $e->nip ?? '',
-                'nama' => $e->name,
-                'email' => $e->email ?? '',
-                'gol' => $e->golongan ?? '-',
-                'jabatan' => $e->jabatan,
-                'unit' => $e->unit_kerja,
-                'status' => $e->status_kepegawaian,
-                'region' => $e->region?->name ?? '',
-                'regionId' => $e->region_id,
-                'office_location_id' => $e->site_id,
-                'foto' => $e->foto_url ?: AdminPresenter::DEFAULT_AVATAR,
-            ])->values()->all();
+            ->map(fn ($e) => AdminPresenter::employeeRow($e))
+            ->values()->all();
 
         return Inertia::render('Admin/SiteDetail', [
             'regionId' => $region->id,
@@ -155,21 +144,46 @@ class SiteController extends Controller
         }
 
         $members = Employee::where('site_id', $site->id)->get();
+        $dipromosi = 0;
+        $dipindah = 0;
 
-        if ($members->isNotEmpty()) {
+        foreach ($members as $member) {
+            // Utamakan titik tambahan karyawan itu sendiri: dia sudah terbiasa
+            // absen di sana, jadi tidak perlu dipindah ke titik asing.
+            $pengganti = $member->sites()->where('site_id', '!=', $site->id)->first();
+
+            if ($pengganti) {
+                $member->update(['site_id' => $pengganti->id]);
+                $member->sites()->detach($pengganti->id);
+                $dipromosi++;
+
+                continue;
+            }
+
             $other = $site->region->sites()->where('id', '!=', $site->id)->first();
             if (! $other) {
                 return back()->with('error', 'Masih ada karyawan di titik ini — pindahkan ke titik lain dulu.');
             }
-            foreach ($members as $member) {
-                $member->update(['site_id' => $other->id]);
-            }
+
+            $member->update(['site_id' => $other->id]);
+            $dipindah++;
         }
+
+        // Titik ini juga mungkin terdaftar sebagai titik tambahan karyawan lain.
+        DB::table('employee_sites')->where('site_id', $site->id)->delete();
 
         $site->delete();
 
-        if ($members->isNotEmpty()) {
-            return back()->with('success', "Titik dihapus — {$members->count()} karyawan dipindah ke titik lain.");
+        $bagian = [];
+        if ($dipromosi > 0) {
+            $bagian[] = "{$dipromosi} karyawan memakai titik tambahannya sebagai titik utama";
+        }
+        if ($dipindah > 0) {
+            $bagian[] = "{$dipindah} karyawan dipindah ke titik lain";
+        }
+
+        if ($bagian !== []) {
+            return back()->with('success', 'Titik dihapus — '.implode(', ', $bagian).'.');
         }
 
         return back()->with('success', 'Titik berhasil dihapus.');
@@ -194,10 +208,45 @@ class SiteController extends Controller
             if ($employee->region_id !== $site->region_id) {
                 throw ValidationException::withMessages(['employee_ids' => 'Karyawan dari wilayah lain tidak bisa ditugaskan ke titik ini.']);
             }
-            $employee->update(['site_id' => $site->id]);
+
+            // Titik utama tidak perlu disimpan di pivot.
+            if ((int) $employee->site_id === (int) $site->id) {
+                continue;
+            }
+
+            // Menambah anggota = menambah titik absensi, bukan memindahkan
+            // titik utama. Karyawan tetap bisa absen di titik lamanya.
+            $employee->sites()->syncWithoutDetaching([$site->id]);
         }
 
-        return back()->with('success', 'Karyawan berhasil ditugaskan ke titik.');
+        return back()->with('success', 'Karyawan berhasil ditambahkan ke titik ini.');
+    }
+
+    /** Keluarkan karyawan dari satu titik (titik tambahan saja). */
+    public function removeEmployee(Site $site, Employee $employee)
+    {
+        $scope = $this->scopeRegion();
+        abort_if($scope && $site->region_id !== $scope, 403, 'Titik ini di luar cakupan Anda.');
+        abort_if((int) $employee->region_id !== (int) $site->region_id, 403, 'Karyawan ini di luar wilayah titik.');
+
+        if ((int) $employee->site_id === (int) $site->id) {
+            // Titik utama tidak bisa dilepas tanpa pengganti: karyawan wajib
+            // punya satu titik utama. Promosikan titik tambahan bila ada.
+            $pengganti = $employee->sites()->where('site_id', '!=', $site->id)->first();
+
+            if (! $pengganti) {
+                return back()->with('error', "{$employee->name} memakai titik ini sebagai titik utama — pindahkan dulu ke titik lain.");
+            }
+
+            $employee->update(['site_id' => $pengganti->id]);
+            $employee->sites()->detach($pengganti->id);
+
+            return back()->with('success', "{$employee->name} dipindah ke {$pengganti->nama_lokasi}.");
+        }
+
+        $employee->sites()->detach($site->id);
+
+        return back()->with('success', "{$employee->name} dikeluarkan dari titik ini.");
     }
 
     public function move(Request $request, Site $site)
@@ -215,6 +264,9 @@ class SiteController extends Controller
         }
 
         $employee->update(['site_id' => $site->id]);
+        // Titik utama tidak disimpan di pivot; bila titik ini sebelumnya
+        // terdaftar sebagai titik tambahan, barisnya dibersihkan.
+        $employee->sites()->detach($site->id);
 
         return back()->with('success', 'Karyawan dipindahkan.');
     }

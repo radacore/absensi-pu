@@ -180,9 +180,13 @@ export default function Regions() {
         if (!region) return;
         if (isWilayah && region.name !== OWN_REGION) { toast.error('Hanya boleh mengelola titik di wilayah Anda sendiri'); return; }
         if (region.locations.length <= 1) { toast.error('Minimal harus ada 1 titik per wilayah'); return; }
-        const nAnggota = employees.filter((e) => e.office_location_id === siteId).length;
+        const anggotaSite = employees.filter((e) => (e.site_ids ?? [e.office_location_id]).map(Number).includes(Number(siteId)));
+        const nAnggota = anggotaSite.length;
+        const nUtama = anggotaSite.filter((e) => Number(e.office_location_id) === Number(siteId)).length;
         const siteName = region.locations.find((s) => s.id === siteId)?.nama_lokasi || 'titik ini';
-        const desc = `${region.name} • ${nAnggota > 0 ? `${nAnggota} anggota akan otomatis dipindah ke titik lain di wilayah ini.` : 'Tidak ada anggota di titik ini.'}`;
+        const desc = `${region.name} • ${nAnggota > 0
+            ? `${nAnggota} anggota terdaftar di titik ini. ${nUtama} karyawan memakai titik ini sebagai titik utama dan akan dipindah otomatis; sisanya hanya kehilangan titik tambahan.`
+            : 'Tidak ada anggota di titik ini.'}`;
         const ok = await confirm({
             title: `Hapus ${siteName}?`,
             description: desc,
@@ -194,7 +198,7 @@ export default function Regions() {
         router.delete(`${base}/sites/${siteId}`, { preserveScroll: true });
     };
 
-    const countForSite = (siteId) => employees.filter((e) => e.office_location_id === siteId).length;
+    const countForSite = (siteId) => employees.filter((e) => (e.site_ids ?? [e.office_location_id]).map(Number).includes(Number(siteId))).length;
 
     return (
         <AdminLayout>

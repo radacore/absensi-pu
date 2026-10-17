@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\MediaCleanup;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -88,6 +89,52 @@ class Employee extends Authenticatable
     public function site(): BelongsTo
     {
         return $this->belongsTo(Site::class);
+    }
+
+    /**
+     * Titik absensi TAMBAHAN (di luar titik utama `site_id`).
+     *
+     * Satu karyawan boleh absen di beberapa titik. Titik utama tetap disimpan
+     * di `employees.site_id` supaya pola shift, impor, dan approver admin
+     * wilayah tidak berubah arti.
+     */
+    public function sites(): BelongsToMany
+    {
+        return $this->belongsToMany(Site::class, 'employee_sites')->withTimestamps();
+    }
+
+    /**
+     * Semua titik absensi yang sah untuk karyawan ini: titik utama lebih dulu,
+     * lalu titik tambahan.
+     *
+     * @return array<int, int>
+     */
+    public function siteIds(): array
+    {
+        $tambahan = $this->relationLoaded('sites')
+            ? $this->sites->pluck('id')->all()
+            : $this->sites()->pluck('sites.id')->all();
+
+        $ids = $this->site_id !== null ? array_merge([(int) $this->site_id], $tambahan) : $tambahan;
+
+        return array_values(array_unique(array_map('intval', $ids)));
+    }
+
+    /**
+     * Samakan titik tambahan dengan daftar yang dipilih admin.
+     *
+     * Titik utama selalu diizinkan, jadi baris pivot untuk titik itu dibuang.
+     * Hanya titik yang benar-benar berbeda dari titik utama yang disimpan.
+     *
+     * @param  array<int, int|string>  $siteIds
+     */
+    public function syncSites(array $siteIds): void
+    {
+        $ids = array_values(array_unique(array_map('intval', $siteIds)));
+        $ids = array_values(array_diff($ids, $this->site_id !== null ? [(int) $this->site_id] : []));
+
+        $this->sites()->sync($ids);
+        $this->unsetRelation('sites');
     }
 
     public function attendances(): HasMany

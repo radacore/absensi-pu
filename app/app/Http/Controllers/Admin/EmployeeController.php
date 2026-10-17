@@ -11,6 +11,7 @@ use App\Support\Audit;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -42,7 +43,14 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         $data = $this->validateEmployee($request, null);
-        $employee = $this->createFromPayload($data);
+        // Satu transaksi: bila titik tambahan ditolak, karyawan barunya juga
+        // batal dibuat (tidak meninggalkan data setengah jadi).
+        $employee = DB::transaction(function () use ($data) {
+            $employee = $this->createFromPayload($data);
+            $this->simpanTitikTambahan($employee, $data);
+
+            return $employee;
+        });
 
         Audit::log(
             'employee.create',
@@ -101,14 +109,24 @@ class EmployeeController extends Controller
             $payload['regu'] = $this->reguPayload($data);
         }
 
-        $employee->update($payload);
+        // Perubahan data dan daftar titik disimpan bersama supaya tidak ada
+        // karyawan yang titiknya setengah tersimpan saat validasi gagal.
+        DB::transaction(function () use ($employee, $payload, $data) {
+            $employee->update($payload);
+
+            // Daftar titik hanya disentuh bila formulir memang mengirimkannya,
+            // supaya pemanggil lama (mis. impor) tidak menghapus titik tambahan.
+            if (array_key_exists('office_location_ids', $data)) {
+                $this->simpanTitikTambahan($employee, $data);
+            }
+        });
 
         Audit::log(
             'employee.update',
             subject: $employee,
             label: $employee->name,
             description: "Perbarui data karyawan {$employee->name}",
-            meta: ['region_id' => $employee->region_id, 'site_id' => $employee->site_id]
+            meta: ['region_id' => $employee->region_id, 'site_id' => $employee->site_id, 'site_ids' => $employee->siteIds()]
         );
 
         return back()->with('success', 'Karyawan berhasil diperbarui.');
@@ -193,6 +211,10 @@ class EmployeeController extends Controller
             'status' => ['required', 'in:PNS,PPPK,Kontrak,Honorer'],
             'region' => ['required', 'string', 'max:120'],
             'office_location_id' => ['required', 'integer'],
+            // Titik absensi tambahan (selain titik utama). Satu karyawan boleh
+            // absen di beberapa titik, semuanya harus di wilayah yang sama.
+            'office_location_ids' => ['sometimes', 'nullable', 'array'],
+            'office_location_ids.*' => ['integer'],
             // Label PPK dari berkas PPK. Murni keterangan, jadi bebas diisi.
             'ppk' => ['sometimes', 'nullable', 'string', 'max:150'],
             // Penanda pekerja shift (K4: per orang). Opsional supaya pemanggil
@@ -224,6 +246,8 @@ class EmployeeController extends Controller
             'region.required' => 'Wilayah wajib dipilih.',
             'office_location_id.required' => 'Titik proyek wajib dipilih.',
             'office_location_id.integer' => 'Titik proyek tidak valid.',
+            'office_location_ids.array' => 'Daftar titik tambahan tidak valid.',
+            'office_location_ids.*.integer' => 'Titik tambahan tidak valid.',
             'ppk.max' => 'PPK maksimal 150 karakter.',
             'regu.max' => 'Regu maksimal 30 karakter.',
             'hariKerja.min' => 'Pilih minimal satu hari kerja.',
@@ -326,6 +350,37 @@ class EmployeeController extends Controller
             'password' => Employee::SANDI_BAWAAN,
             'must_change_password' => true,
         ]);
+    }
+
+    /**
+     * Simpan titik absensi tambahan karyawan.
+     *
+     * Titik utama selalu sah dan tidak disimpan di pivot. Titik tambahan wajib
+     * berada di wilayah yang sama dengan titik utama — laporan dan approver
+     * bekerja per wilayah, jadi titik lintas wilayah akan membuat keduanya
+     * salah hitung.
+     */
+    private function simpanTitikTambahan(Employee $employee, array $data): void
+    {
+        $utama = (int) $employee->site_id;
+        $ids = collect($data['office_location_ids'] ?? [])
+            ->map(fn ($v) => (int) $v)
+            ->reject(fn ($id) => $id === $utama)
+            ->unique()
+            ->values();
+
+        if ($ids->isNotEmpty()) {
+            $region = Region::findOrFail($employee->region_id);
+            $sah = $region->sites()->whereIn('id', $ids->all())->pluck('id')->map(fn ($v) => (int) $v);
+
+            if ($ids->diff($sah)->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'office_location_ids' => 'Titik tambahan harus berada di wilayah yang sama dengan titik utama.',
+                ]);
+            }
+        }
+
+        $employee->syncSites($ids->all());
     }
 
     private function assertSameRegion(Region $region): void
