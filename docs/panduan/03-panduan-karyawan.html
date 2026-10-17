@@ -126,7 +126,7 @@
 <p>Beranda menampilkan ringkasan keadaan hari ini: apakah Anda sudah absen masuk, jam berapa, serta pintasan menuju halaman absensi. Dari sini Anda juga dapat melihat pengumuman terbaru dan pengajuan yang masih menunggu persetujuan.</p>
 
 <ol class="steps">
-  <li>Periksa nama titik absen Anda dan radiusnya.</li>
+  <li>Periksa daftar titik absensi Anda dan radius masing-masing.</li>
   <li>Bila belum absen, tekan pintasan <strong>Absensi</strong>.</li>
   <li>Bila ada pengajuan yang ditolak, buka halamannya untuk membaca catatan dari atasan.</li>
 </ol>
@@ -134,11 +134,11 @@
 <h2 id="s5"><span class="num">5</span>Absen masuk</h2>
 <p class="path">/karyawan/absensi</p>
 
-<p>Absen masuk memerlukan tiga hal sekaligus: posisi ponsel di dalam radius titik absen, swafoto langsung dari kamera, dan koneksi internet. Bila salah satu tidak terpenuhi, absen tidak dikirim.</p>
+<p>Absen masuk memerlukan tiga hal sekaligus: posisi ponsel di dalam radius salah satu titik absensi Anda, swafoto langsung dari kamera, dan koneksi internet. Bila salah satu tidak terpenuhi, absen tidak dikirim.</p>
 
 <ol class="steps">
-  <li>Buka menu <strong>Absensi</strong>. Halaman menampilkan nama titik absen, radius, dan jarak ponsel Anda saat ini.</li>
-  <li>Pastikan jarak yang tertera tidak lebih besar dari radius. Bila di luar radius, dekatkan diri ke titik absen.</li>
+  <li>Buka menu <strong>Absensi</strong>. Halaman menampilkan seluruh titik absensi Anda, radius, serta jarak ponsel ke tiap titik.</li>
+  <li>Aplikasi memilih titik terdekat otomatis. Pastikan jarak ke titik itu tidak melebihi radiusnya.</li>
   <li>Tekan tombol <strong>Absen Masuk</strong>.</li>
   <li>Ambil swafoto saat itu juga. Foto dari galeri tidak diterima.</li>
   <li>Tunggu sampai muncul konfirmasi bahwa absen tercatat.</li>
@@ -162,7 +162,7 @@
 
 <h2 id="s6"><span class="num">6</span>Absen pulang</h2>
 
-<p>Absen pulang juga memerlukan posisi di dalam radius dan swafoto, ditambah satu hal lagi: catatan pekerjaan hari itu. Catatan ini yang nantinya terlihat oleh admin pada daftar absensi.</p>
+<p>Absen pulang memerlukan posisi di dalam radius salah satu titik absensi Anda, swafoto, dan catatan pekerjaan hari itu. Catatan inilah yang terlihat oleh admin. Titik pulang boleh berbeda dari titik masuk; aplikasi memakai titik terdekat saat itu.</p>
 
 <ol class="steps">
   <li>Buka menu <strong>Absensi</strong> pada akhir hari kerja.</li>
@@ -334,8 +334,8 @@
 <table class="grid">
   <thead><tr><th style="width:58mm">Gejala</th><th>Kemungkinan sebab dan tindakan</th></tr></thead>
   <tbody>
-    <tr><td>Titik belum di-assign, tidak bisa absen</td><td>Akun Anda belum dihubungkan ke titik. Hubungi Admin Wilayah.</td></tr>
-    <tr><td>Di luar radius</td><td>Posisi ponsel lebih jauh dari radius titik. Dekatkan diri, atau ajukan dinas bila sedang bertugas di tempat lain.</td></tr>
+    <tr><td>Belum ada titik absensi</td><td>Akun Anda belum dihubungkan ke titik. Hubungi Admin Wilayah.</td></tr>
+    <tr><td>Di luar radius</td><td>Posisi ponsel lebih jauh dari radius titik terdekat. Dekatkan diri ke salah satu titik absensi Anda, atau ajukan dinas bila sedang bertugas di tempat lain.</td></tr>
     <tr><td>Lokasi belum siap atau gagal membaca GPS</td><td>Nyalakan lokasi dan izinkan akses lokasi untuk situs ini di pengaturan peramban.</td></tr>
     <tr><td>Kamera tidak terbuka saat absen</td><td>Izinkan akses kamera untuk situs ini. Muat ulang halaman setelah mengizinkan.</td></tr>
     <tr><td>Absen masuk tidak tercatat padahal sudah menekan tombol</td><td>Periksa halaman Rekap. Bila tidak ada, ajukan klaim toleransi pada bulan yang sama.</td></tr>

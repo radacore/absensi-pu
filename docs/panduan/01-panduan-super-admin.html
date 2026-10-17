@@ -122,7 +122,7 @@
     <tr><td class="n">1</td><td>Pengaturan</td><td>Jam kerja, hari kerja, dan kuota berlaku untuk semua wilayah.</td></tr>
     <tr><td class="n">2</td><td>Kantor Wilayah</td><td>Wilayah pusat dan cabang terbentuk.</td></tr>
     <tr><td class="n">3</td><td>Titik absen</td><td>Setiap lokasi punya koordinat dan radius.</td></tr>
-    <tr><td class="n">4</td><td>Karyawan</td><td>Setiap karyawan terhubung ke satu titik.</td></tr>
+    <tr><td class="n">4</td><td>Karyawan</td><td>Setiap karyawan punya satu titik utama, boleh ditambah titik lain di wilayah yang sama.</td></tr>
     <tr><td class="n">5</td><td>Admin Wilayah</td><td>Pengelola wilayah bisa masuk dan bekerja.</td></tr>
     <tr><td class="n">6</td><td>Pola dan jadwal shift</td><td>Hanya bila ada pekerja shift.</td></tr>
   </tbody>
@@ -179,17 +179,17 @@
   <li>Simpan.</li>
 </ol>
 
-<h4>Mengubah titik dan memindahkan anggota</h4>
+<h4>Mengubah titik dan mengelola anggota</h4>
 <ol class="steps">
   <li>Buka titik dari daftar wilayah.</li>
   <li>Tekan <strong>Ubah</strong> untuk memperbaiki nama, alamat, koordinat, atau radius.</li>
-  <li>Untuk memindahkan karyawan, cari namanya di daftar anggota, lalu tekan <strong>Pindah</strong>.</li>
-  <li>Pilih titik tujuan di wilayah yang sama, lalu simpan.</li>
+  <li>Untuk menambah titik absensi karyawan, tekan <strong>Tambah Anggota</strong>, centang namanya, lalu simpan.</li>
+  <li>Untuk memindahkan titik utama, cari karyawan di daftar anggota, lalu tekan <strong>Jadikan utama</strong> dan pilih titik tujuan di wilayah yang sama.</li>
 </ol>
 
 <div class="warn">
-  <div class="t">Satu karyawan, satu titik</div>
-  <p>Karyawan tidak bisa dilepas tanpa titik. Menambah anggota ke sebuah titik berarti memindahkannya dari titik lama. Riwayat absen yang sudah tercatat tetap menyimpan titik yang dipakai saat itu.</p>
+  <div class="t">Satu titik utama, boleh ditambah</div>
+  <p>Setiap karyawan wajib punya satu titik utama. Menambah anggota lewat halaman titik berarti menambahkan titik tambahan, bukan memindahkan titik utama, sehingga karyawan tetap bisa absen di titik lamanya. Untuk benar-benar pindah, gunakan tombol <strong>Jadikan utama</strong>. Riwayat absen tetap menyimpan titik yang dipakai saat itu.</p>
 </div>
 
 <div class="note">
@@ -197,8 +197,11 @@
   <p>Radius yang terlalu besar membuat absen bisa dilakukan dari jauh. Gunakan radius sekecil mungkin yang masih mencakup area kerja. Perubahan radius berlaku untuk semua anggota titik tersebut.</p>
 </div>
 
+<h4>Mengeluarkan karyawan dari titik</h4>
+<p>Tombol <strong>Keluarkan</strong> melepas karyawan dari titik tambahan. Bila titik itu ternyata titik utamanya, karyawan dipindahkan ke titik tambahan lain yang masih terdaftar. Bila tidak ada titik tambahan, pindahkan dulu lewat <strong>Jadikan utama</strong> agar karyawan tidak kehilangan titik absensi.</p>
+
 <h4>Menghapus titik</h4>
-<p>Sebuah wilayah harus menyisakan minimal satu titik. Ketika sebuah titik dihapus, anggotanya otomatis dipindahkan ke titik lain di wilayah yang sama. Bila titik yang dihapus masih memegang karyawan, pastikan titik tujuan pengganti sudah benar, karena karyawan tidak diberi pilihan pada saat itu.</p>
+<p>Sebuah wilayah harus menyisakan minimal satu titik. Ketika sebuah titik dihapus, karyawan yang memakai titik itu sebagai titik utama dipindahkan otomatis: didahulukan ke titik tambahannya sendiri bila ada, bila tidak ke titik lain di wilayah yang sama. Karyawan yang hanya memakai titik itu sebagai titik tambahan cukup kehilangan titik tersebut.</p>
 
 <h3>4.4 Menambah karyawan secara manual</h3>
 <p class="path">/super-admin/employees, tombol Tambah Karyawan</p>
@@ -213,7 +216,8 @@
     <tr><td>Golongan, jabatan, unit, PPK</td><td>Data kepegawaian, dipakai di tampilan dan rekap.</td></tr>
     <tr><td>Status</td><td>PNS, PPPK, atau Kontrak.</td></tr>
     <tr><td>Wilayah</td><td>Menentukan admin mana yang mengelola orang ini.</td></tr>
-    <tr><td>Titik proyek</td><td>Wajib. Satu karyawan hanya boleh punya satu titik.</td></tr>
+    <tr><td>Titik proyek</td><td>Wajib. Menjadi titik utama karyawan.</td></tr>
+    <tr><td>Titik tambahan</td><td>Opsional. Titik lain di wilayah yang sama tempat karyawan juga boleh absen.</td></tr>
     <tr><td>Pekerja shift</td><td>Aktifkan bila orang ini bekerja bergiliran.</td></tr>
     <tr><td>Hari kerja khusus</td><td>Kosongkan bila ikut hari kerja umum. Bila diisi, jadwal pribadi ini yang dipakai.</td></tr>
     <tr><td>Regu</td><td>Opsional, dipakai untuk menyusun jadwal shift.</td></tr>
@@ -499,7 +503,7 @@
 <table class="grid">
   <thead><tr><th style="width:62mm">Gejala</th><th>Kemungkinan sebab dan tindakan</th></tr></thead>
   <tbody>
-    <tr><td>Karyawan tidak bisa absen, muncul pesan titik belum di-assign</td><td>Karyawan belum terhubung ke titik. Buka titik yang benar, lalu tambahkan atau pindahkan karyawan tersebut.</td></tr>
+    <tr><td>Karyawan tidak bisa absen, muncul pesan belum ada titik absensi</td><td>Karyawan belum terhubung ke titik. Buka titik yang benar, lalu tambahkan atau pindahkan karyawan tersebut.</td></tr>
     <tr><td>Absen ditolak karena di luar radius</td><td>Posisi ponsel jauh dari titik, atau radius terlalu kecil. Periksa jarak pada detail absensi, lalu sesuaikan radius bila perlu.</td></tr>
     <tr><td>Admin Wilayah tidak bisa mengubah Pengaturan</td><td>Memang demikian. Pengaturan hanya dapat diubah Super Admin. Admin Wilayah melihat halaman dalam mode baca.</td></tr>
     <tr><td>Akun admin tidak bisa membuka panel</td><td>Akun masih memakai sandi bawaan. Ganti sandi lewat halaman Profil terlebih dahulu.</td></tr>
