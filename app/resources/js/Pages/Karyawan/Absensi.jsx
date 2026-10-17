@@ -160,15 +160,22 @@ export default function Absensi() {
         [history, workDateAktif],
     );
     const wfaAktif = rowAktif?.jenisKerja === 'WFA';
-    // Radius hanya relevan untuk WFO. WFA bebas dari mana saja (C1).
-    const butuhRadius = mode === 'pulang' ? !wfaAktif : jenisKerja === 'WFO';
-    const radiusOk = !butuhRadius || inRadius;
-    // Alasan WFA wajib diisi sebelum absen masuk dikirim.
-    const wfaSiap = jenisKerja !== 'WFA' || wfaAlasan.trim().length >= 10;
+    // WFA membebaskan absen dari lokasi mana pun (C1). Saat absen masuk,
+    // yang menentukan adalah pilihan hari ini; saat pulang, baris absennya.
+    const wfaDipilih = mode === 'pulang' ? wfaAktif : jenisKerja === 'WFA';
 
     // Tahap pulang sedang dibuka, izin pindah titik mati, dan titik masuknya
     // masih diketahui: hanya titik itu yang diterima server.
     const terkunciPulang = mode === 'pulang' && !wfaAktif && !bolehPindahTitik && titikMasukAktif != null;
+
+    // Radius hanya mengunci absen pulang yang wajib di titik masuk. Absen
+    // masuk di luar radius tetap dicatat dan ditandai (E6), jadi tidak diblokir.
+    const butuhRadius = terkunciPulang;
+    const radiusOk = !butuhRadius || inRadius;
+    // Alasan WFA wajib diisi sebelum absen masuk dikirim.
+    const wfaSiap = jenisKerja !== 'WFA' || wfaAlasan.trim().length >= 10;
+
+    const namaTitikMasuk = sites.find((s) => Number(s.id) === Number(titikMasukAktif))?.nama_lokasi ?? 'titik masuk';
 
     const requestPos = () => {
         if (sites.length === 0) return;
@@ -409,12 +416,16 @@ export default function Absensi() {
                                     <p className="text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 bg-[#FEF2F2] text-[#991B1B]">Lokasi belum siap</p>
                                 ) : (
                                     <>
-                                        <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${radiusOk ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FFF7E6] text-[#92400E]'}`}>
-                                            {jarak} m / {radiusAktif} m • {!butuhRadius ? 'WFA — bebas lokasi' : inRadius ? `Dalam radius ${terdekat?.site?.nama_lokasi ?? ''}` : 'Di luar radius'}
+                                        <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${wfaDipilih || inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FFF7E6] text-[#92400E]'}`}>
+                                            {jarak} m / {radiusAktif} m • {wfaDipilih ? 'WFA — bebas lokasi' : inRadius ? `Dalam radius ${terdekat?.site?.nama_lokasi ?? ''}` : 'Di luar radius'}
                                         </p>
-                                        {butuhRadius && !inRadius && (
+                                        {!wfaDipilih && !inRadius && (
                                             <p className="text-xs text-[#92400E] mt-1">
-                                                Absen WFO di luar radius tetap dicatat dan ditandai. Pilih WFA bila memang bekerja dari luar kantor.
+                                                {terkunciPulang
+                                                    ? `Absen pulang hanya bisa di ${namaTitikMasuk}. Kembali ke radius titik itu.`
+                                                    : mode === 'pulang'
+                                                        ? 'Absen pulang di luar radius tetap dicatat dan ditandai.'
+                                                        : 'Absen WFO di luar radius tetap dicatat dan ditandai. Pilih WFA bila memang bekerja dari luar kantor.'}
                                             </p>
                                         )}
                                     </>
@@ -443,7 +454,7 @@ export default function Absensi() {
                                             type="button"
                                             onClick={handlePulang}
                                             disabled={jarak == null || !radiusOk || !selfieFile || !openRow || !bolehPulang || !catatanPulang.trim()}
-                                            title={jarak == null ? 'Menunggu GPS' : !radiusOk ? `${jarak} m / ${radiusAktif} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : !bolehPulang ? 'Belum waktunya pulang — ajukan pulang cepat dulu' : !catatanPulang.trim() ? 'Isi catatan pekerjaan dulu' : ''}
+                                            title={jarak == null ? 'Menunggu GPS' : !radiusOk ? `Absen pulang hanya bisa di ${namaTitikMasuk} (${jarak} m / ${radiusAktif} m)` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : !bolehPulang ? 'Belum waktunya pulang — ajukan pulang cepat dulu' : !catatanPulang.trim() ? 'Isi catatan pekerjaan dulu' : ''}
                                             className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && radiusOk && selfieFile && openRow && bolehPulang && catatanPulang.trim() ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
                                         >
                                             Absen Pulang
@@ -519,6 +530,9 @@ export default function Absensi() {
                                                 )}
                                                 {r.diLuarTitik && (
                                                     <span className="inline-block ml-1 text-[10px] font-medium bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full align-middle">di luar titik</span>
+                                                )}
+                                                {r.diLuarTitikPulang && (
+                                                    <span className="inline-block ml-1 text-[10px] font-medium bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full align-middle">pulang di luar titik</span>
                                                 )}
                                             </td>
                                         </tr>

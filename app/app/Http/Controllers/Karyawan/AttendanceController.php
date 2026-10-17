@@ -52,6 +52,7 @@ class AttendanceController extends Controller
                 'jenisKerja' => $a->jenis_kerja ?: 'WFO',
                 'wfaStatus' => $a->wfa_status,
                 'diLuarTitik' => (bool) $a->di_luar_titik,
+                'diLuarTitikPulang' => (bool) $a->di_luar_titik_pulang,
             ])->values()->all();
 
         $assigned = $me->site ? [
