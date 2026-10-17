@@ -104,6 +104,10 @@ class AdminPresenter
             'regionId' => $u->region_id,
             'status' => $u->is_active ? 'Aktif' : 'Nonaktif',
             'avatar' => self::DEFAULT_AVATAR,
+            // Akun yang juga terdaftar sebagai karyawan: satu orang, satu
+            // kata sandi, dua peran.
+            'employeeId' => $u->employee_id,
+            'karyawan' => $u->employee_id !== null,
         ])->values()->all();
     }
 

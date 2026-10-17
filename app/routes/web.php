@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\AttendanceSelfieController;
 use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\Auth\EmployeeAuthController;
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Karyawan\AttendanceController as KaryawanAttendanceController;
 use App\Http\Controllers\Karyawan\CutiController as KaryawanCutiController;
 use App\Http\Controllers\Karyawan\DashboardController as KaryawanDashboardController;
@@ -30,14 +31,20 @@ use App\Http\Controllers\Karyawan\LoveController as KaryawanLoveController;
 use App\Http\Controllers\Karyawan\PengumumanController as KaryawanPengumumanController;
 use App\Http\Controllers\Karyawan\ProfilController as KaryawanProfilController;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // ── Public ────────────────────────────────────────────────────
 Route::get('/', function () {
-    return redirect()->route('karyawan.login');
+    return redirect()->route('login');
 });
+
+// Satu pintu masuk untuk admin dan karyawan. Halaman ini yang dipakai PWA
+// (lihat start_url di vite.config.js) dan yang dituju semua tautan lama.
+Route::get('/login', [LoginController::class, 'create'])->name('login');
+Route::post('/login', [LoginController::class, 'store'])
+    ->middleware('throttle:login')
+    ->name('login.store');
 
 // ── Swafoto absensi (disk privat, ber-otorisasi) ──────────────
 // Dipakai bersama karyawan (miliknya sendiri) dan admin (sesuai cakupan).
@@ -49,15 +56,10 @@ Route::get('/absensi/{attendance}/selfie/{jenis}', [AttendanceSelfieController::
 
 // ── Karyawan PWA ──────────────────────────────────────────────
 Route::prefix('karyawan')->group(function () {
-    // Sesi karyawan masih aktif → langsung ke dasbor (mis. membuka PWA yang start di halaman ini).
-    Route::get('/login', function () {
-        if (Auth::guard('employee')->check()) {
-            return redirect()->route('karyawan.dashboard');
-        }
-
-        return Inertia::render('Karyawan/Login');
-    })->name('karyawan.login');
-    Route::post('/login', [EmployeeAuthController::class, 'store'])
+    // Alamat lama tetap dilayani: halaman yang sama dengan /login, jadi
+    // tautan, bookmark, dan PWA yang sudah terpasang tidak berakhir 404.
+    Route::get('/login', [LoginController::class, 'create'])->name('karyawan.login');
+    Route::post('/login', [LoginController::class, 'store'])
         ->middleware('throttle:login')
         ->name('karyawan.login.store');
 
@@ -200,8 +202,8 @@ if (! function_exists('adminMasterRoutes')) {
 
 // ── Super Admin Pusat ─────────────────────────────────────────
 Route::prefix('super-admin')->group(function () {
-    Route::get('/login', fn () => Inertia::render('Admin/Login'))->name('super_admin.login');
-    Route::post('/login', [AdminAuthController::class, 'store'])
+    Route::get('/login', [LoginController::class, 'create'])->name('super_admin.login');
+    Route::post('/login', [LoginController::class, 'store'])
         ->middleware('throttle:login')
         ->name('super_admin.login.store');
 });
@@ -209,8 +211,8 @@ adminMasterRoutes('super-admin', 'super_admin', 'super_admin');
 
 // ── Admin Wilayah ─────────────────────────────────────────────
 Route::prefix('admin')->group(function () {
-    Route::get('/login', fn () => Inertia::render('Admin/Login'))->name('admin.login');
-    Route::post('/login', [AdminAuthController::class, 'store'])
+    Route::get('/login', [LoginController::class, 'create'])->name('admin.login');
+    Route::post('/login', [LoginController::class, 'store'])
         ->middleware('throttle:login')
         ->name('admin.login.store');
 });
@@ -218,8 +220,8 @@ adminMasterRoutes('admin', 'admin_wilayah', 'admin');
 
 // ── Alias legacy /wilayah → Admin Wilayah ─────────────────────
 Route::prefix('wilayah')->group(function () {
-    Route::get('/login', fn () => Inertia::render('Admin/Login'))->name('wilayah.login');
-    Route::post('/login', [AdminAuthController::class, 'store'])
+    Route::get('/login', [LoginController::class, 'create'])->name('wilayah.login');
+    Route::post('/login', [LoginController::class, 'store'])
         ->middleware('throttle:login')
         ->name('wilayah.login.store');
 });

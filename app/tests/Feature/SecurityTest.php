@@ -55,6 +55,7 @@ class SecurityTest extends TestCase
     {
         $routes = Route::getRoutes();
         $loginRoutes = [
+            'login',
             'super-admin/login',
             'admin/login',
             'wilayah/login',

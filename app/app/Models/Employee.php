@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\MediaCleanup;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -118,6 +119,17 @@ class Employee extends Authenticatable
     public function earlyLeaveRequests(): HasMany
     {
         return $this->hasMany(EarlyLeaveRequest::class);
+    }
+
+    /**
+     * Akun admin yang menunjuk ke karyawan ini, bila ada.
+     *
+     * Satu karyawan hanya boleh tertaut ke satu akun admin (kolom
+     * users.employee_id unik).
+     */
+    public function akunAdmin(): HasOne
+    {
+        return $this->hasOne(User::class, 'employee_id');
     }
 
     /**

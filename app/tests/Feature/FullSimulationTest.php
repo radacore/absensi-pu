@@ -240,14 +240,15 @@ class FullSimulationTest extends TestCase
         $this->assertAuthenticatedAs($this->adminGowa());
     }
 
-    public function test_admin_tidak_bisa_login_ke_panel_super_admin(): void
+    public function test_admin_wilayah_tetap_terkurung_di_panel_wilayahnya(): void
     {
-        $this->from('/super-admin/login')
-            ->post('/super-admin/login', ['email' => 'admin.gowa@bbws-pj.go.id', 'password' => 'password123'])
-            ->assertRedirect('/super-admin/login')
-            ->assertSessionHasErrors('email');
+        // Satu pintu masuk: kata sandinya sah, jadi login berhasil. Yang
+        // membatasi akses bukan halaman login, melainkan penjaga area.
+        $this->post('/super-admin/login', ['email' => 'admin.gowa@bbws-pj.go.id', 'password' => 'password123'])
+            ->assertRedirect('/admin');
 
-        $this->assertGuest();
+        $this->get('/super-admin')->assertRedirect('/admin');
+        $this->assertAuthenticatedAs($this->adminGowa());
     }
 
     public function test_super_admin_tidak_bisa_masuk_panel_admin_wilayah(): void

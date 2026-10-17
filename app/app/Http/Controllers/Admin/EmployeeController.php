@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Region;
+use App\Models\User;
 use App\Support\AdminPresenter;
 use App\Support\Audit;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -117,6 +119,12 @@ class EmployeeController extends Controller
         $scope = $this->scopeRegion();
         abort_if($scope && $employee->region_id !== $scope, 403, 'Karyawan ini di luar cakupan Anda.');
 
+        // Menghapus karyawan yang punya akun admin akan membuat akun itu
+        // kehilangan identitas dan kata sandinya. Tautan dilepas dulu.
+        if ($employee->akunAdmin()->exists()) {
+            return back()->with('error', 'Karyawan ini tertaut ke akun Admin Wilayah. Lepaskan tautannya dulu di menu Admin Wilayah.');
+        }
+
         $snapshot = ['nik' => $employee->nik, 'nip' => $employee->nip, 'region_id' => $employee->region_id, 'site_id' => $employee->site_id];
         $name = $employee->name;
         $id = $employee->id;
@@ -178,7 +186,7 @@ class EmployeeController extends Controller
             'nik' => ['nullable', 'string', 'max:30', 'regex:/^[0-9A-Za-z.\-\/]+$/', Rule::unique('employees', 'nik')->ignore($ignoreId)],
             'nip' => ['nullable', 'string', Rule::unique('employees', 'nip')->ignore($ignoreId)],
             'nama' => ['required', 'string', 'max:150'],
-            'email' => ['required', 'email', Rule::unique('employees', 'email')->ignore($ignoreId)],
+            'email' => ['required', 'email', Rule::unique('employees', 'email')->ignore($ignoreId), $this->emailBukanAkunAdmin($ignoreId)],
             'gol' => ['required', 'string', 'max:10'],
             'jabatan' => ['required', 'string', 'max:150'],
             'unit' => ['required', 'string', 'max:150'],
@@ -220,6 +228,29 @@ class EmployeeController extends Controller
             'regu.max' => 'Regu maksimal 30 karakter.',
             'hariKerja.min' => 'Pilih minimal satu hari kerja.',
         ]);
+    }
+
+    /**
+     * Email karyawan tidak boleh sama dengan email akun admin yang tidak
+     * tertaut ke karyawan ini.
+     *
+     * Tanpa pemeriksaan ini, sebuah akun admin bisa "menutupi" karyawan
+     * dengan email yang sama: saat login, akun admin yang menang, dan
+     * karyawan itu tidak akan pernah bisa masuk memakai emailnya sendiri.
+     */
+    private function emailBukanAkunAdmin(?int $ignoreEmployeeId): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) use ($ignoreEmployeeId): void {
+            $bentrok = User::whereRaw('LOWER(email) = ?', [mb_strtolower(trim((string) $value), 'UTF-8')])
+                ->when($ignoreEmployeeId, fn ($q) => $q->where(function ($q) use ($ignoreEmployeeId) {
+                    $q->whereNull('employee_id')->orWhere('employee_id', '!=', $ignoreEmployeeId);
+                }))
+                ->exists();
+
+            if ($bentrok) {
+                $fail('Email ini sudah dipakai akun admin. Gunakan email lain.');
+            }
+        };
     }
 
     /**

@@ -1,16 +1,23 @@
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 
+/**
+ * Satu pintu masuk untuk admin dan karyawan.
+ *
+ * Formulir ini mengirim `email`, tetapi server juga menerima `login` supaya
+ * aplikasi karyawan yang masih terpasang di ponsel tetap bisa masuk.
+ */
 export default function Login() {
-    const [form, setForm] = useState({ login: '', password: '' });
+    const [form, setForm] = useState({ email: '', password: '', remember: false });
     const [show, setShow] = useState(false);
     const [processing, setProcessing] = useState(false);
     const { errors } = usePage().props;
+    const galat = errors.email || errors.login;
 
     function submit(e) {
         e.preventDefault();
         setProcessing(true);
-        router.post('/karyawan/login', form, {
+        router.post('/login', form, {
             preserveScroll: true,
             onFinish: () => setProcessing(false),
         });
@@ -28,18 +35,19 @@ export default function Login() {
                 <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(15,23,42,0.06)] p-6">
                     <div className="mb-5">
                         <h2 className="font-semibold text-[#0F172A]">Masuk</h2>
+                        <p className="text-xs text-[#64748B] mt-1">Untuk admin dan karyawan. Satu akun, satu kata sandi.</p>
                     </div>
 
                     <form onSubmit={submit} className="space-y-4">
-                        {errors.login && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{errors.login}</p>}
+                        {galat && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{galat}</p>}
                         <div>
-                            <label htmlFor="login" className="text-xs font-medium text-[#334155]">Email</label>
+                            <label htmlFor="email" className="text-xs font-medium text-[#334155]">Email</label>
                             <input
-                                id="login"
+                                id="email"
                                 type="email"
                                 autoComplete="email"
-                                value={form.login}
-                                onChange={(e) => setForm({ ...form, login: e.target.value })}
+                                value={form.email}
+                                onChange={(e) => setForm({ ...form, email: e.target.value })}
                                 placeholder="Masukkan email"
                                 className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-3 text-[15px] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/10 focus:bg-white"
                             />
@@ -50,6 +58,7 @@ export default function Login() {
                                 <input
                                     id="password"
                                     type={show ? 'text' : 'password'}
+                                    autoComplete="current-password"
                                     value={form.password}
                                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                                     placeholder="Masukkan kata sandi"
@@ -60,6 +69,16 @@ export default function Login() {
                                 </button>
                             </div>
                         </div>
+
+                        <label className="flex items-center gap-2.5 text-xs text-[#334155]">
+                            <input
+                                type="checkbox"
+                                checked={form.remember}
+                                onChange={(e) => setForm({ ...form, remember: e.target.checked })}
+                                className="h-4 w-4 rounded border-[#CBD5E1] text-[#1E3A8A] focus:ring-[#1E3A8A]/20"
+                            />
+                            Ingat saya di perangkat ini
+                        </label>
 
                         <button type="submit" disabled={processing} className="block w-full text-center bg-[#0F172A] text-white rounded-xl py-3.5 text-sm font-semibold hover:bg-[#1E3A8A] transition disabled:opacity-60">
                             Masuk

@@ -7,40 +7,91 @@ import { useState } from 'react';
 
 function getBase(url) { if (url.startsWith('/super-admin')) return '/super-admin'; if (url.startsWith('/admin')) return '/admin'; if (url.startsWith('/wilayah')) return '/wilayah'; return '/admin'; }
 
-const empty = { nama: '', email: '', region: '', password: '' };
+const empty = { employeeId: '', nama: '', email: '', region: '', password: '' };
 
 export default function AdminWilayah() {
     const { url, props } = usePage();
-    const { admins, regionNames } = props;
+    const { admins, regionNames, employees } = props;
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     const list = admins || [];
     const regions = regionNames || [];
+    const semuaKaryawan = employees || [];
     const confirm = useConfirm();
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({ ...empty });
+    const [cari, setCari] = useState('');
+    const [formErrors, setFormErrors] = useState({});
+
+    // Karyawan yang sudah dipakai akun admin lain tidak boleh dipilih lagi
+    // (satu karyawan = satu akun admin).
+    const terpakai = new Set(
+        list
+            .filter((a) => a.employeeId && a.id !== editing?.id)
+            .map((a) => a.employeeId)
+    );
+    const pilihan = semuaKaryawan.filter((e) => {
+        if (terpakai.has(e.id)) return false;
+        if (!cari.trim()) return true;
+        const kunci = `${e.nama} ${e.nik} ${e.email}`.toLowerCase();
+        return kunci.includes(cari.trim().toLowerCase());
+    });
+    const karyawan = semuaKaryawan.find((e) => String(e.id) === String(form.employeeId)) || null;
 
     // Wilayah sengaja tidak dipilih otomatis. Dulu di sini ada `regions[1]`, dan
     // karena urutan wilayah mengikuti id, pilihan itu selalu jatuh ke "Kab. Gowa":
     // Super Admin yang tidak menyentuh kolom Region tanpa sadar membuat admin Gowa.
-    const openAdd = () => { setEditing(null); setForm({ ...empty }); setOpen(true); };
-    const openEdit = (a) => { setEditing(a); setForm({ nama: a.nama, email: a.email, region: a.region, password: '' }); setOpen(true); };
-    const close = () => setOpen(false);
+    const openAdd = () => { setEditing(null); setForm({ ...empty }); setCari(''); setFormErrors({}); setOpen(true); };
+    const openEdit = (a) => {
+        setEditing(a);
+        setForm({ employeeId: a.employeeId ? String(a.employeeId) : '', nama: a.nama, email: a.email, region: a.region, password: '' });
+        setCari('');
+        setFormErrors({});
+        setOpen(true);
+    };
+    const close = () => { setOpen(false); setFormErrors({}); };
+
+    const pilihKaryawan = (id) => {
+        const e = semuaKaryawan.find((x) => String(x.id) === String(id));
+        setForm((f) => ({
+            ...f,
+            employeeId: id,
+            nama: e ? e.nama : f.nama,
+            email: e ? e.email : f.email,
+            region: e && e.region ? e.region : f.region,
+        }));
+    };
 
     const save = () => {
-        if (!form.nama.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) { toast.error('Nama dan email valid wajib diisi'); return; }
-        if (!form.region) { toast.error('Pilih wilayah dulu'); return; }
-        if (!editing && form.password.length < 8) { toast.error('Password minimal 8 karakter'); return; }
-        const payload = { nama: form.nama, email: form.email, region: form.region };
-        if (editing) {
-            if (form.password) payload.password = form.password;
-            router.put(`${base}/admin-wilayah/${editing.id}`, payload, { preserveScroll: true });
-        } else {
-            payload.password = form.password;
-            router.post(`${base}/admin-wilayah`, payload, { preserveScroll: true });
+        const err = {};
+        if (!form.region) err.region = 'Pilih wilayah dulu';
+        if (!form.employeeId) {
+            if (!form.nama.trim()) err.nama = 'Nama wajib diisi';
+            if (!/^\S+@\S+\.\S+$/.test(form.email)) err.email = 'Email tidak valid';
+            if (!editing && form.password.length < 8) err.password = 'Password minimal 8 karakter';
+            if (editing?.karyawan && form.password.length < 8) err.password = 'Isi password baru karena akun ini dilepas dari karyawan';
         }
-        setOpen(false);
+        if (Object.keys(err).length) { setFormErrors(err); return; }
+
+        const payload = {
+            employee_id: form.employeeId || null,
+            nama: form.nama,
+            email: form.email,
+            region: form.region,
+        };
+        if (form.password) payload.password = form.password;
+
+        const opsi = {
+            preserveScroll: true,
+            onSuccess: () => { setOpen(false); setFormErrors({}); },
+            onError: (e) => setFormErrors(e),
+        };
+        if (editing) {
+            router.put(`${base}/admin-wilayah/${editing.id}`, payload, opsi);
+        } else {
+            router.post(`${base}/admin-wilayah`, payload, opsi);
+        }
     };
 
     const handleReset = () => {
@@ -102,7 +153,7 @@ export default function AdminWilayah() {
                             <tbody className="divide-y divide-[#F1F5F9]">
                                 {list.map((a) => (
                                     <tr key={a.id} className="hover:bg-[#F8FAFC]/50">
-                                        <td className="px-4 py-3"><div className="flex items-center gap-3"><img src={a.avatar} alt={a.nama} className="w-8 h-8 rounded-full object-cover" /><div><p className="font-medium text-[#0F172A]">{a.nama}</p><p className="text-xs text-[#64748B]">{a.email}</p></div></div></td>
+                                        <td className="px-4 py-3"><div className="flex items-center gap-3"><img src={a.avatar} alt={a.nama} className="w-8 h-8 rounded-full object-cover" /><div><div className="flex items-center gap-2 flex-wrap"><p className="font-medium text-[#0F172A]">{a.nama}</p>{a.karyawan && <span className="text-[10px] font-semibold bg-[#EFF6FF] text-[#1E3A8A] px-1.5 py-0.5 rounded-full">Juga karyawan</span>}</div><p className="text-xs text-[#64748B]">{a.email}</p></div></div></td>
                                         <td className="px-4 py-3"><span className="text-xs font-medium bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full border border-[#FCB833]/20">{a.region}</span></td>
                                         <td className="px-4 py-3 text-xs">admin_wilayah</td>
                                         <td className="px-4 py-3">
@@ -125,31 +176,69 @@ export default function AdminWilayah() {
 
                 {open && (
                     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={close}>
-                        <div className="bg-white rounded-2xl w-full max-w-[480px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
+                        <div className="bg-white rounded-2xl w-full max-w-[480px] shadow-xl max-h-[92dvh] overflow-y-auto" onClick={(e)=>e.stopPropagation()}>
                             <div className="px-6 py-4 flex items-center justify-between border-b">
                                 <h3 className="font-semibold text-[#0F172A]">{editing ? 'Edit Admin Wilayah' : 'Tambah Admin Wilayah'}</h3>
                                 <button type="button" onClick={close} className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center"><IconClose size={15} /></button>
                             </div>
                             <div className="px-6 py-5 space-y-4">
                                 <div>
-                                    <label className="text-xs font-medium text-[#334155]">Nama</label>
-                                    <input value={form.nama} onChange={(e)=>setForm({...form, nama:e.target.value})} placeholder="Admin Gowa" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                                    <label className="text-xs font-medium text-[#334155]">Karyawan</label>
+                                    <p className="text-[11px] text-[#64748B] mt-0.5">Pilih karyawan yang juga menjadi admin, atau buat akun admin saja.</p>
+                                    <input
+                                        value={cari}
+                                        onChange={(e)=>setCari(e.target.value)}
+                                        placeholder="Cari nama, NIK, atau email"
+                                        className="mt-2 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10"
+                                    />
+                                    <select
+                                        value={form.employeeId}
+                                        onChange={(e)=>pilihKaryawan(e.target.value)}
+                                        className="mt-2 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10"
+                                    >
+                                        <option value="">— Akun admin saja (tanpa tautan) —</option>
+                                        {pilihan.map((e)=>(
+                                            <option key={e.id} value={e.id}>{e.nama} • {e.nik || e.email} • {e.region}</option>
+                                        ))}
+                                    </select>
+                                    {formErrors.employee_id && <p className="text-[11px] text-red-600 mt-1">{formErrors.employee_id}</p>}
                                 </div>
-                                <div>
-                                    <label className="text-xs font-medium text-[#334155]">Email (login)</label>
-                                    <input value={form.email} onChange={(e)=>setForm({...form, email:e.target.value})} placeholder="admin.gowa@bbws-pj.go.id" type="email" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
-                                </div>
+
+                                {karyawan ? (
+                                    <div className="rounded-xl bg-[#EFF6FF] px-3.5 py-3">
+                                        <p className="text-sm font-medium text-[#0F172A]">{karyawan.nama}</p>
+                                        <p className="text-xs text-[#334155] mt-0.5">{karyawan.email}</p>
+                                        <p className="text-[11px] text-[#1E3A8A] mt-2">Nama dan email mengikuti data karyawan. Kata sandi juga mengikuti akun karyawan, jadi tidak perlu diisi di sini.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <label className="text-xs font-medium text-[#334155]">Nama</label>
+                                            <input value={form.nama} onChange={(e)=>setForm({...form, nama:e.target.value})} placeholder="Admin Gowa" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                                            {formErrors.nama && <p className="text-[11px] text-red-600 mt-1">{formErrors.nama}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-medium text-[#334155]">Email (login)</label>
+                                            <input value={form.email} onChange={(e)=>setForm({...form, email:e.target.value})} placeholder="admin.gowa@bbws-pj.go.id" type="email" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                                            {formErrors.email && <p className="text-[11px] text-red-600 mt-1">{formErrors.email}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-medium text-[#334155]">{editing ? 'Password baru (kosongkan jika tidak ganti)' : 'Password awal'}</label>
+                                            <input value={form.password} onChange={(e)=>setForm({...form, password:e.target.value})} placeholder="Min. 8 karakter" type="password" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
+                                            {formErrors.password && <p className="text-[11px] text-red-600 mt-1">{formErrors.password}</p>}
+                                        </div>
+                                    </>
+                                )}
+
                                 <div>
                                     <label className="text-xs font-medium text-[#334155]">Region (assign 1 wilayah)</label>
                                     <select value={form.region} onChange={(e)=>setForm({...form, region:e.target.value})} className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10">
                                         <option value="" disabled>— Pilih wilayah —</option>
                                         {regions.map((r)=><option key={r} value={r}>{r}</option>)}
                                     </select>
+                                    {formErrors.region && <p className="text-[11px] text-red-600 mt-1">{formErrors.region}</p>}
                                 </div>
-                                <div>
-                                    <label className="text-xs font-medium text-[#334155]">{editing ? 'Password baru (kosongkan jika tidak ganti)' : 'Password awal'}</label>
-                                    <input value={form.password} onChange={(e)=>setForm({...form, password:e.target.value})} placeholder="Min. 8 karakter" type="password" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
-                                </div>
+
                                 <div className="flex gap-2 pt-2">
                                     <button type="button" onClick={close} className="flex-1 rounded-xl bg-[#F1F5F9] py-3 text-sm font-semibold text-[#64748B]">Batal</button>
                                     <button type="button" onClick={save} className="flex-1 rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Simpan</button>

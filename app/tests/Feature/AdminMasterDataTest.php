@@ -42,7 +42,7 @@ class AdminMasterDataTest extends TestCase
                 ->component('Admin/Regions')
                 ->has('regions', 24)
                 ->where('regions.0.name', 'Kota Makassar')
-                ->has('employees', 5));
+                ->has('employees', 7));
     }
 
     public function test_wilayah_admin_region_index_only_sees_own_region(): void
@@ -54,7 +54,7 @@ class AdminMasterDataTest extends TestCase
                 ->component('Admin/Regions')
                 ->where('regions.0.name', 'Kab. Gowa')
                 ->has('regions', 1)
-                ->has('employees', 3));
+                ->has('employees', 4));
     }
 
     public function test_super_admin_can_create_update_and_delete_region(): void

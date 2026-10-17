@@ -59,12 +59,17 @@ class AuthWorkflowTest extends TestCase
         $this->get('/admin/regions')->assertOk();
     }
 
-    public function test_admin_wilayah_cannot_login_to_super_admin_area(): void
+    public function test_pintu_super_admin_tetap_mengarahkan_admin_wilayah_ke_panel_wilayah(): void
     {
+        // Satu pintu masuk melayani semua peran. Admin wilayah yang mengetik
+        // alamat /super-admin/login tidak diberi akses pusat; ia diarahkan ke
+        // panel wilayahnya sendiri.
         $this->post('/super-admin/login', [
             'email' => 'admin.gowa@bbws-pj.go.id',
             'password' => 'password123',
-        ])->assertSessionHasErrors('email');
+        ])->assertRedirect('/admin');
+
+        $this->get('/super-admin')->assertRedirect('/admin');
     }
 
     public function test_super_admin_login_and_reaches_pusat_area(): void

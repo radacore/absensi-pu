@@ -15,6 +15,11 @@ class EmployeeSeeder extends Seeder
             ['nik' => '7371001234567892', 'nip' => null, 'name' => 'Budi Santoso', 'golongan' => null, 'jabatan' => 'Operator', 'unit_kerja' => 'Bidang Jalan', 'status_kepegawaian' => 'Kontrak', 'region_id' => 2, 'site_id' => 202, 'email' => 'budi@bbws-pj.go.id'],
             ['nik' => '7371001234567893', 'nip' => null, 'name' => 'Rina Wati', 'golongan' => null, 'jabatan' => 'Admin', 'unit_kerja' => 'Bidang Umum', 'status_kepegawaian' => 'Kontrak', 'region_id' => 2, 'site_id' => 201, 'email' => 'rina@bbws-pj.go.id'],
             ['nik' => '7371001234567894', 'nip' => null, 'name' => 'Dewi Lestari', 'golongan' => null, 'jabatan' => 'Staff', 'unit_kerja' => 'Bidang Jalan', 'status_kepegawaian' => 'PNS', 'region_id' => 3, 'site_id' => 301, 'email' => 'dewi@bbws-pj.go.id'],
+            // Dua baris berikut adalah orang yang sama dengan akun Admin
+            // Wilayah di AdminUserSeeder. Satu orang, satu kata sandi, dua
+            // peran: admin panel dan aplikasi karyawan.
+            ['nik' => '7371001234567895', 'nip' => null, 'name' => 'Admin Wilayah Gowa', 'golongan' => null, 'jabatan' => 'Admin Wilayah', 'unit_kerja' => 'Bidang Umum', 'status_kepegawaian' => 'PNS', 'region_id' => 2, 'site_id' => 201, 'email' => 'admin.gowa@bbws-pj.go.id'],
+            ['nik' => '7371001234567896', 'nip' => null, 'name' => 'Admin Wilayah Bone', 'golongan' => null, 'jabatan' => 'Admin Wilayah', 'unit_kerja' => 'Bidang Umum', 'status_kepegawaian' => 'PNS', 'region_id' => 4, 'site_id' => 401, 'email' => 'admin.bone@bbws-pj.go.id'],
         ];
 
         foreach ($employees as $e) {

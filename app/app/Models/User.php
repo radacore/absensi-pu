@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'region_id', 'site_id', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'role', 'region_id', 'site_id', 'is_active', 'employee_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -40,5 +40,23 @@ class User extends Authenticatable
     public function site(): BelongsTo
     {
         return $this->belongsTo(Site::class);
+    }
+
+    /**
+     * Baris karyawan milik akun admin ini.
+     *
+     * Bila terisi, akun memakai kata sandi karyawan (kolom users.password
+     * tidak dipakai) dan pemiliknya bisa masuk ke panel admin maupun aplikasi
+     * karyawan dengan satu kata sandi yang sama.
+     */
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    /** Apakah akun admin ini juga terdaftar sebagai karyawan. */
+    public function jugaKaryawan(): bool
+    {
+        return $this->employee_id !== null;
     }
 }

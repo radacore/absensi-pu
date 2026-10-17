@@ -8,6 +8,7 @@ export default function Profil(){
     const { props } = usePage();
     const me0 = props.me ?? { nama:'—', email:'', phone:'', foto:'', region:'', jabatan:'', unit:'', status:'', gol:'-', nip:'', nik:'' };
     const sandiBawaan = props.sandiBawaan || '';
+    const bisaAdmin = Boolean(props.auth?.user);
     const confirm = useConfirm();
 
     const [phone,setPhone]=useState(me0.phone || '');
@@ -148,6 +149,7 @@ export default function Profil(){
                             <label htmlFor="newPwd" className="text-xs font-medium text-[#334155]">Kata sandi baru</label>
                             <input id="newPwd" type="password" value={pwd.password} onChange={(e)=>setPwd({...pwd, password:e.target.value})} placeholder="Min. 8 karakter, huruf besar+kecil+angka" className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/10" />
                             <p className="text-xs text-[#64748B] mt-1">Wajib mengandung huruf besar, huruf kecil, dan angka. Tidak boleh sama dengan sandi bawaan.</p>
+                            {bisaAdmin && <p className="text-xs text-[#1E3A8A] mt-1">Kata sandi ini juga dipakai untuk masuk panel admin.</p>}
                         </div>
                         <div>
                             <label htmlFor="confirmPwd" className="text-xs font-medium text-[#334155]">Konfirmasi baru</label>
@@ -157,6 +159,9 @@ export default function Profil(){
                     </form>
                 </div>
 
+                {bisaAdmin && (
+                    <a href="/admin" className="block text-center w-full rounded-xl bg-[#0F172A] text-white py-3 text-sm font-semibold">Buka panel admin</a>
+                )}
                 <button type="button" onClick={handleLogout} className="w-full rounded-xl bg-[#FEF2F2] text-[#991B1B] py-3 text-sm font-semibold">Keluar</button>
             </div>
         </KaryawanLayout>

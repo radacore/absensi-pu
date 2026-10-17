@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Employee;
 use App\Models\Region;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -846,6 +847,18 @@ class KaryawanImpor
         $adaEmail = $email === [] ? collect() : Employee::whereIn('email', $email)->get()->keyBy('email');
         $adaNip = $nip === [] ? collect() : Employee::whereIn('nip', $nip)->get()->keyBy('nip');
 
+        // Email yang sudah dipakai akun admin. Impor tidak boleh membuat
+        // karyawan dengan email milik akun admin: saat login, akun admin yang
+        // menang, dan karyawan itu tidak akan pernah bisa masuk.
+        $emailAdmin = $email === []
+            ? collect()
+            : User::whereIn(DB::raw('LOWER(email)'), array_map(
+                fn ($e) => mb_strtolower((string) $e, 'UTF-8'),
+                $email
+            ))->get(['email', 'employee_id'])->keyBy(
+                fn (User $u) => mb_strtolower((string) $u->email, 'UTF-8')
+            );
+
         foreach ($hasil as $i => $baris) {
             if ($baris['data'] === null) {
                 continue;
@@ -862,6 +875,13 @@ class KaryawanImpor
             if ($pemilikEmail !== null && $pemilikEmail->id !== $tersimpan?->id) {
                 $hasil[$i]['pesan'][] = 'Email '.$data['email'].' sudah dipakai karyawan lain ('
                     .self::penanda($pemilikEmail).').';
+            }
+
+            // Akun admin yang tertaut ke baris ini sendiri tidak dianggap
+            // bentrok; yang bentrok adalah akun admin lain.
+            $akunAdmin = $emailAdmin->get(mb_strtolower((string) $data['email'], 'UTF-8'));
+            if ($akunAdmin !== null && $akunAdmin->employee_id !== $tersimpan?->id) {
+                $hasil[$i]['pesan'][] = 'Email '.$data['email'].' sudah dipakai akun admin. Pakai email lain.';
             }
 
             if ($data['nip'] !== null) {
