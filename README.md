@@ -200,6 +200,17 @@ Ringkasnya, lihat rancangan lengkap dan riwayat keputusannya di **[`docs/desain-
 
 **Ekspor PDF rekap.** Tiga route PDF (`/karyawan/rekap/pdf`, `/admin/.../rekap/pdf`, `/super-admin/.../rekap/pdf`, `/wilayah/.../rekap/pdf`) memakai **satu templat** (`resources/views/pdf/rekap-presensi.blade.php`) melalui `App\Support\RekapPdf` + `barryvdh/laravel-dompdf`. Berkasnya A4 **landscape**, satu dokumen per karyawan per bulan, nama `rekap-presensi-{NIK}-{YYYY-MM}.pdf` — sama dengan penamaan ekspor CSV. Admin Wilayah hanya bisa mengunduh karyawan di wilayahnya (di luar itu `403`), dan route karyawan tidak menerima parameter `employee`. Setiap unduhan dicatat ke `audit_logs` (`employee.rekap.pdf` / `karyawan.rekap.pdf`). Tombol **Cetak** di layar memakai aturan `@media print` global di `resources/css/app.css` dengan tata letak A4 yang sama.
 
+### 7. Absensi multi titik (17 Okt 2026)
+
+Satu karyawan boleh terdaftar di beberapa titik absen, tetapi semuanya **dalam satu wilayah**. Titik tambahan disimpan di pivot `employee_sites`, sedangkan `employees.site_id` tetap titik utama. Saat absen, server yang memilih titik dari koordinat terkirim (`AttendanceController::titikTerdekat()`), bukan `site_id` dari peramban, supaya titik tidak bisa dipilih manual.
+
+| Aspek | Aturan |
+| :--- | :--- |
+| Titik pulang | Bawaannya hanya titik tempat absen masuk. Boleh di titik terdaftar lain bila `employees.boleh_pindah_titik` dinyalakan admin untuk orang itu. |
+| Titik masuk hilang | Bila titik masuk dihapus di tengah hari, absen pulang dilonggarkan untuk hari itu dan dicatat sebagai `attendance.clock_out_titik_hilang` di audit log. |
+| Radius | 200 meter untuk semua titik (`radius_m`), dapat diubah per titik lewat halaman Wilayah. |
+| Lintas wilayah | Sengaja tidak didukung. Titik selalu ditentukan admin wilayah pemilik titik, jadi tidak ada pilihan "bebas wilayah" bagi karyawan. |
+
 ---
 
 ## Prasyarat VPS
