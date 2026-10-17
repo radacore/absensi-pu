@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Site;
 use App\Models\User;
+use App\Support\AdminPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -135,6 +136,29 @@ class MultiTitikTest extends TestCase
             ->assertSessionHasErrors('distance');
 
         $this->assertDatabaseCount('attendances', 0);
+    }
+
+    public function test_approver_mencakup_admin_di_titik_tambahan(): void
+    {
+        $emp = $this->karyawanGowa();
+        $emp->sites()->attach(202);
+
+        $adminTambahan = User::create([
+            'name' => 'Admin Titik Pampang',
+            'email' => 'admin.pampang@bbws-pj.go.id',
+            'password' => 'password123',
+            'role' => 'admin_wilayah',
+            'region_id' => 2,
+            'site_id' => 202,
+            'is_active' => true,
+        ]);
+
+        $semua = collect(AdminPresenter::leaveApproversFor(2, $emp->siteIds()))->pluck('id')->all();
+        $this->assertContains($adminTambahan->id, $semua);
+
+        // Tanpa titik tambahan, admin titik itu tidak berwenang.
+        $utamaSaja = collect(AdminPresenter::leaveApproversFor(2, [$emp->site_id]))->pluck('id')->all();
+        $this->assertNotContains($adminTambahan->id, $utamaSaja);
     }
 
     public function test_hapus_titik_mempromosikan_titik_tambahan_karyawan(): void

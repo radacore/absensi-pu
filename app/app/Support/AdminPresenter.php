@@ -382,15 +382,37 @@ class AdminPresenter
         ])->values()->all();
     }
 
-    public static function approversFor(?int $regionId, ?int $siteId): array
+    /**
+     * @param  int|array<int, int|string>|null  $siteIds  titik absensi karyawan
+     *                                                    (utama + tambahan)
+     * @return array<int, int>
+     */
+    private static function normalisasiSiteIds(int|array|null $siteIds): array
     {
-        // Approver = User role admin_wilayah (act as atasan) scoped to region + optional site
-        // Kantor wilayah = admin without site_id; site admin = site_id match
+        if ($siteIds === null) {
+            return [];
+        }
+
+        return array_values(array_unique(array_map('intval', (array) $siteIds)));
+    }
+
+    public static function approversFor(?int $regionId, int|array|null $siteIds = null): array
+    {
+        // Approver = User role admin_wilayah (act as atasan) scoped to region +
+        // salah satu titik absensi karyawan. Admin wilayah tanpa site_id
+        // (kantor wilayah) selalu ikut. Kantor Pusat ditambahkan di akhir.
+        $siteIds = self::normalisasiSiteIds($siteIds);
+
         $q = User::with('region')->where('role', 'admin_wilayah')->where('is_active', true);
         if ($regionId !== null) {
-            $q->where(function ($qq) use ($regionId, $siteId) {
-                $qq->where('region_id', $regionId)->whereNull('site_id')
-                    ->when($siteId !== null, fn ($qq2) => $qq2->orWhere('site_id', $siteId));
+            $q->where(function ($qq) use ($regionId, $siteIds) {
+                $qq->where(function ($q2) use ($regionId) {
+                    $q2->where('region_id', $regionId)->whereNull('site_id');
+                });
+
+                if ($siteIds !== []) {
+                    $qq->orWhereIn('site_id', $siteIds);
+                }
             });
         }
         // fallback: if no site-scoped approver, still include kantor
@@ -399,18 +421,25 @@ class AdminPresenter
             $rows = User::with('region')->where('role', 'admin_wilayah')->where('region_id', $regionId)->where('is_active', true)->orderBy('name')->get();
         }
 
-        return $rows->map(fn (User $u) => self::presentApprover($u))->values()->all();
+        // Pulang cepat & toleransi hanya disetujui Admin Wilayah. Kantor Pusat
+        // tidak masuk daftar ini (berbeda dari approver cuti).
+        return $rows
+            ->unique('id')
+            ->map(fn (User $u) => self::presentApprover($u))
+            ->values()->all();
     }
 
     /**
      * Approver CUTI — hanya akun admin (kebijakan: "admin saja").
      *
-     * Level 1–2 = admin_wilayah di wilayah/site karyawan.
+     * Level 1–2 = admin_wilayah di wilayah/salah satu titik karyawan.
      * Level 3    = Kantor Pusat (super_admin), ikut ditampilkan sebagai approver final.
      * Akun non-admin (mis. akun karyawan) tidak pernah muncul di sini.
      */
-    public static function leaveApproversFor(?int $regionId, ?int $siteId): array
+    public static function leaveApproversFor(?int $regionId, int|array|null $siteIds = null): array
     {
+        $siteIds = self::normalisasiSiteIds($siteIds);
+
         $wilayah = User::with('region')
             ->where('role', 'admin_wilayah')
             ->where('is_active', true)
@@ -419,8 +448,9 @@ class AdminPresenter
             ->get();
 
         // Admin wilayah tanpa site_id = kantor wilayah → selalu boleh jadi approver.
-        // Admin wilayah dengan site_id hanya relevan untuk site yang sama.
-        $wilayah = $wilayah->filter(fn (User $u) => $u->site_id === null || (int) $u->site_id === (int) $siteId);
+        // Admin wilayah dengan site_id hanya relevan untuk titik karyawan itu.
+        $wilayah = $wilayah->filter(fn (User $u) => $u->site_id === null
+            || in_array((int) $u->site_id, $siteIds, true));
 
         $pusat = User::with('region')
             ->where('role', 'super_admin')
@@ -429,6 +459,7 @@ class AdminPresenter
             ->get();
 
         return $wilayah->concat($pusat)
+            ->unique('id')
             ->map(fn (User $u) => self::presentApprover($u) + ['level' => $u->role === 'super_admin' ? 3 : null])
             ->values()->all();
     }

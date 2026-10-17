@@ -20,7 +20,7 @@ class CutiController extends Controller
 {
     public function index()
     {
-        $me = Auth::guard('employee')->user()->load(['region', 'site']);
+        $me = Auth::guard('employee')->user()->load(['region', 'site', 'sites']);
         $assigned = $me->site ? ['site' => ['nama_lokasi' => $me->site->nama_lokasi, 'radius' => $me->site->radius_m]] : null;
         $myList = Leave::where('employee_id', $me->id)->orderByDesc('created_at')->get()->map(function (Leave $l) use ($me) {
             $mulai = $l->mulai instanceof Carbon ? $l->mulai->format('Y-m-d') : (string) $l->mulai;
@@ -41,7 +41,7 @@ class CutiController extends Controller
             'assigned' => $me->site ? ['site' => ['nama_lokasi' => $me->site->nama_lokasi, 'radius' => (int) $me->site->radius_m], 'regionName' => $me->region?->name ?? ''] : null,
             'list' => $myList,
             // Approver cuti = akun admin saja (admin wilayah + Kantor Pusat).
-            'approvers' => AdminPresenter::leaveApproversFor($me->region_id, $me->site_id),
+            'approvers' => AdminPresenter::leaveApproversFor($me->region_id, $me->siteIds()),
             // Kuota cuti tahunan + hari kerja/libur supaya UI bisa memperkirakan
             // jumlah hari kerja sebelum dikirim. Server tetap penentu akhir
             // lewat validasi di store().
@@ -88,7 +88,7 @@ class CutiController extends Controller
 
     public function store(Request $request)
     {
-        $me = Auth::guard('employee')->user();
+        $me = Auth::guard('employee')->user()->load('sites');
         $data = $request->validate([
             'jenis' => ['required', 'in:Tahunan,Sakit,Besar,Melahirkan'],
             'mulai' => ['required', 'date', 'after_or_equal:today'],
@@ -101,7 +101,7 @@ class CutiController extends Controller
         // Pakai ValidationException (bukan back()->withErrors()) supaya request XHR
         // mendapat 422 yang konsisten dengan validasi lain di aplikasi ini.
         if (! empty($data['approver_id'])) {
-            $allow = array_map('intval', collect(AdminPresenter::leaveApproversFor($me->region_id, $me->site_id))->pluck('id')->all());
+            $allow = array_map('intval', collect(AdminPresenter::leaveApproversFor($me->region_id, $me->siteIds()))->pluck('id')->all());
             if (! in_array((int) $data['approver_id'], $allow, true)) {
                 throw ValidationException::withMessages([
                     'approver_id' => 'Approver harus akun admin di wilayah Anda.',

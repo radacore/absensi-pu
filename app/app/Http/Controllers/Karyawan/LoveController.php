@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
+use App\Models\Attendance;
 use App\Models\AttendanceSetting;
 use App\Models\ToleranceClaim;
 use App\Support\AdminPresenter;
@@ -14,7 +15,7 @@ class LoveController extends Controller
 {
     public function index()
     {
-        $me = Auth::guard('employee')->user()->load(['region','site']);
+        $me = Auth::guard('employee')->user()->load(['region','site','sites']);
         $settings = AttendanceSetting::first();
         $loveMax = $settings ? (int)$settings->love_max : 4;
         $quota = AdminPresenter::loveQuota($me->id, $loveMax);
@@ -34,13 +35,13 @@ class LoveController extends Controller
             'assigned'=>$assigned,
             'settings'=>['loveMax'=>$loveMax,'loveQuota'=>$quota],
             'claims'=>$myClaims,
-            'approvers'=> AdminPresenter::approversFor($me->region_id, $me->site_id),
+            'approvers'=> AdminPresenter::approversFor($me->region_id, $me->siteIds()),
         ]);
     }
 
     public function store(Request $request)
     {
-        $me = Auth::guard('employee')->user()->load(['region','site']);
+        $me = Auth::guard('employee')->user()->load(['region','site','sites']);
         if (! $me->site_id || ! $me->site) {
             return back()->withErrors(['site'=>'Titik belum di-assign — tidak bisa klaim.'])->withInput();
         }
@@ -67,10 +68,16 @@ class LoveController extends Controller
             return back()->withErrors(['love'=>'Sisa Toleransi 0 — reset bulan depan'])->withInput();
         }
         // approver must be valid for this site/region
-        $allow = collect(AdminPresenter::approversFor($me->region_id, $me->site_id))->pluck('id')->all();
+        $allow = collect(AdminPresenter::approversFor($me->region_id, $me->siteIds()))->pluck('id')->all();
         if (! in_array((int)$data['approver_id'], array_map('intval', $allow), true)) {
             return back()->withErrors(['approver_id'=>'Atasan tidak valid — pilih dari daftar'])->withInput();
         }
+
+        // Titik klaim mengikuti baris absensi hari itu bila ada; kalau tidak
+        // ada (mis. lupa absen), pakai titik utama.
+        $siteKlaim = Attendance::where('employee_id', $me->id)
+            ->whereDate('work_date', $data['tgl'])
+            ->value('site_id') ?: $me->site_id;
 
         ToleranceClaim::create([
             'employee_id'=>$me->id,
@@ -78,7 +85,7 @@ class LoveController extends Controller
             'claim_date'=>$data['tgl'],
             'jam'=>$data['jam'].':00',
             'alasan'=>$data['alasan'],
-            'site_id'=>$me->site_id,
+            'site_id'=>$siteKlaim,
             'region_id'=>$me->region_id,
             'approver_id'=>$data['approver_id'],
             'status'=>'pending',

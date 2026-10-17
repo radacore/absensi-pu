@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
+use App\Models\Attendance;
 use App\Models\EarlyLeaveRequest;
 use App\Support\AdminPresenter;
 use App\Support\ShiftResolver;
@@ -21,7 +22,7 @@ class EarlyLeaveController extends Controller
 {
     public function index()
     {
-        $me = Auth::guard('employee')->user()->load(['region', 'site']);
+        $me = Auth::guard('employee')->user()->load(['region', 'site', 'sites']);
         $now = now('Asia/Makassar');
 
         $rows = EarlyLeaveRequest::with(['approver', 'approvedBy'])
@@ -62,13 +63,13 @@ class EarlyLeaveController extends Controller
             'isShift' => (bool) $me->is_shift,
             'hariIni' => $now->toDateString(),
             'batasMundur' => $now->copy()->subDays(7)->toDateString(),
-            'approvers' => AdminPresenter::approversFor($me->region_id, $me->site_id),
+            'approvers' => AdminPresenter::approversFor($me->region_id, $me->siteIds()),
         ]);
     }
 
     public function store(Request $request)
     {
-        $me = Auth::guard('employee')->user();
+        $me = Auth::guard('employee')->user()->load('sites');
         $now = now('Asia/Makassar');
 
         $data = $request->validate([
@@ -78,7 +79,7 @@ class EarlyLeaveController extends Controller
             'approver_id' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        $allow = collect(AdminPresenter::approversFor($me->region_id, $me->site_id))
+        $allow = collect(AdminPresenter::approversFor($me->region_id, $me->siteIds()))
             ->pluck('id')->map(fn ($v) => (int) $v)->all();
         if (! in_array((int) $data['approver_id'], $allow, true)) {
             return back()->withErrors(['approver_id' => 'Atasan tidak valid — pilih dari daftar'])->withInput();
@@ -94,6 +95,11 @@ class EarlyLeaveController extends Controller
             ])->withInput();
         }
 
+        // Titik pengajuan mengikuti baris absensi tanggal itu bila sudah ada.
+        $sitePulang = Attendance::where('employee_id', $me->id)
+            ->whereDate('work_date', $data['tanggal'])
+            ->value('site_id') ?: $me->site_id;
+
         EarlyLeaveRequest::create([
             'employee_id' => $me->id,
             'tanggal' => $data['tanggal'],
@@ -101,7 +107,7 @@ class EarlyLeaveController extends Controller
             'alasan' => $data['alasan'],
             'approver_id' => $data['approver_id'],
             'status' => 'Menunggu',
-            'site_id' => $me->site_id,
+            'site_id' => $sitePulang,
             'region_id' => $me->region_id,
         ]);
 
