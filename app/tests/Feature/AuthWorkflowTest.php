@@ -51,7 +51,7 @@ class AuthWorkflowTest extends TestCase
         $this->post('/admin/login', [
             'email' => 'admin.gowa@bbws-pj.go.id',
             'password' => 'password123',
-        ])->assertRedirect('/admin');
+        ])->assertRedirect('/pilih-peran');
 
         $this->assertAuthenticatedAs(User::where('email', 'admin.gowa@bbws-pj.go.id')->first(), 'web');
 
@@ -67,7 +67,7 @@ class AuthWorkflowTest extends TestCase
         $this->post('/super-admin/login', [
             'email' => 'admin.gowa@bbws-pj.go.id',
             'password' => 'password123',
-        ])->assertRedirect('/admin');
+        ])->assertRedirect('/pilih-peran');
 
         $this->get('/super-admin')->assertRedirect('/admin');
     }

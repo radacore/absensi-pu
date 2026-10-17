@@ -42,6 +42,10 @@ export default function AdminLayout({ children }) {
     const [open, setOpen] = useState(false);
     const logoutUrl = `${base}/logout`;
     const doLogout = () => router.post(logoutUrl);
+    // Akun yang tertaut ke baris karyawan punya dua sesi sekaligus, jadi
+    // sidebar admin perlu jalan pintas ke aplikasi karyawan (misalnya untuk
+    // absen) tanpa login ulang.
+    const punyaAplikasiKaryawan = Boolean(props.auth?.employee);
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex">
             {/* Sidebar — desktop */}
@@ -76,6 +80,12 @@ export default function AdminLayout({ children }) {
                             <p className="text-xs text-white/60 truncate">{usr?.email || (isWilayah ? 'wilayah@bbws-pj.go.id' : 'pusat@bbws-pj.go.id')}</p>
                         </div>
                     </div>
+                    {punyaAplikasiKaryawan && (
+                        <Link href="/karyawan" className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FCB833] hover:bg-[#F5B32A] text-[#0F172A] text-sm font-semibold py-2.5 transition">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                            Aplikasi karyawan
+                        </Link>
+                    )}
                     <button type="button" onClick={doLogout} className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-sm font-medium py-2.5 transition">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         Keluar
@@ -127,6 +137,12 @@ export default function AdminLayout({ children }) {
                                     </Link>
                                 );
                             })}
+                            {punyaAplikasiKaryawan && (
+                                <Link href="/karyawan" onClick={() => setOpen(false)} className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#FCB833] text-[#0F172A] text-sm font-semibold py-2.5">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                                    Aplikasi karyawan
+                                </Link>
+                            )}
                             <button type="button" onClick={() => { setOpen(false); doLogout(); }} className="mt-auto flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-sm font-medium py-2.5 transition">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                                 Keluar

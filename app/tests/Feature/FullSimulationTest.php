@@ -236,7 +236,7 @@ class FullSimulationTest extends TestCase
         Auth::guard('web')->logout();
 
         $this->post('/admin/login', ['email' => 'admin.gowa@bbws-pj.go.id', 'password' => 'password123'])
-            ->assertRedirect('/admin');
+            ->assertRedirect('/pilih-peran');
         $this->assertAuthenticatedAs($this->adminGowa());
     }
 
@@ -245,7 +245,7 @@ class FullSimulationTest extends TestCase
         // Satu pintu masuk: kata sandinya sah, jadi login berhasil. Yang
         // membatasi akses bukan halaman login, melainkan penjaga area.
         $this->post('/super-admin/login', ['email' => 'admin.gowa@bbws-pj.go.id', 'password' => 'password123'])
-            ->assertRedirect('/admin');
+            ->assertRedirect('/pilih-peran');
 
         $this->get('/super-admin')->assertRedirect('/admin');
         $this->assertAuthenticatedAs($this->adminGowa());

@@ -24,7 +24,17 @@ class LoginController extends Controller
     public function create()
     {
         if (Auth::guard('web')->check()) {
-            return redirect($this->tujuanAdmin(Auth::guard('web')->user()));
+            $user = Auth::guard('web')->user();
+
+            // Pemilik dua peran selalu ditanya dulu mau masuk sebagai apa,
+            // sama seperti sesudah login. Hanya berlaku bila sesi karyawannya
+            // juga masih hidup; kalau tidak, halaman pemilihan akan
+            // mengalihkan balik ke panel dan terjadi pantulan tanpa ujung.
+            if ($user->employee_id !== null && Auth::guard('employee')->check()) {
+                return redirect('/pilih-peran');
+            }
+
+            return redirect($this->tujuanAdmin($user));
         }
 
         if (Auth::guard('employee')->check()) {
@@ -111,6 +121,11 @@ class LoginController extends Controller
         }
 
         $request->session()->regenerate();
+
+        // Dua peran: berhenti di halaman pemilihan, bukan langsung ke panel.
+        if ($user->employee) {
+            return redirect('/pilih-peran');
+        }
 
         return redirect($this->tujuanAdmin($user));
     }

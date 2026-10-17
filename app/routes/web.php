@@ -22,6 +22,7 @@ use App\Http\Controllers\AttendanceSelfieController;
 use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\Auth\EmployeeAuthController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PilihPeranController;
 use App\Http\Controllers\Karyawan\AttendanceController as KaryawanAttendanceController;
 use App\Http\Controllers\Karyawan\CutiController as KaryawanCutiController;
 use App\Http\Controllers\Karyawan\DashboardController as KaryawanDashboardController;
@@ -45,6 +46,12 @@ Route::get('/login', [LoginController::class, 'create'])->name('login');
 Route::post('/login', [LoginController::class, 'store'])
     ->middleware('throttle:login')
     ->name('login.store');
+
+// Akun yang memegang dua peran berhenti di sini dulu untuk memilih mau masuk
+// ke panel admin atau ke aplikasi karyawan. Akun satu peran tidak pernah
+// melihat halaman ini; controller mengalihkannya langsung.
+Route::get('/pilih-peran', PilihPeranController::class)->name('pilih-peran');
+Route::post('/pilih-peran/keluar', [PilihPeranController::class, 'destroy'])->name('pilih-peran.keluar');
 
 // ── Swafoto absensi (disk privat, ber-otorisasi) ──────────────
 // Dipakai bersama karyawan (miliknya sendiri) dan admin (sesuai cakupan).

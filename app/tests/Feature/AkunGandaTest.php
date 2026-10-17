@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
@@ -78,7 +79,7 @@ class AkunGandaTest extends TestCase
         $this->post('/login', [
             'email' => 'admin.gowa@bbws-pj.go.id',
             'password' => 'password123',
-        ])->assertRedirect('/admin');
+        ])->assertRedirect('/pilih-peran');
     }
 
     public function test_admin_tertaut_langsung_mendapat_dua_sesi(): void
@@ -86,7 +87,7 @@ class AkunGandaTest extends TestCase
         $this->post('/login', [
             'email' => 'admin.gowa@bbws-pj.go.id',
             'password' => 'password123',
-        ])->assertRedirect('/admin');
+        ])->assertRedirect('/pilih-peran');
 
         $this->assertAuthenticatedAs($this->adminGowa(), 'web');
         $this->assertAuthenticatedAs($this->karyawanGowa(), 'employee');
@@ -243,5 +244,94 @@ class AkunGandaTest extends TestCase
             ->assertSessionHasErrors('email');
 
         $this->assertDatabaseMissing('employees', ['nik' => '7371009999999999']);
+    }
+
+    // ==================================================================
+    // Halaman pemilihan peran
+    // ==================================================================
+
+    public function test_akun_dua_peran_melihat_dua_kartu_pilihan(): void
+    {
+        $this->post('/login', [
+            'email' => 'admin.gowa@bbws-pj.go.id',
+            'password' => 'password123',
+        ])->assertRedirect('/pilih-peran');
+
+        $this->get('/pilih-peran')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/PilihPeran')
+                ->where('admin.peran', 'Admin Wilayah')
+                ->where('admin.wilayah', 'Kab. Gowa')
+                ->where('admin.tujuan', '/admin')
+                ->where('karyawan.tujuan', '/karyawan'));
+    }
+
+    public function test_pilih_peran_menolak_tamu(): void
+    {
+        $this->get('/pilih-peran')->assertRedirect('/login');
+    }
+
+    public function test_pilih_peran_mengalihkan_admin_tanpa_tautan_karyawan(): void
+    {
+        $this->actingAs($this->superAdmin(), 'web')
+            ->get('/pilih-peran')
+            ->assertRedirect('/super-admin');
+    }
+
+    public function test_pilih_peran_mengalihkan_karyawan_biasa(): void
+    {
+        $karyawan = Employee::where('email', 'andi@bbws-pj.go.id')->firstOrFail();
+
+        $this->actingAs($karyawan, 'employee')
+            ->get('/pilih-peran')
+            ->assertRedirect('/karyawan');
+    }
+
+    public function test_pilih_peran_menunggu_sandi_bawaan_diganti(): void
+    {
+        $admin = $this->adminGowa();
+        $karyawan = $this->karyawanGowa();
+        $karyawan->forceFill(['must_change_password' => true])->save();
+
+        $this->actingAs($admin, 'web')
+            ->actingAs($karyawan, 'employee')
+            ->get('/pilih-peran')
+            ->assertRedirect('/karyawan/profil');
+    }
+
+    public function test_membuka_login_lagi_mengembalikan_akun_dua_peran_ke_pilihan(): void
+    {
+        $this->post('/login', [
+            'email' => 'admin.gowa@bbws-pj.go.id',
+            'password' => 'password123',
+        ]);
+
+        $this->get('/login')->assertRedirect('/pilih-peran');
+    }
+
+    public function test_memilih_panel_admin_tidak_menutup_sesi_karyawan(): void
+    {
+        $this->post('/login', [
+            'email' => 'admin.gowa@bbws-pj.go.id',
+            'password' => 'password123',
+        ]);
+
+        $this->get('/admin/regions')->assertOk();
+        $this->get('/karyawan')->assertOk();
+        $this->assertAuthenticatedAs($this->karyawanGowa(), 'employee');
+    }
+
+    public function test_keluar_dari_halaman_pilihan_menutup_dua_sesi(): void
+    {
+        $this->post('/login', [
+            'email' => 'admin.gowa@bbws-pj.go.id',
+            'password' => 'password123',
+        ]);
+
+        $this->post('/pilih-peran/keluar')->assertRedirect('/login');
+
+        $this->assertGuest('web');
+        $this->assertGuest('employee');
     }
 }
