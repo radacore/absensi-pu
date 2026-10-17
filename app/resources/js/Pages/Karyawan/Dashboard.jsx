@@ -87,6 +87,22 @@ export default function Dashboard(){
                         <p className="text-xs text-[#92400E]">Kalender • {hadir} hadir • {assigned.site.nama_lokasi}</p>
                     </div>
                 </Link>
+                <div className="grid grid-cols-2 gap-3">
+                    <Link href="/karyawan/jadwal" className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition">
+                        <span className="w-8 h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h3M8 17h3M14 14h3"/></svg>
+                        </span>
+                        <p className="font-semibold text-sm text-[#0F172A] leading-tight mt-2">Jadwal kerja</p>
+                        <p className="text-xs text-[#64748B] leading-tight">{isShift ? 'Shift 4 minggu' : 'Hari & jam kerja'}</p>
+                    </Link>
+                    <Link href="/karyawan/lembur" className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition">
+                        <span className="w-8 h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                        </span>
+                        <p className="font-semibold text-sm text-[#0F172A] leading-tight mt-2">Lembur</p>
+                        <p className="text-xs text-[#64748B] leading-tight">Ajukan & lacak</p>
+                    </Link>
+                </div>
             </div>
         </KaryawanLayout>
     );

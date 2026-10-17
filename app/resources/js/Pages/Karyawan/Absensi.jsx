@@ -58,6 +58,10 @@ export default function Absensi() {
     const [selfiePreview, setSelfiePreview] = useState(null);
     const [mode, setMode] = useState('masuk'); // 'masuk' | 'pulang'
     const [catatanPulang, setCatatanPulang] = useState('');
+    // Jenis kerja hari ini. WFA dipilih sendiri oleh karyawan saat absen (C2)
+    // dan hanya tersedia untuk karyawan non-shift.
+    const [jenisKerja, setJenisKerja] = useState('WFO');
+    const [wfaAlasan, setWfaAlasan] = useState('');
     const videoRef = useRef(null);
 
     useEffect(() => { if (me.foto) setPhotoPreview(me.foto); }, [me.foto]);
@@ -79,6 +83,7 @@ export default function Absensi() {
         if (selfiePreview) URL.revokeObjectURL(selfiePreview);
         setSelfieFile(null); setSelfiePreview(null);
         setCatatanPulang('');
+        setJenisKerja('WFO'); setWfaAlasan('');
     };
 
     const openRow = useMemo(
@@ -147,9 +152,23 @@ export default function Absensi() {
     const radiusAktif = terdekat?.site?.radius ?? null;
     const inRadius = jarak != null && radiusAktif != null ? jarak <= radiusAktif : false;
     const tanpaTitik = sites.length === 0;
+
+    // Baris absensi hari ini (bila sudah masuk). WFA pada baris itu membuat
+    // absen pulang bebas lokasi, sama seperti aturan di server.
+    const rowAktif = useMemo(
+        () => history.find((h) => h.tgl === workDateAktif) ?? null,
+        [history, workDateAktif],
+    );
+    const wfaAktif = rowAktif?.jenisKerja === 'WFA';
+    // Radius hanya relevan untuk WFO. WFA bebas dari mana saja (C1).
+    const butuhRadius = mode === 'pulang' ? !wfaAktif : jenisKerja === 'WFO';
+    const radiusOk = !butuhRadius || inRadius;
+    // Alasan WFA wajib diisi sebelum absen masuk dikirim.
+    const wfaSiap = jenisKerja !== 'WFA' || wfaAlasan.trim().length >= 10;
+
     // Tahap pulang sedang dibuka, izin pindah titik mati, dan titik masuknya
     // masih diketahui: hanya titik itu yang diterima server.
-    const terkunciPulang = mode === 'pulang' && !bolehPindahTitik && titikMasukAktif != null;
+    const terkunciPulang = mode === 'pulang' && !wfaAktif && !bolehPindahTitik && titikMasukAktif != null;
 
     const requestPos = () => {
         if (sites.length === 0) return;
@@ -173,13 +192,15 @@ export default function Absensi() {
         if (tanpaTitik) { toast.error('Titik belum di-assign — tidak bisa absen'); return; }
         if (blokirAbsen) { toast.error(`Absen ditolak — ${absenLibur.label}`); return; }
         if (jarak == null) { toast.error(geoLoading ? 'Menunggu GPS...' : 'Lokasi belum siap — aktifkan GPS'); return; }
-        if (!inRadius) { toast.error(`${jarak} m / ${radiusAktif} m — di luar radius ${terdekat?.site?.nama_lokasi ?? 'titik terdekat'}`); return; }
+        if (!wfaSiap) { toast.error('Isi alasan WFA dulu — minimal 10 karakter'); return; }
         if (alreadyToday) { toast.error('Sudah absen hari ini'); return; }
         if (!selfieFile) { toast.error('Ambil foto selfie dulu — wajib untuk absen masuk'); return; }
         router.post('/karyawan/absensi/clock-in', {
             lat: myPos.lat,
             lng: myPos.lng,
             selfie: selfieFile,
+            jenis_kerja: jenisKerja,
+            ...(jenisKerja === 'WFA' ? { wfa_alasan: wfaAlasan.trim() } : {}),
         }, {
             preserveScroll: true,
             onSuccess: () => { resetCapture(); setMode('masuk'); },
@@ -196,7 +217,6 @@ export default function Absensi() {
             return;
         }
         if (jarak == null) { toast.error(geoLoading ? 'Menunggu GPS...' : 'Aktifkan GPS lalu tekan kirim lagi'); return; }
-        if (!inRadius) { toast.error(`${jarak} m / ${radiusAktif} m — di luar radius ${terdekat?.site?.nama_lokasi ?? 'titik terdekat'}`); return; }
         if (!selfieFile) { toast.error('Ambil foto selfie dulu — wajib untuk absen pulang'); return; }
         if (!catatanPulang.trim()) { toast.error('Isi catatan pekerjaan dulu — wajib saat absen pulang'); return; }
         router.post('/karyawan/absensi/clock-out', {
@@ -313,6 +333,48 @@ export default function Absensi() {
                 )}
 
                 <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(15,23,42,0.04)]">
+                    {!isShift && mode === 'masuk' && !alreadyToday && (
+                        <div className="mb-4">
+                            <p className="text-xs font-medium text-[#64748B]">Jenis kerja hari ini</p>
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setJenisKerja('WFO')}
+                                    className={`rounded-xl px-3 py-2.5 text-sm font-semibold border ${jenisKerja === 'WFO' ? 'bg-[#EFF6FF] border-[#1E3A8A]/30 text-[#1E3A8A]' : 'bg-white border-[#E2E8F0] text-[#334155]'}`}
+                                >
+                                    WFO
+                                    <span className="block text-[10px] font-normal text-[#64748B]">Bekerja di kantor</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setJenisKerja('WFA')}
+                                    className={`rounded-xl px-3 py-2.5 text-sm font-semibold border ${jenisKerja === 'WFA' ? 'bg-[#ECFDF5] border-[#0D9488]/30 text-[#065F46]' : 'bg-white border-[#E2E8F0] text-[#334155]'}`}
+                                >
+                                    WFA
+                                    <span className="block text-[10px] font-normal text-[#64748B]">Bekerja dari luar kantor</span>
+                                </button>
+                            </div>
+                            {jenisKerja === 'WFA' && (
+                                <div className="mt-2">
+                                    <label htmlFor="wfa-alasan" className="block text-xs font-medium text-[#334155]">
+                                        Alasan WFA <span className="text-[#991B1B]">*</span>
+                                    </label>
+                                    <textarea
+                                        id="wfa-alasan"
+                                        rows={2}
+                                        maxLength={500}
+                                        value={wfaAlasan}
+                                        onChange={(e) => setWfaAlasan(e.target.value)}
+                                        placeholder="Contoh: menyelesaikan laporan dari rumah, koordinasi lapangan di luar kantor"
+                                        className="mt-1.5 w-full rounded-xl bg-[#F8FAFC] border-0 px-3 py-2.5 text-sm placeholder:text-[#64748B] outline-none focus:bg-white focus:ring-2 focus:ring-[#0D9488]/20"
+                                    />
+                                    <p className="mt-1 text-xs text-[#64748B]">
+                                        WFA tetap merekam koordinat dan swafoto, dan menunggu persetujuan atasan. Minimal 10 karakter.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <div className="rounded-2xl bg-[#F8FAFC] p-4">
                         {!captured ? (
                             <div className="flex flex-col items-center justify-center text-center py-8 px-6">
@@ -346,7 +408,16 @@ export default function Absensi() {
                                 ) : jarak == null ? (
                                     <p className="text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 bg-[#FEF2F2] text-[#991B1B]">Lokasi belum siap</p>
                                 ) : (
-                                    <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${inRadius ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FEF2F2] text-[#991B1B]'}`}>{jarak} m / {radiusAktif} m • {inRadius ? `Dalam radius ${terdekat?.site?.nama_lokasi ?? ''}` : 'Di luar radius'}</p>
+                                    <>
+                                        <p className={`text-xs font-medium inline-block px-2.5 py-1 rounded-full mt-1 ${radiusOk ? 'bg-[#ECFDF5] text-[#065F46]' : 'bg-[#FFF7E6] text-[#92400E]'}`}>
+                                            {jarak} m / {radiusAktif} m • {!butuhRadius ? 'WFA — bebas lokasi' : inRadius ? `Dalam radius ${terdekat?.site?.nama_lokasi ?? ''}` : 'Di luar radius'}
+                                        </p>
+                                        {butuhRadius && !inRadius && (
+                                            <p className="text-xs text-[#92400E] mt-1">
+                                                Absen WFO di luar radius tetap dicatat dan ditandai. Pilih WFA bila memang bekerja dari luar kantor.
+                                            </p>
+                                        )}
+                                    </>
                                 )}
                                 {geoError && <p className="text-xs text-[#92400E] mt-1">{geoError}</p>}
                                 {mode === 'pulang' && (
@@ -371,9 +442,9 @@ export default function Absensi() {
                                         <button
                                             type="button"
                                             onClick={handlePulang}
-                                            disabled={jarak == null || !inRadius || !selfieFile || !openRow || !bolehPulang || !catatanPulang.trim()}
-                                            title={jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${radiusAktif} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : !bolehPulang ? 'Belum waktunya pulang — ajukan pulang cepat dulu' : !catatanPulang.trim() ? 'Isi catatan pekerjaan dulu' : ''}
-                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && openRow && bolehPulang && catatanPulang.trim() ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
+                                            disabled={jarak == null || !radiusOk || !selfieFile || !openRow || !bolehPulang || !catatanPulang.trim()}
+                                            title={jarak == null ? 'Menunggu GPS' : !radiusOk ? `${jarak} m / ${radiusAktif} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : !openRow ? 'Belum absen masuk hari ini' : !bolehPulang ? 'Belum waktunya pulang — ajukan pulang cepat dulu' : !catatanPulang.trim() ? 'Isi catatan pekerjaan dulu' : ''}
+                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && radiusOk && selfieFile && openRow && bolehPulang && catatanPulang.trim() ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
                                         >
                                             Absen Pulang
                                         </button>
@@ -381,9 +452,9 @@ export default function Absensi() {
                                         <button
                                             type="button"
                                             onClick={handleKirim}
-                                            disabled={jarak == null || !inRadius || !selfieFile || alreadyToday || blokirAbsen}
-                                            title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : jarak == null ? 'Menunggu GPS' : !inRadius ? `${jarak} m / ${radiusAktif} m — di luar radius` : !selfieFile ? 'Ambil foto selfie dulu' : alreadyToday ? 'Sudah absen hari ini' : ''}
-                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && inRadius && selfieFile && !alreadyToday && !blokirAbsen ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
+                                            disabled={jarak == null || !radiusOk || !selfieFile || alreadyToday || blokirAbsen || !wfaSiap}
+                                            title={blokirAbsen ? `Absen ditolak — ${absenLibur.label}` : jarak == null ? 'Menunggu GPS' : !wfaSiap ? 'Isi alasan WFA minimal 10 karakter' : !selfieFile ? 'Ambil foto selfie dulu' : alreadyToday ? 'Sudah absen hari ini' : ''}
+                                            className={`rounded-xl px-5 py-2 text-sm font-semibold ${jarak != null && radiusOk && selfieFile && !alreadyToday && !blokirAbsen && wfaSiap ? 'bg-[#0D9488] text-white' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'}`}
                                         >
                                             Absen Masuk
                                         </button>
@@ -401,7 +472,7 @@ export default function Absensi() {
                             Absen pulang baru bisa dilakukan setelah jam shift berakhir. Perlu pulang lebih awal? <Link href="/karyawan/pulang-cepat" className="font-semibold underline">Ajukan pulang cepat</Link>.
                         </p>
                     )}
-                    <p className="text-xs text-[#64748B] mt-3 text-center">{terkunciPulang ? 'Absen pulang hanya diterima di titik tempat Anda absen masuk' : 'Absen tercatat di titik terdekat yang sah, selama Anda berada dalam radiusnya'}</p>
+                    <p className="text-xs text-[#64748B] mt-3 text-center">{terkunciPulang ? 'Absen pulang hanya diterima di titik tempat Anda absen masuk' : 'Absen WFO di luar radius tetap dicatat dan ditandai; WFA bebas lokasi'}</p>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(15,23,42,0.04)] overflow-hidden">
@@ -441,6 +512,14 @@ export default function Absensi() {
                                             </td>
                                             <td className="px-5 py-3">
                                                 <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${statusMeta(r.status).cls}`}>{statusMeta(r.status).label}</span>
+                                                {r.jenisKerja === 'WFA' && (
+                                                    <span className="inline-block ml-1 text-[10px] font-medium bg-[#ECFDF5] text-[#065F46] px-2 py-1 rounded-full align-middle">
+                                                        WFA{r.wfaStatus ? ` • ${r.wfaStatus}` : ''}
+                                                    </span>
+                                                )}
+                                                {r.diLuarTitik && (
+                                                    <span className="inline-block ml-1 text-[10px] font-medium bg-[#FFF7E6] text-[#92400E] px-2 py-1 rounded-full align-middle">di luar titik</span>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
