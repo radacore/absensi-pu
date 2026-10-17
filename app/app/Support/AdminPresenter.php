@@ -149,7 +149,7 @@ class AdminPresenter
 
     public static function attendancesFor(?int $regionId): array
     {
-        $rows = Attendance::with(['employee.region'])
+        $rows = Attendance::with(['employee.region', 'site', 'siteOut'])
             ->when($regionId, fn ($q) => $q->where('region_id', $regionId))
             ->orderByDesc('work_date')
             ->orderByDesc('clock_in_at')
@@ -175,6 +175,13 @@ class AdminPresenter
                 'wilayah' => $regionName,
                 'kantor' => $kantor ?: $regionName,
                 'office_location_id' => $a->site_id,
+                // Titik pulang bisa berbeda dari titik masuk. UI dan filter
+                // memakai keduanya supaya absensi tidak terbaca di titik yang
+                // salah (dan tidak tampak "di luar radius").
+                'office_location_id_out' => $a->site_out_id,
+                'nama_titik' => $a->site?->nama_lokasi ?? $emp?->site?->nama_lokasi ?? '',
+                'nama_titik_pulang' => $a->siteOut?->nama_lokasi ?? $a->site?->nama_lokasi ?? $emp?->site?->nama_lokasi ?? '',
+                'berpindah_lokasi' => $a->site_id !== null && $a->site_out_id !== null && (int) $a->site_id !== (int) $a->site_out_id,
                 'tgl' => $tgl,
                 'datang' => $datang,
                 'pulang' => $pulang,
@@ -183,6 +190,13 @@ class AdminPresenter
                 'jarak' => (int) ($a->distance_in_m ?? 0),
                 'lat' => (float) ($a->lat_in ?? 0),
                 'lng' => (float) ($a->lng_in ?? 0),
+                // Koordinat pulang dipakai kartu detail admin. Jaraknya dihitung
+                // ke titik pulang, bukan ke titik masuk.
+                'lat_out' => $a->lat_out !== null ? (float) $a->lat_out : null,
+                'lng_out' => $a->lng_out !== null ? (float) $a->lng_out : null,
+                'jarak_pulang' => ($a->lat_out !== null && $a->lng_out !== null && $a->siteOut)
+                    ? self::haversineM((float) $a->lat_out, (float) $a->lng_out, (float) $a->siteOut->lat, (float) $a->siteOut->lng)
+                    : null,
                 'foto' => $emp?->foto_url ?: self::DEFAULT_AVATAR,
                 'selfie' => $a->selfieRouteUrl('masuk') ?: ($emp?->foto_url ?: self::DEFAULT_AVATAR),
                 'selfie_pulang' => $a->selfieRouteUrl('pulang'),

@@ -411,6 +411,9 @@
                         <td class="tgl">{{ $d['tgl'] }}</td>
                         <td class="right">
                             <span class="chip">{{ $d['status'] }}</span>
+                            @if (! empty($d['berpindah_lokasi']))
+                                <span class="chip">Berpindah lokasi</span>
+                            @endif
                             @if ($k['is_shift'] && ! empty($h['shift']))
                                 <span class="chip">Shift {{ $h['shift'] }}@if (! empty($h['shift_jam'])) · {{ $h['shift_jam'] }}@endif</span>
                             @endif

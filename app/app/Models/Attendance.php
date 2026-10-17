@@ -76,6 +76,26 @@ class Attendance extends Model
         return $this->belongsTo(Employee::class);
     }
 
+    /**
+     * Titik absen masuk.
+     *
+     * Disimpan per baris absensi, bukan dibaca dari titik utama karyawan:
+     * karyawan boleh absen di titik tambahan mana pun, dan titik utama bisa
+     * berubah setelah absensi terjadi.
+     */
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
+    }
+
+    /**
+     * Titik absen pulang (null untuk absensi lama atau yang belum pulang).
+     */
+    public function siteOut(): BelongsTo
+    {
+        return $this->belongsTo(Site::class, 'site_out_id');
+    }
+
     public function toleranceClaim(): BelongsTo
     {
         return $this->belongsTo(ToleranceClaim::class);

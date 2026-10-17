@@ -103,7 +103,7 @@ export default function Rekap() {
                 <div className="flex items-start justify-between print-hide">
                     <div>
                         <h2 className="font-semibold text-[17px] tracking-tight text-[#0F172A]">Rekap kehadiran</h2>
-                        <p className="text-sm text-[#64748B] capitalize">{monthName} • {assigned.regionName} • {assigned.nama_lokasi} • {assigned.radius} m • Toleransi {sisa}/{loveMax}</p>
+                        <p className="text-sm text-[#64748B] capitalize">{monthName} • {assigned.regionName} • {assigned.nama_lokasi} (titik utama) • {assigned.radius} m • Toleransi {sisa}/{loveMax}</p>
                     </div>
                     <span className="bg-[#FCB833] text-[#0F172A] text-xs font-semibold px-3 py-1.5 rounded-full">{loveMax} Toleransi</span>
                 </div>
@@ -127,7 +127,7 @@ export default function Rekap() {
                 </div>
 
                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-3 flex items-center justify-between">
-                    <span className="text-xs font-medium text-[#1E3A8A]">{assigned.nama_lokasi} • {assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)}</span>
+                    <span className="text-xs font-medium text-[#1E3A8A]">Titik utama: {assigned.nama_lokasi} • {assigned.lat.toFixed(4)}, {assigned.lng.toFixed(4)}</span>
                     <span className="text-xs text-[#64748B]">{assigned.radius} m • {isShift ? 'jadwal shift' : `${settings.jamMasuk}–${settings.jamPulang}`}</span>
                 </div>
                 <div className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(15,23,42,0.04)] flex items-center justify-between">
@@ -194,8 +194,8 @@ export default function Rekap() {
                     </div>
                     <p className="text-xs text-[#64748B] mt-4">
                         {isShift
-                            ? `Jam mengikuti jadwal shift • Kelonggaran ${settings.toleransi}m • Di luar ${assigned.radius} m titik ${assigned.nama_lokasi} tidak tercatat`
-                            : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA • Kelonggaran ${settings.toleransi}m • Di luar ${assigned.radius} m titik ${assigned.nama_lokasi} tidak tercatat`}
+                            ? `Jam mengikuti jadwal shift • Kelonggaran ${settings.toleransi}m • Absen tercatat di titik mana pun yang ditugaskan, selama masih dalam radiusnya`
+                            : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA • Kelonggaran ${settings.toleransi}m • Absen tercatat di titik mana pun yang ditugaskan, selama masih dalam radiusnya`}
                     </p>
                     {isShift && (
                         <p className="text-xs text-[#64748B] mt-1">

@@ -54,7 +54,7 @@ export default function Attendances() {
     const filtered = useMemo(() => baseList.filter((r) => {
         if (!isWilayah && wilayah !== 'Semua' && r.wilayah !== wilayah) return false;
         if (isWilayah && wilayah !== OWN_REGION) return false;
-        if (siteFilter !== 'Semua' && String(r.office_location_id) !== String(siteFilter)) return false;
+        if (siteFilter !== 'Semua' && String(r.office_location_id) !== String(siteFilter) && String(r.office_location_id_out) !== String(siteFilter)) return false;
         if (status !== 'Semua' && r.status !== status) return false;
         if (q && !r.nama.toLowerCase().includes(q.toLowerCase()) && !r.email.toLowerCase().includes(q.toLowerCase())) return false;
         return true;
@@ -64,10 +64,11 @@ export default function Attendances() {
 
     const handleExport = () => {
         if (filtered.length === 0) { toast.error('Tidak ada data untuk diekspor'); return; }
-        const header = ['Nama', 'Email', 'Wilayah', 'Titik', 'Tgl', 'Datang', 'Pulang', 'Shift', 'Status', 'Jarak(m)', 'Catatan'];
+        const header = ['Nama', 'Email', 'Wilayah', 'Titik Masuk', 'Titik Pulang', 'Tgl', 'Datang', 'Pulang', 'Shift', 'Status', 'Jarak(m)', 'Catatan'];
         const rows = filtered.map((r) => {
             const hit = siteById(r.office_location_id, regionsData);
-            return [r.nama, r.email, r.wilayah, hit?.site.nama_lokasi ?? '', r.tgl, r.datang, r.pulang, shiftLabel(r), r.status, String(r.jarak), r.catatan_pulang ?? ''];
+            const hitPulang = siteById(r.office_location_id_out, regionsData);
+            return [r.nama, r.email, r.wilayah, hit?.site.nama_lokasi ?? '', hitPulang?.site.nama_lokasi ?? '', r.tgl, r.datang, r.pulang, shiftLabel(r), r.status, String(r.jarak), r.catatan_pulang ?? ''];
         });
         const csv = [header, ...rows].map((a) => a.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -166,9 +167,14 @@ export default function Attendances() {
                                             <td className="px-4 py-3 text-xs"><span className="bg-[#F1F5F9] px-2 py-1 rounded-full">{r.wilayah}</span></td>
                                             <td className="px-4 py-3 text-xs">
                                                 {hit ? (
-                                                    <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${inRadius ? 'bg-[#EFF6FF] text-[#1E3A8A] hover:bg-[#DBEAFE]' : 'bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA]'}`} title={`${hit.site.nama_lokasi} • ${hit.site.radius}m`}>
-                                                        {hit.site.nama_lokasi} • {hit.site.radius}m
-                                                    </Link>
+                                                    <div className="space-y-1">
+                                                        <Link href={`${base}/regions/${hit.region.id}/sites/${hit.site.id}`} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${inRadius ? 'bg-[#EFF6FF] text-[#1E3A8A] hover:bg-[#DBEAFE]' : 'bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA]'}`} title={`${hit.site.nama_lokasi} • ${hit.site.radius}m`}>
+                                                            {hit.site.nama_lokasi} • {hit.site.radius}m
+                                                        </Link>
+                                                        {r.berpindah_lokasi && (
+                                                            <p className="text-[10px] text-[#92400E]">Pulang di {r.nama_titik_pulang || '—'}</p>
+                                                        )}
+                                                    </div>
                                                 ) : (
                                                     <span className="inline-flex bg-[#F1F5F9] text-[#64748B] px-2.5 py-1 rounded-full text-xs">—</span>
                                                 )}
@@ -185,7 +191,7 @@ export default function Attendances() {
                     {filtered.length === 0 && <p className="text-center text-sm text-[#64748B] py-8">Tidak ada data untuk filter ini</p>}
                     <div className="px-4 py-3 bg-[#F8FAFC] text-xs text-[#64748B] flex flex-wrap gap-2 justify-between">
                         <span>{isWilayah ? `Admin Wilayah: hanya ${OWN_REGION}` : 'Super Admin lihat semua • Admin Wilayah own region saja'}</span>
-                        <span>1 karyawan = 1 titik • Jam {jamLabel} WITA</span>
+                        <span>Karyawan bisa absen di lebih dari satu titik • Jam {jamLabel} WITA</span>
                     </div>
                 </div>
 
@@ -216,10 +222,22 @@ export default function Attendances() {
                                         <p className="text-xs text-[#64748B] bg-[#F8FAFC] rounded-xl px-3 py-2">Belum ada swafoto pulang{detail.pulang && detail.pulang !== '— belum pulang' ? ' (baris lama, sebelum kebijakan foto pulang)' : ''}</p>
                                     )}
                                     <div className="grid grid-cols-2 gap-3 text-sm">
+                                        <div className="bg-[#F8FAFC] rounded-xl p-3 col-span-2">
+                                            <p className="text-xs text-[#64748B]">Titik absen</p>
+                                            <p className="font-medium text-[#0F172A]">
+                                                {detail.nama_titik || '—'}
+                                                {detail.berpindah_lokasi ? ` ke ${detail.nama_titik_pulang || '—'}` : ''}
+                                            </p>
+                                            {detail.berpindah_lokasi && (
+                                                <span className="inline-flex mt-1 bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30 px-2 py-0.5 rounded-full text-[11px] font-medium">Berpindah lokasi</span>
+                                            )}
+                                        </div>
                                         <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Waktu datang</p><p className="font-medium text-[#0F172A]">{detail.datang} WITA</p></div>
                                         <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Waktu pulang</p><p className="font-medium text-[#0F172A]">{detail.pulang || '— belum pulang'}</p></div>
-                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Koordinat absen</p><p className="font-mono text-xs text-[#0F172A]">{Number(detail.lat).toFixed(4)}, {Number(detail.lng).toFixed(4)}</p></div>
-                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Jarak ke titik assigned</p><p className={`font-medium ${hit && inRadius ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{detail.jarak} m {hit ? `/${hit.site.radius}m • ${inRadius ? 'Dalam' : 'Di luar'}` : ''}</p></div>
+                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Koordinat datang</p><p className="font-mono text-xs text-[#0F172A]">{Number(detail.lat).toFixed(4)}, {Number(detail.lng).toFixed(4)}</p></div>
+                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Koordinat pulang</p><p className="font-mono text-xs text-[#0F172A]">{detail.lat_out != null && detail.lng_out != null ? `${Number(detail.lat_out).toFixed(4)}, ${Number(detail.lng_out).toFixed(4)}` : '—'}</p></div>
+                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Jarak ke titik datang</p><p className={`font-medium ${hit && inRadius ? 'text-[#065F46]' : 'text-[#991B1B]'}`}>{detail.jarak} m {hit ? `/${hit.site.radius}m • ${inRadius ? 'Dalam' : 'Di luar'}` : ''}</p></div>
+                                        <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Jarak ke titik pulang</p><p className="font-medium text-[#0F172A]">{detail.jarak_pulang != null ? `${Math.round(detail.jarak_pulang)} m` : '—'}</p></div>
                                     </div>
                                     <div className="bg-[#F8FAFC] rounded-xl p-3">
                                         <div className="flex items-center justify-between gap-2">

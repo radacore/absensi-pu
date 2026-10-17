@@ -329,7 +329,12 @@ function KartuHari({ h, detail }) {
         <div className="rounded-lg border border-[#86EFAC] bg-white p-3 space-y-2">
             <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-[#065F46]">{detail.tgl}</p>
-                <span className="text-xs font-medium text-[#065F46]">{detail.status}</span>
+                <div className="flex items-center gap-2">
+                    {detail.berpindah_lokasi && (
+                        <span className="text-[11px] font-medium text-[#92400E] bg-[#FFF7E6] border border-[#FCB833]/30 px-2 py-0.5 rounded-full">Berpindah lokasi</span>
+                    )}
+                    <span className="text-xs font-medium text-[#065F46]">{detail.status}</span>
+                </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 {detail.masuk && (

@@ -41,8 +41,9 @@ class RekapPresenter
         $jamPulangMin = $hP * 60 + $mP;
         $batasToleransiMin = $jamMasukMin + $toleransi;
 
-        // Attendance bulan itu
-        $attendances = Attendance::with('toleranceClaim')
+        // Attendance bulan itu. Relasi titik ikut dimuat: satu hari bisa
+        // absen masuk di satu titik dan pulang di titik lain.
+        $attendances = Attendance::with(['toleranceClaim', 'site', 'siteOut'])
             ->where('employee_id', $emp->id)
             ->whereYear('work_date', $year)
             ->whereMonth('work_date', $month)
@@ -199,6 +200,10 @@ class RekapPresenter
             $trenMasukMin = null;
             $trenPulangMin = null;
             $zonaMasuk = null;
+            // Titik yang benar-benar dipakai hari itu (bisa berbeda masuk/pulang).
+            $pindahLokasi = false;
+            $lokasiMasuk = null;
+            $lokasiPulang = null;
 
             if ($isShift) {
                 if ($shiftKe !== null) {
@@ -235,6 +240,16 @@ class RekapPresenter
                 $jamPulangStr = $att->clock_out_at ? Carbon::parse($att->clock_out_at)->format('H:i') : '—';
                 $catatanPulang = $att->catatan_pulang ?: null;
                 $hadirCount++;
+
+                // Titik masuk dan pulang dibaca dari baris absensi, bukan dari
+                // titik utama karyawan — titik utama bisa saja berbeda.
+                $siteMasukRow = $att->site ?: $emp->site;
+                $sitePulangRow = $att->siteOut ?: $siteMasukRow;
+                $lokasiMasuk = $siteMasukRow?->nama_lokasi;
+                $lokasiPulang = $sitePulangRow?->nama_lokasi;
+                $pindahLokasi = $att->site_id !== null
+                    && $att->site_out_id !== null
+                    && (int) $att->site_id !== (int) $att->site_out_id;
 
                 if ($att->status === 'excused_love') {
                     // Keterlambatan sudah dimaafkan oleh klaim toleransi yang
@@ -325,6 +340,12 @@ class RekapPresenter
                     }
                 }
 
+                if ($pindahLokasi) {
+                    // Jawaban klien: satu kehadiran, tetapi hari itu ditandai
+                    // berpindah lokasi supaya terbaca di rekap.
+                    $catatan .= ($catatan ? ' · ' : '').'Berpindah lokasi: '.$lokasiMasuk.' ke '.$lokasiPulang;
+                }
+
                 // Detail per hari untuk kartu detail
                 $detailHari[] = self::buildDetailHari($att, $date, $hariFull, $zonaMasuk, $emp);
             } else {
@@ -350,6 +371,10 @@ class RekapPresenter
                 'jam_pulang' => $jamPulangStr,
                 'catatan' => $catatan,
                 'catatan_pulang' => $catatanPulang,
+                // Titik absen hari itu (null bila tidak ada absensi).
+                'berpindah_lokasi' => $pindahLokasi,
+                'lokasi_masuk' => $lokasiMasuk,
+                'lokasi_pulang' => $lokasiPulang,
                 'is_weekend' => $isWeekend,
                 'is_holiday' => $isHoliday,
                 'is_cuti' => $isCuti,
@@ -459,9 +484,27 @@ class RekapPresenter
             default => 'Hadir',
         };
 
-        $siteName = $emp->site?->nama_lokasi ?? '';
-        $siteLat = $emp->site?->lat ?? 0;
-        $siteLng = $emp->site?->lng ?? 0;
+        // Titik masuk dan titik pulang bisa berbeda (absen di titik tambahan
+        // atau berpindah titik di tengah hari). Keduanya dibaca dari baris
+        // absensi; titik utama karyawan hanya cadangan untuk data lama yang
+        // belum menyimpan site_id/site_out_id.
+        $siteMasuk = $att->site ?: $emp->site;
+        $sitePulang = $att->siteOut ?: $siteMasuk;
+
+        $siteName = $siteMasuk?->nama_lokasi ?? '';
+        $siteLat = $siteMasuk?->lat ?? 0;
+        $siteLng = $siteMasuk?->lng ?? 0;
+
+        $namaPulang = $sitePulang?->nama_lokasi ?? $siteName;
+        $latPulang = $sitePulang?->lat ?? 0;
+        $lngPulang = $sitePulang?->lng ?? 0;
+
+        // Ditandai di rekap supaya hari yang berpindah titik tidak terbaca
+        // sebagai hari biasa (jawaban klien: tetap satu kehadiran, ditandai).
+        $pindahLokasi = $att->site_id !== null
+            && $att->site_out_id !== null
+            && (int) $att->site_id !== (int) $att->site_out_id;
+
         $unitKerja = $emp->unit_kerja;
 
         $masuk = null;
@@ -489,29 +532,29 @@ class RekapPresenter
         $pulang = null;
         if ($att->clock_out_at) {
             $adaKoordinat = $att->lat_out !== null && $att->lng_out !== null;
-            // Jarak pulang dihitung dari koordinat pulang ke titik kantor.
-            // Sebelumnya kolom ini memakai distance_in_m (jarak masuk), jadi
-            // kartu "Absen Pulang" bisa menampilkan angka yang salah.
+            // Jarak pulang dihitung dari koordinat pulang ke titik tempat
+            // karyawan benar-benar absen pulang. Memakai titik masuk membuat
+            // absensi sah di titik lain terbaca seperti di luar radius.
             $radiusPulang = null;
-            if ($adaKoordinat && $emp->site) {
+            if ($adaKoordinat && $sitePulang) {
                 $radiusPulang = AdminPresenter::haversineM(
                     (float) $att->lat_out,
                     (float) $att->lng_out,
-                    (float) $siteLat,
-                    (float) $siteLng
+                    (float) $latPulang,
+                    (float) $lngPulang
                 );
             }
             $pulang = [
                 'jenis_absen' => $adaKoordinat ? 'WFO' : 'Isian manual',
                 'jam' => Carbon::parse($att->clock_out_at)->format('H:i:s'),
-                'lokasi' => $siteName,
+                'lokasi' => $namaPulang,
                 'timezone' => 'Asia/Makassar',
                 'koordinat' => $adaKoordinat
                     ? sprintf('%.6f, %.6f', (float) $att->lat_out, (float) $att->lng_out)
                     : null,
                 'radius' => $radiusPulang,
-                'nama_lokasi_aktif' => $siteName,
-                'koordinat_lokasi_aktif' => sprintf('%.6f, %.6f', $siteLat, $siteLng),
+                'nama_lokasi_aktif' => $namaPulang,
+                'koordinat_lokasi_aktif' => sprintf('%.6f, %.6f', $latPulang, $lngPulang),
                 'unit_kerja' => $unitKerja,
                 'catatan' => $att->catatan_pulang,
                 'selfie_url' => $att->selfieRouteUrl('pulang'),
@@ -541,6 +584,10 @@ class RekapPresenter
             'tgl' => $date->locale('id')->isoFormat('dddd, D MMMM YYYY'),
             'hari' => $hariFull,
             'status' => 'Hadir · '.$zonaLabel,
+            // Satu kehadiran walau masuk dan pulang di titik berbeda.
+            'berpindah_lokasi' => $pindahLokasi,
+            'lokasi_masuk' => $siteName,
+            'lokasi_pulang' => $namaPulang,
             'masuk' => $masuk,
             'pulang' => $pulang,
             'dispensasi' => $dispensasi,
