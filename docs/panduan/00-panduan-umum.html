@@ -86,7 +86,7 @@
   <li>Buka alamat di atas memakai peramban ponsel atau komputer.</li>
   <li>Isi <strong>Email</strong> dan <strong>Kata sandi</strong> yang diberikan pengelola.</li>
   <li>Tekan tombol <strong>Masuk</strong>.</li>
-  <li>Aplikasi mengantar ke halaman yang sesuai dengan peran akun tersebut.</li>
+  <li>Aplikasi mengantar ke halaman yang sesuai dengan peran akun tersebut. Bila akun Anda memegang dua peran, Anda berhenti dulu di halaman pilihan peran.</li>
 </ol>
 
 <table class="grid">
@@ -95,8 +95,31 @@
     <tr><td>Super Admin</td><td><span class="url">/super-admin</span></td></tr>
     <tr><td>Admin Wilayah</td><td><span class="url">/admin</span></td></tr>
     <tr><td>Karyawan</td><td><span class="url">/karyawan</span></td></tr>
+    <tr><td>Admin sekaligus karyawan</td><td>Halaman pilihan peran, lalu <span class="url">/admin</span> atau <span class="url">/karyawan</span></td></tr>
   </tbody>
 </table>
+
+<h3>Bila akun Anda admin sekaligus karyawan</h3>
+<p>Sebagian pegawai memegang dua peran: mengelola data sebagai admin, dan tetap tercatat sebagai karyawan yang harus absen. Akun seperti ini memakai satu email dan satu kata sandi. Setelah masuk, aplikasi menampilkan dua kartu pilihan, bukan langsung membuka salah satu tampilan.</p>
+
+<table class="grid">
+  <thead><tr><th style="width:38mm">Kartu</th><th>Isi</th><th style="width:32mm">Tujuan</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Panel Admin</strong></td><td>Peran Anda (Super Admin atau Admin Wilayah) dan nama wilayah</td><td><span class="url">/admin</span></td></tr>
+    <tr><td><strong>Aplikasi Karyawan</strong></td><td>Absen, cuti, dan rekap pribadi, beserta titik absen Anda</td><td><span class="url">/karyawan</span></td></tr>
+  </tbody>
+</table>
+
+<p>Pilihan ini tidak diingat. Setiap kali masuk, kedua kartu muncul lagi, sehingga Anda tidak pernah terjebak di tampilan yang tidak sedang dibutuhkan. Misalnya pagi hari Anda memilih Aplikasi Karyawan untuk absen masuk, lalu siangnya memilih Panel Admin untuk memeriksa data.</p>
+
+<p>Setelah memilih salah satu, Anda tetap bisa berpindah tanpa login ulang:</p>
+
+<ul>
+  <li>Dari panel admin, tekan <strong>Aplikasi karyawan</strong> di bagian bawah menu samping. Tombol ini hanya muncul untuk akun dua peran.</li>
+  <li>Dari aplikasi karyawan, tekan <strong>Buka panel admin</strong> di halaman Profil.</li>
+</ul>
+
+<p>Keluar dari salah satu tampilan berarti keluar dari keduanya. Untuk masuk lagi, cukup satu kali login.</p>
 
 <h3>Alamat lama yang tetap berfungsi</h3>
 <p>Bila ada tautan lama, penanda di ponsel, atau aplikasi yang sudah terpasang sebelumnya, alamat berikut tetap bisa dibuka dan menampilkan halaman masuk yang sama:</p>
@@ -116,7 +139,7 @@
 
 <div class="warn">
   <div class="t">Satu orang, satu akun</div>
-  <p>Seorang pegawai yang juga bertugas sebagai admin memakai satu email dan satu kata sandi untuk kedua peran. Setelah masuk, ia bisa berpindah dari tampilan karyawan ke panel admin lewat tombol <strong>Buka panel admin</strong> di halaman Profil.</p>
+  <p>Seorang pegawai yang juga bertugas sebagai admin memakai satu email dan satu kata sandi untuk kedua peran. Setelah masuk, ia memilih dulu mau bekerja sebagai admin atau sebagai karyawan. Perpindahan setelah itu bisa dilakukan kapan saja tanpa login ulang.</p>
 </div>
 
 <h2 id="s3"><span class="num">3</span>Memasang aplikasi di ponsel</h2>
