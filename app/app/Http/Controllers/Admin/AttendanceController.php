@@ -27,6 +27,8 @@ class AttendanceController extends Controller
             'regions' => AdminPresenter::regionsFor($scope),
             'attendances' => AdminPresenter::attendancesFor($scope),
             'settings' => AdminPresenter::settingsFor(),
+            // Tanggal acuan filter dihitung di server (WITA), bukan di browser.
+            'todayISO' => now('Asia/Makassar')->toDateString(),
         ]);
     }
 

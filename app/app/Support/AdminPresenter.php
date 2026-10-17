@@ -238,6 +238,10 @@ class AdminPresenter
                 'nama_titik' => $a->site?->nama_lokasi ?? $emp?->site?->nama_lokasi ?? '',
                 'nama_titik_pulang' => $a->siteOut?->nama_lokasi ?? $a->site?->nama_lokasi ?? $emp?->site?->nama_lokasi ?? '',
                 'berpindah_lokasi' => $a->site_id !== null && $a->site_out_id !== null && (int) $a->site_id !== (int) $a->site_out_id,
+                // E6: absen di luar radius semua titik tetap tercatat, jadi
+                // admin perlu melihat tanda ini di kartu detail.
+                'di_luar_titik' => (bool) $a->di_luar_titik,
+                'di_luar_titik_pulang' => (bool) $a->di_luar_titik_pulang,
                 'tgl' => $tgl,
                 'datang' => $datang,
                 'pulang' => $pulang,

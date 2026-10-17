@@ -15,7 +15,11 @@ const shiftLabel = (r) => (r.shift ? r.shift : r.is_shift ? 'Di luar jadwal' : '
 
 export default function Attendances() {
     const { url, props } = usePage();
-    const { regions: regionsProp, attendances: attendancesProp, settings } = props;
+    const { regions: regionsProp, attendances: attendancesProp, settings, todayISO: todayISOProp } = props;
+    // Tanggal acuan filter dihitung server (WITA). new Date() di browser bisa
+    // masih tanggal kemarin saat dini hari, sehingga absen shift malam tidak
+    // tampil pada hari kerja yang sedang berjalan.
+    const todayISO = todayISOProp ?? new Date().toISOString().slice(0, 10);
     const base = getBase(url);
     const isWilayah = base === '/admin' || base === '/wilayah';
     // Wilayah admin yang sedang login; bukan nama tetap, karena tiap admin beda.
@@ -27,7 +31,7 @@ export default function Attendances() {
     const [wilayah, setWilayah] = useState(isWilayah ? OWN_REGION : 'Semua');
     const [siteFilter, setSiteFilter] = useState('Semua');
     const [status, setStatus] = useState('Semua');
-    const [tgl, setTgl] = useState(() => new Date().toISOString().slice(0, 10));
+    const [tgl, setTgl] = useState(() => todayISO);
     const [detail, setDetail] = useState(null);
     // D5: koreksi catatan pekerjaan oleh admin.
     const [editCatatan, setEditCatatan] = useState(false);
@@ -46,9 +50,10 @@ export default function Attendances() {
     const sitesForWilayah = useMemo(() => getSitesForWilayah(regionsData, wilayah, isWilayah), [regionsData, wilayah, isWilayah]);
 
     const baseList = useMemo(() => {
+        // Filter tanggal harus jujur: jangan tampilkan baris tanggal lain hanya
+        // karena tanggal yang dipilih belum punya data.
         const byDate = attendances.filter((r) => r.tgl === tgl);
-        const list = byDate.length > 0 ? byDate : attendances;
-        return isWilayah ? list.filter((r) => r.wilayah === OWN_REGION) : list;
+        return isWilayah ? byDate.filter((r) => r.wilayah === OWN_REGION) : byDate;
     }, [attendances, tgl, isWilayah]);
 
     const filtered = useMemo(() => baseList.filter((r) => {
@@ -230,6 +235,12 @@ export default function Attendances() {
                                             </p>
                                             {detail.berpindah_lokasi && (
                                                 <span className="inline-flex mt-1 bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30 px-2 py-0.5 rounded-full text-[11px] font-medium">Berpindah lokasi</span>
+                                            )}
+                                            {detail.di_luar_titik && (
+                                                <span className="inline-flex mt-1 ml-1 bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30 px-2 py-0.5 rounded-full text-[11px] font-medium">Masuk di luar radius</span>
+                                            )}
+                                            {detail.di_luar_titik_pulang && (
+                                                <span className="inline-flex mt-1 ml-1 bg-[#FFF7E6] text-[#92400E] border border-[#FCB833]/30 px-2 py-0.5 rounded-full text-[11px] font-medium">Pulang di luar radius</span>
                                             )}
                                         </div>
                                         <div className="bg-[#F8FAFC] rounded-xl p-3"><p className="text-xs text-[#64748B]">Waktu datang</p><p className="font-medium text-[#0F172A]">{detail.datang} WITA</p></div>
