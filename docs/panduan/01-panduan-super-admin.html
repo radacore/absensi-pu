@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Panduan Super Admin, Sistem Absensi dan Kepegawaian BBWS Pompengan Jeneberang</title>
+<link rel="stylesheet" href="panduan.css">
+<style>
+  @page {
+    @bottom-left {
+      content: "Panduan Super Admin · SIAPPOMJEN BBWS Pompengan Jeneberang";
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #94A3B8;
+    }
+    @bottom-right {
+      content: "Hal " counter(page) " dari " counter(pages);
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #94A3B8;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="band">
+  <div class="eyebrow">Panduan Pengguna</div>
+  <h1>Panduan Super Admin</h1>
+  <p class="sub">Menyiapkan sistem dari nol, mengelola seluruh wilayah, memantau kehadiran, dan menjaga aturan absensi tetap konsisten.</p>
+  <span class="role">Super Admin</span>
+</div>
+
+<table class="meta">
+  <tr><td class="k">Peran</td><td>Super Admin Kantor Pusat</td></tr>
+  <tr><td class="k">Alamat panel</td><td>https://siappomjen.id/super-admin</td></tr>
+  <tr><td class="k">Jumlah menu</td><td>15 menu</td></tr>
+  <tr><td class="k">Versi dokumen</td><td>1.0, Oktober 2026</td></tr>
+  <tr><td class="k">Disusun oleh</td><td>Rahmat Dani S</td></tr>
+</table>
+
+<div class="lead">
+  <p>Super Admin adalah satu-satunya peran yang dapat mengubah pengaturan global, mengelola hari libur, membuat akun admin wilayah, dan membaca catatan audit. Panduan ini disusun mengikuti urutan pekerjaan yang sebenarnya: menyiapkan sistem, menjalankan operasi harian, lalu menutup bulan dengan rekap.</p>
+</div>
+
+<div class="toc">
+  <div class="t">Isi panduan</div>
+  <ol>
+    <li><a href="#s1">Peran dan kewenangan</a></li>
+    <li><a href="#s2">Peta menu</a></li>
+    <li><a href="#s3">Masuk dan keluar</a></li>
+    <li><a href="#s4">Menyiapkan sistem dari nol</a></li>
+    <li><a href="#s5">Pekerjaan harian</a></li>
+    <li><a href="#s6">Mengelola shift</a></li>
+    <li><a href="#s7">Rekap per karyawan</a></li>
+    <li><a href="#s8">Hari libur</a></li>
+    <li><a href="#s9">Audit log</a></li>
+    <li><a href="#s10">Jika ada masalah</a></li>
+  </ol>
+</div>
+
+<h2 id="s1"><span class="num">1</span>Peran dan kewenangan</h2>
+
+<p>Super Admin melihat dan mengubah data seluruh wilayah. Admin Wilayah hanya melihat wilayahnya sendiri, sehingga pekerjaan Super Admin adalah menjaga kerangka yang dipakai bersama: pengaturan jam kerja, hari libur nasional, pola shift, dan akun pengelola wilayah.</p>
+
+<table class="grid">
+  <thead><tr><th style="width:70mm">Yang hanya bisa dilakukan Super Admin</th><th>Keterangan</th></tr></thead>
+  <tbody>
+    <tr><td>Mengubah Pengaturan global</td><td>Jam kerja, kelonggaran, hari kerja, kuota toleransi, jatah cuti, aturan absen di hari libur.</td></tr>
+    <tr><td>Mengelola Hari Libur</td><td>Menu ini tidak muncul untuk Admin Wilayah.</td></tr>
+    <tr><td>Membuat dan menghapus akun Admin Wilayah</td><td>Termasuk menautkan akun ke data karyawan.</td></tr>
+    <tr><td>Membaca Audit Log</td><td>Riwayat perubahan data dan persetujuan.</td></tr>
+    <tr><td>Mengelola seluruh wilayah dan titik absen</td><td>Admin Wilayah terbatas pada wilayahnya.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s2"><span class="num">2</span>Peta menu</h2>
+
+<p>Seluruh alamat di bawah diawali <span class="url">https://siappomjen.id/super-admin</span>. Menu tampil di bilah samping kiri, berurutan seperti tabel berikut.</p>
+
+<table class="grid compact">
+  <thead><tr><th style="width:38mm">Menu</th><th style="width:44mm">Alamat</th><th>Kegunaan</th></tr></thead>
+  <tbody>
+    <tr><td>Dashboard</td><td><span class="url">/super-admin</span></td><td>Ringkasan kehadiran hari ini dan pengajuan yang menunggu.</td></tr>
+    <tr><td>Kantor Wilayah</td><td><span class="url">/super-admin/regions</span></td><td>Daftar wilayah dan titik absen di dalamnya.</td></tr>
+    <tr><td>Karyawan</td><td><span class="url">/super-admin/employees</span></td><td>Data karyawan, impor Excel, rekap per orang.</td></tr>
+    <tr><td>Admin Wilayah</td><td><span class="url">/super-admin/admin-wilayah</span></td><td>Akun pengelola wilayah.</td></tr>
+    <tr><td>Absensi</td><td><span class="url">/super-admin/attendances</span></td><td>Catatan absen harian seluruh karyawan.</td></tr>
+    <tr><td>Cuti</td><td><span class="url">/super-admin/cuti</span></td><td>Pengajuan dan persetujuan cuti.</td></tr>
+    <tr><td>Klaim Toleransi</td><td><span class="url">/super-admin/love</span></td><td>Klaim lupa absen datang atau pulang.</td></tr>
+    <tr><td>Pola Shift</td><td><span class="url">/super-admin/pola-shift</span></td><td>Aturan jam tiap shift.</td></tr>
+    <tr><td>Jadwal Shift</td><td><span class="url">/super-admin/jadwal-shift</span></td><td>Penugasan shift per tanggal.</td></tr>
+    <tr><td>Pulang Cepat</td><td><span class="url">/super-admin/pulang-cepat</span></td><td>Izin pulang sebelum jam selesai.</td></tr>
+    <tr><td>Dinas</td><td><span class="url">/super-admin/dinas</span></td><td>Perjalanan tugas beserta surat tugas.</td></tr>
+    <tr><td>Pengumuman</td><td><span class="url">/super-admin/pengumuman</span></td><td>Informasi untuk semua atau satu wilayah.</td></tr>
+    <tr><td>Hari Libur</td><td><span class="url">/super-admin/holidays</span></td><td>Libur nasional dan cuti bersama.</td></tr>
+    <tr><td>Pengaturan</td><td><span class="url">/super-admin/settings</span></td><td>Aturan global absensi dan cuti.</td></tr>
+    <tr><td>Audit Log</td><td><span class="url">/super-admin/audit-log</span></td><td>Riwayat tindakan pengelola.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s3"><span class="num">3</span>Masuk dan keluar</h2>
+
+<ol class="steps">
+  <li>Buka <span class="url">https://siappomjen.id/login</span>.</li>
+  <li>Masukkan email dan kata sandi akun Super Admin.</li>
+  <li>Tekan <strong>Masuk</strong>. Aplikasi membuka <span class="url">/super-admin</span>.</li>
+  <li>Untuk keluar, tekan nama akun di kanan atas, lalu pilih <strong>Keluar</strong>.</li>
+</ol>
+
+<div class="warn">
+  <div class="t">Sandi bawaan</div>
+  <p>Akun baru dibuat dengan sandi bawaan yang sama untuk semua orang. Bila akun masih memakai sandi bawaan, panel admin terkunci sampai sandi diganti lewat halaman Profil. Ini disengaja agar tidak ada akun pengelola yang tetap memakai sandi umum.</p>
+</div>
+
+<h2 id="s4"><span class="num">4</span>Menyiapkan sistem dari nol</h2>
+
+<p>Urutan berikut penting. Titik absen tidak bisa dibuat sebelum ada wilayah, karyawan tidak bisa dibuat sebelum ada titik, dan admin wilayah sebaiknya dibuat setelah karyawannya ada agar bisa ditautkan.</p>
+
+<table class="grid">
+  <thead><tr><th style="width:12mm">Urut</th><th style="width:44mm">Langkah</th><th>Hasil yang diharapkan</th></tr></thead>
+  <tbody>
+    <tr><td class="n">1</td><td>Pengaturan</td><td>Jam kerja, hari kerja, dan kuota berlaku untuk semua wilayah.</td></tr>
+    <tr><td class="n">2</td><td>Kantor Wilayah</td><td>Wilayah pusat dan cabang terbentuk.</td></tr>
+    <tr><td class="n">3</td><td>Titik absen</td><td>Setiap lokasi punya koordinat dan radius.</td></tr>
+    <tr><td class="n">4</td><td>Karyawan</td><td>Setiap karyawan terhubung ke satu titik.</td></tr>
+    <tr><td class="n">5</td><td>Admin Wilayah</td><td>Pengelola wilayah bisa masuk dan bekerja.</td></tr>
+    <tr><td class="n">6</td><td>Pola dan jadwal shift</td><td>Hanya bila ada pekerja shift.</td></tr>
+  </tbody>
+</table>
+
+<h3>4.1 Pengaturan global</h3>
+<p class="path">/super-admin/settings</p>
+
+<p>Halaman ini menentukan aturan yang dipakai seluruh aplikasi. Setelah diubah, aturan langsung berlaku untuk absensi dan rekap. Khusus kuota toleransi, perubahan berlaku mulai bulan berikutnya agar angka bulan berjalan tidak berubah di tengah jalan.</p>
+
+<table class="grid">
+  <thead><tr><th style="width:48mm">Isian</th><th style="width:30mm">Nilai yang diizinkan</th><th>Pengaruhnya</th></tr></thead>
+  <tbody>
+    <tr><td>Jam masuk</td><td>Waktu</td><td>Batas awal kerja. Harus lebih awal dari jam pulang.</td></tr>
+    <tr><td>Jam pulang</td><td>Waktu</td><td>Acuan tombol absen pulang terbuka untuk pekerja bukan shift.</td></tr>
+    <tr><td>Kelonggaran</td><td>0 sampai 60 menit</td><td>Datang dalam rentang ini masih dihitung tepat waktu.</td></tr>
+    <tr><td>Hari kerja</td><td>Pilihan hari</td><td>Hari di luar pilihan ini dianggap non-kerja. Minimal satu hari harus dipilih.</td></tr>
+    <tr><td>Total toleransi per bulan</td><td>1 sampai 10</td><td>Jumlah klaim lupa absen yang boleh diajukan seorang karyawan tiap bulan.</td></tr>
+    <tr><td>Jatah cuti tahunan</td><td>1 sampai 60 hari kerja</td><td>Kuota cuti tahunan. Akhir pekan dan libur nasional tidak dihitung.</td></tr>
+    <tr><td>Jatah cuti pekerja shift</td><td>0 sampai 60 hari kerja</td><td>Kuota khusus pekerja shift, dihitung dari hari yang dijadwalkan.</td></tr>
+    <tr><td>Absen di hari libur</td><td>Aktif atau nonaktif</td><td>Bila aktif, ada dua pilihan: tolak absen, atau catat dengan status khusus libur.</td></tr>
+    <tr><td>Cakupan pola shift</td><td>Bertingkat, per wilayah, global</td><td>Menentukan pola mana yang menang bila ada beberapa pola berlaku.</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <div class="t">Cakupan pola shift</div>
+  <p><strong>Bertingkat</strong> memakai urutan lokasi, lalu wilayah, lalu global. <strong>Per wilayah</strong> mengabaikan pola per lokasi. <strong>Global</strong> mengabaikan keduanya dan hanya memakai satu pola untuk semua.</p>
+</div>
+
+<h3>4.2 Kantor Wilayah</h3>
+<p class="path">/super-admin/regions</p>
+
+<ol class="steps">
+  <li>Tekan <strong>Tambah Wilayah</strong>.</li>
+  <li>Isi nama wilayah, lalu pilih tipe <strong>Pusat</strong> atau <strong>Cabang</strong>.</li>
+  <li>Simpan. Wilayah baru muncul di daftar beserta jumlah titik dan karyawannya.</li>
+</ol>
+
+<p>Hanya boleh ada satu wilayah bertipe Pusat. Bila perlu mengubah tipe, lakukan pada wilayah yang sudah ada, bukan dengan menambah wilayah pusat kedua.</p>
+
+<h3>4.3 Titik absen</h3>
+<p class="path">/super-admin/regions, lalu pilih wilayah dan titik</p>
+
+<p>Titik absen adalah lokasi resmi tempat karyawan boleh melakukan absen. Setiap titik menyimpan koordinat, radius, alamat, dan daftar anggotanya.</p>
+
+<h4>Membuat titik baru</h4>
+<ol class="steps">
+  <li>Buka menu <strong>Kantor Wilayah</strong>, lalu pilih wilayahnya.</li>
+  <li>Tekan <strong>Tambah Titik</strong>.</li>
+  <li>Isi nama titik dan alamat.</li>
+  <li>Klik lokasi yang benar di peta. Koordinat terisi otomatis dan bisa disesuaikan manual.</li>
+  <li>Atur radius antara 50 dan 1000 meter.</li>
+  <li>Simpan.</li>
+</ol>
+
+<h4>Mengubah titik dan memindahkan anggota</h4>
+<ol class="steps">
+  <li>Buka titik dari daftar wilayah.</li>
+  <li>Tekan <strong>Ubah</strong> untuk memperbaiki nama, alamat, koordinat, atau radius.</li>
+  <li>Untuk memindahkan karyawan, cari namanya di daftar anggota, lalu tekan <strong>Pindah</strong>.</li>
+  <li>Pilih titik tujuan di wilayah yang sama, lalu simpan.</li>
+</ol>
+
+<div class="warn">
+  <div class="t">Satu karyawan, satu titik</div>
+  <p>Karyawan tidak bisa dilepas tanpa titik. Menambah anggota ke sebuah titik berarti memindahkannya dari titik lama. Riwayat absen yang sudah tercatat tetap menyimpan titik yang dipakai saat itu.</p>
+</div>
+
+<div class="note">
+  <div class="t">Radius dan pengawasan</div>
+  <p>Radius yang terlalu besar membuat absen bisa dilakukan dari jauh. Gunakan radius sekecil mungkin yang masih mencakup area kerja. Perubahan radius berlaku untuk semua anggota titik tersebut.</p>
+</div>
+
+<h4>Menghapus titik</h4>
+<p>Sebuah wilayah harus menyisakan minimal satu titik. Ketika sebuah titik dihapus, anggotanya otomatis dipindahkan ke titik lain di wilayah yang sama. Bila titik yang dihapus masih memegang karyawan, pastikan titik tujuan pengganti sudah benar, karena karyawan tidak diberi pilihan pada saat itu.</p>
+
+<h3>4.4 Menambah karyawan secara manual</h3>
+<p class="path">/super-admin/employees, tombol Tambah Karyawan</p>
+
+<table class="grid">
+  <thead><tr><th style="width:44mm">Isian</th><th>Keterangan</th></tr></thead>
+  <tbody>
+    <tr><td>Nama lengkap</td><td>Nama yang tampil di absensi dan rekap.</td></tr>
+    <tr><td>Email</td><td>Dipakai untuk masuk. Harus unik, tidak boleh sama dengan akun lain.</td></tr>
+    <tr><td>NIK/NIP</td><td>Boleh diisi sebagian atau dikosongkan. Tidak harus 16 digit.</td></tr>
+    <tr><td>NIP</td><td>Kolom terpisah, opsional.</td></tr>
+    <tr><td>Golongan, jabatan, unit, PPK</td><td>Data kepegawaian, dipakai di tampilan dan rekap.</td></tr>
+    <tr><td>Status</td><td>PNS, PPPK, atau Kontrak.</td></tr>
+    <tr><td>Wilayah</td><td>Menentukan admin mana yang mengelola orang ini.</td></tr>
+    <tr><td>Titik proyek</td><td>Wajib. Satu karyawan hanya boleh punya satu titik.</td></tr>
+    <tr><td>Pekerja shift</td><td>Aktifkan bila orang ini bekerja bergiliran.</td></tr>
+    <tr><td>Hari kerja khusus</td><td>Kosongkan bila ikut hari kerja umum. Bila diisi, jadwal pribadi ini yang dipakai.</td></tr>
+    <tr><td>Regu</td><td>Opsional, dipakai untuk menyusun jadwal shift.</td></tr>
+  </tbody>
+</table>
+
+<p>Setelah disimpan, akun langsung aktif dengan sandi bawaan. Karyawan wajib menggantinya saat pertama masuk. Tombol <strong>Reset kata sandi</strong> pada baris karyawan mengembalikan sandi ke bawaan, misalnya ketika karyawan lupa sandi.</p>
+
+<h3>4.5 Impor akun karyawan</h3>
+<p class="path">/super-admin/employees/impor</p>
+
+<p>Impor dipakai saat data karyawan masih ada di Excel. Halaman ini punya tiga langkah: unduh templat, unggah berkas, lalu periksa pratinjau sebelum menyimpan.</p>
+
+<h4>Langkah 1. Unduh templat</h4>
+<p>Tekan <strong>Unduh templat</strong>. Berkas berisi satu lembar isian dengan enam kolom berikut:</p>
+
+<table class="grid compact">
+  <thead><tr><th style="width:52mm">Kolom</th><th style="width:20mm">Wajib</th><th>Contoh isi</th></tr></thead>
+  <tbody>
+    <tr><td>NAMA</td><td>Ya</td><td>Andi Saputra</td></tr>
+    <tr><td>NIK/NIP</td><td>Tidak</td><td>198705122010011003</td></tr>
+    <tr><td>STATUS PEGAWAI</td><td>Ya</td><td>Petugas OP</td></tr>
+    <tr><td>SATKER</td><td>Ya</td><td>BBWS Pompengan Jeneberang</td></tr>
+    <tr><td>PPK</td><td>Tidak</td><td>Nama PPK</td></tr>
+    <tr><td>EMAIL</td><td>Ya</td><td>andi@contoh.go.id</td></tr>
+  </tbody>
+</table>
+
+<p>Kolom tambahan dikenali bila ditambahkan sendiri: <strong>Wilayah</strong>, <strong>Titik Proyek</strong>, <strong>NIP</strong>, <strong>Golongan</strong>, <strong>Status Kepegawaian</strong>, <strong>Regu</strong>, <strong>Shift</strong>, <strong>Hari Kerja</strong>, dan <strong>Sandi Awal</strong>. Kolom tambahan tidak dicetak di templat, jadi harus ditulis manual bila diperlukan.</p>
+
+<h4>Langkah 2. Tujuan dan berkas</h4>
+<ol class="steps">
+  <li>Pilih <strong>Impor ke</strong> wilayah dan titik tujuan. Pilihan ini berlaku untuk seluruh isi berkas.</li>
+  <li>Pilih berkas Excel. Batasnya 1000 baris dan 5 MB per berkas.</li>
+  <li>Pilih mode: <strong>Tambah saja</strong>, <strong>Perbarui saja</strong>, atau <strong>Tambah dan perbarui</strong>.</li>
+  <li>Pilih sumber sandi awal: sandi bawaan, NIK/NIP, atau kolom Sandi Awal.</li>
+  <li>Centang <strong>Wajib ganti sandi saat pertama masuk</strong> bila akun baru harus mengganti sandi.</li>
+  <li>Pilih status kepegawaian bawaan untuk baris yang kolom statusnya kosong.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Arti tiga mode impor</div>
+  <p><strong>Tambah saja</strong> melewati karyawan yang NIK/NIP atau emailnya sudah terdaftar, dan tidak pernah mengubah data lama. <strong>Perbarui saja</strong> hanya mengubah yang sudah terdaftar dan tidak pernah mereset sandi. <strong>Tambah dan perbarui</strong> melakukan keduanya, dan merupakan pilihan paling umum.</p>
+</div>
+
+<h4>Langkah 3. Pratinjau</h4>
+<p>Pratinjau menampilkan baris yang akan ditambah, diperbarui, dilewati, atau gagal beserta alasannya. Belum ada yang tersimpan pada tahap ini. Periksa jumlahnya, lalu tekan <strong>Impor sekarang</strong> bila sudah sesuai.</p>
+
+<div class="warn">
+  <div class="t">NIK yang terbaca sebagai angka</div>
+  <p>Excel kadang mengubah NIK menjadi angka dan membuang nol di depan. Bila muncul peringatan ini, ubah format kolom NIK/NIP menjadi teks di Excel, lalu unggah ulang. NIK yang sudah terlanjur berubah tidak bisa dipulihkan oleh aplikasi.</p>
+</div>
+
+<h3>4.6 Akun Admin Wilayah</h3>
+<p class="path">/super-admin/admin-wilayah</p>
+
+<p>Admin Wilayah adalah akun pengelola untuk satu wilayah. Akun ini bisa berdiri sendiri, atau ditautkan ke data karyawan bila orang tersebut juga tercatat sebagai pegawai.</p>
+
+<ol class="steps">
+  <li>Tekan <strong>Tambah Admin Wilayah</strong>.</li>
+  <li>Isi nama, email, dan pilih wilayah yang dikelola.</li>
+  <li>Bila orang ini juga karyawan, pilih namanya pada daftar <strong>Karyawan terkait</strong>.</li>
+  <li>Simpan. Akun aktif dengan sandi bawaan dan wajib diganti saat pertama masuk.</li>
+</ol>
+
+<div class="key">
+  <div class="t">Satu orang, satu akun</div>
+  <p>Bila akun admin ditautkan ke karyawan, orang tersebut memakai satu email dan satu kata sandi untuk kedua peran. Setelah masuk sebagai karyawan, ia dapat membuka panel admin lewat tombol <strong>Buka panel admin</strong> di halaman Profil. Penautan hanya bisa dilakukan satu kali untuk satu karyawan, karena satu karyawan hanya boleh terhubung ke satu akun admin.</p>
+</div>
+
+<p>Tombol <strong>Nonaktifkan</strong> mematikan akses tanpa menghapus data. Tombol <strong>Hapus</strong> menghapus akun. Keduanya tercatat di Audit Log.</p>
+
+<h2 id="s5"><span class="num">5</span>Pekerjaan harian</h2>
+
+<h3>5.1 Memantau absensi</h3>
+<p class="path">/super-admin/attendances</p>
+
+<p>Halaman ini menampilkan absen masuk dan pulang seluruh karyawan. Gunakan pencarian nama atau email, saringan wilayah, dan saringan tanggal untuk mempersempit daftar.</p>
+
+<table class="grid compact">
+  <thead><tr><th style="width:26mm">Kolom</th><th>Artinya</th></tr></thead>
+  <tbody>
+    <tr><td>Karyawan</td><td>Foto, nama, dan email.</td></tr>
+    <tr><td>Waktu</td><td>Jam datang dan jam pulang.</td></tr>
+    <tr><td>Shift</td><td>Shift yang dijadwalkan, bila pekerja shift.</td></tr>
+    <tr><td>Wilayah</td><td>Wilayah karyawan.</td></tr>
+    <tr><td>Titik Proyek</td><td>Nama titik dan radiusnya. Berwarna merah bila absen terjadi di luar radius.</td></tr>
+    <tr><td>Jarak</td><td>Jarak ponsel ke titik saat absen, disertai keterangan Dalam atau Di luar.</td></tr>
+    <tr><td>Status</td><td>Tepat waktu, Terlambat, Toleransi, atau Pulang awal.</td></tr>
+    <tr><td>Detail</td><td>Membuka rincian absensi.</td></tr>
+  </tbody>
+</table>
+
+<h4>Membaca rincian absensi</h4>
+<p>Tekan <strong>Detail</strong> pada baris yang ingin diperiksa. Rincian menampilkan swafoto datang dan swafoto pulang, jam keduanya, koordinat absen, jarak ke titik beserta batas radiusnya, status, dan catatan pekerjaan.</p>
+
+<h4>Mengoreksi catatan</h4>
+<ol class="steps">
+  <li>Tekan <strong>Detail</strong> pada baris absensi yang bersangkutan.</li>
+  <li>Pada bagian catatan, tekan <strong>Ubah</strong>.</li>
+  <li>Tulis catatan yang benar, lalu simpan.</li>
+</ol>
+
+<h4>Menghapus data absensi</h4>
+<p>Buka <strong>Detail</strong> pada baris yang bersangkutan, lalu tekan <strong>Hapus</strong> dan setujui peringatan. Data yang dihapus tidak bisa dikembalikan. Gunakan hanya untuk absen yang jelas keliru, misalnya tercatat pada tanggal yang salah.</p>
+
+<h4>Mengunduh data</h4>
+<p>Tekan <strong>Ekspor CSV</strong> untuk mengunduh daftar sesuai saringan yang sedang aktif. Berkas CSV bisa dibuka di Excel.</p>
+
+<h3>5.2 Cuti</h3>
+<p class="path">/super-admin/cuti</p>
+
+<p>Cuti disetujui bertingkat melalui tiga tahap: Atasan, Admin Wilayah, lalu Kantor Pusat. Setiap persetujuan menaikkan level pengajuan, dan pengajuan berstatus <strong>Disetujui</strong> setelah tahap terakhir. Karyawan dapat memilih approver level 1 saat mengajukan; bila tidak memilih, admin wilayah yang berwenang dapat memprosesnya.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Cuti</strong>. Saringan status membantu menemukan yang masih <strong>Menunggu</strong>.</li>
+  <li>Tekan baris pengajuan untuk membuka rinciannya.</li>
+  <li>Periksa tanggal, jenis cuti, alasan, dan sisa kuota karyawan pada tahun tersebut.</li>
+  <li>Tekan <strong>Setujui</strong> untuk menaikkan level, atau <strong>Tolak</strong> dengan menuliskan catatan alasan penolakan.</li>
+  <li>Ulangi persetujuan sampai status menjadi <strong>Disetujui</strong>.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Jenis cuti</div>
+  <p>Pilihan yang tersedia: Tahunan, Sakit, Besar, dan Melahirkan. Hanya jenis yang berkuota, yaitu Tahunan, yang dipotong dari jatah tahunan. Kuota dihitung dalam hari kerja, sehingga akhir pekan dan libur nasional tidak mengurangi jatah.</p>
+</div>
+
+<p>Tombol <strong>Hapus</strong> menghapus pengajuan beserta riwayatnya. Gunakan bila pengajuan memang salah dibuat, bukan untuk membatalkan cuti yang sudah disetujui dan sudah dijalani.</p>
+
+<h3>5.3 Klaim toleransi</h3>
+<p class="path">/super-admin/love</p>
+
+<p>Klaim toleransi dipakai ketika karyawan lupa absen datang atau lupa absen pulang. Setiap klaim memakai jatah bulanan sesuai Pengaturan.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Klaim Toleransi</strong>.</li>
+  <li>Saring berdasarkan status, wilayah, titik, atau jenis klaim.</li>
+  <li>Periksa jam yang diklaim dan alasan yang ditulis karyawan.</li>
+  <li>Tekan <strong>Setujui</strong> atau <strong>Tolak</strong>. Penolakan disertai catatan.</li>
+</ol>
+
+<p>Klaim yang disetujui memperbaiki catatan kehadiran pada tanggal tersebut. Klaim yang ditolak tetap tersimpan sebagai riwayat dan jatahnya kembali. Klaim yang masih menunggu sudah menahan satu jatah, sehingga sisa kuota karyawan berkurang sebelum keputusan diambil.</p>
+
+<h3>5.4 Pulang cepat</h3>
+<p class="path">/super-admin/pulang-cepat</p>
+
+<p>Izin pulang sebelum jam selesai harus disetujui sebelum karyawan dapat melakukan absen pulang. Tanpa persetujuan, tombol absen pulang menolak dengan pesan belum waktunya pulang.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Pulang Cepat</strong>.</li>
+  <li>Buka pengajuan yang masih menunggu.</li>
+  <li>Periksa tanggal, rencana jam pulang, dan alasannya.</li>
+  <li>Tekan <strong>Setujui</strong> atau <strong>Tolak</strong> dengan catatan.</li>
+</ol>
+
+<h3>5.5 Dinas</h3>
+<p class="path">/super-admin/dinas</p>
+
+<p>Pengajuan dinas memuat surat tugas yang diunggah karyawan. Setelah disetujui, tanggal dinas tercatat sebagai Dinas pada rekap, bukan sebagai kehadiran biasa.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Dinas</strong>, lalu buka pengajuannya.</li>
+  <li>Periksa nomor surat, tanggal mulai dan selesai, tujuan, serta keterangan tugas.</li>
+  <li>Buka dokumen surat tugas untuk memastikan berkasnya benar.</li>
+  <li>Tekan <strong>Setujui</strong> atau <strong>Tolak</strong> dengan catatan.</li>
+</ol>
+
+<h3>5.6 Pengumuman</h3>
+<p class="path">/super-admin/pengumuman</p>
+
+<p>Super Admin dapat menerbitkan pengumuman untuk semua wilayah (Global) atau untuk satu wilayah saja. Pengumuman bersifat sematan (pin) akan tampil paling atas di daftar karyawan.</p>
+
+<ol class="steps">
+  <li>Tekan <strong>Tambah Pengumuman</strong>.</li>
+  <li>Isi judul dan isi pengumuman.</li>
+  <li>Pilih cakupan: <strong>Global</strong> atau <strong>Wilayah</strong>.</li>
+  <li>Bila memilih wilayah, tentukan wilayahnya.</li>
+  <li>Centang <strong>Sematkan</strong> bila pengumuman harus selalu di atas.</li>
+  <li>Simpan.</li>
+</ol>
+
+<p>Pengumuman Global tidak dapat diubah atau dihapus oleh Admin Wilayah. Pengumuman wilayah hanya dapat diubah oleh admin wilayah yang bersangkutan atau oleh Super Admin.</p>
+
+<h2 id="s6"><span class="num">6</span>Mengelola shift</h2>
+
+<h3>6.1 Pola shift</h3>
+<p class="path">/super-admin/pola-shift</p>
+
+<p>Pola shift menentukan jam mulai tiap shift. Panjang shift tidak diisi manual, melainkan dihitung dari 24 jam dibagi jumlah shift: 2 shift berarti 12 jam, 3 shift berarti 8 jam, 4 shift berarti 6 jam.</p>
+
+<ol class="steps">
+  <li>Tekan <strong>Tambah Pola</strong>.</li>
+  <li>Isi nama pola, minimal 2 karakter.</li>
+  <li>Pilih cakupan: global, wilayah, atau lokasi.</li>
+  <li>Pilih jumlah shift, lalu isi jam mulai shift pertama. Jam shift berikutnya dihitung otomatis.</li>
+  <li>Simpan. Pola bisa dinonaktifkan tanpa dihapus.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Nama shift mengikuti jumlah</div>
+  <p>Untuk 2 shift, nama yang dipakai Pagi dan Malam. Untuk 3 atau 4 shift, nama mengikuti urutan Pagi, Siang, Sore, Malam.</p>
+</div>
+
+<h3>6.2 Jadwal shift</h3>
+<p class="path">/super-admin/jadwal-shift</p>
+
+<p>Jadwal shift menentukan siapa masuk shift mana pada tanggal berapa. Pekerja shift tidak memakai akhir pekan sebagai acuan hari kerja, melainkan jadwal ini.</p>
+
+<ol class="steps">
+  <li>Pilih bulan dan tahun.</li>
+  <li>Pilih lokasi, lalu pilih regu bila ada.</li>
+  <li>Klik sel tanggal pada baris karyawan, lalu pilih shift yang berlaku.</li>
+  <li>Ulangi untuk seluruh tanggal dalam bulan tersebut.</li>
+  <li>Gunakan <strong>Salin minggu lalu</strong> bila pola mingguan berulang, lalu sesuaikan seperlunya.</li>
+  <li>Tekan <strong>Simpan Jadwal</strong>.</li>
+</ol>
+
+<div class="warn">
+  <div class="t">Jadwal menentukan kehadiran</div>
+  <p>Bagi pekerja shift, hari yang tidak dijadwalkan dianggap bukan hari kerja. Kekeliruan mengisi jadwal akan tampak langsung di rekap sebagai hari tanpa keterangan, atau sebaliknya sebagai kehadiran pada hari yang seharusnya libur.</p>
+</div>
+
+<h2 id="s7"><span class="num">7</span>Rekap per karyawan</h2>
+<p class="path">/super-admin/employees, tombol Rekap pada baris karyawan</p>
+
+<p>Rekap menampilkan satu bulan penuh untuk satu karyawan, lengkap dengan ringkasan angka di bagian atas: Hadir, Terlambat, Cuti, Dinas, dan Tanpa keterangan.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Karyawan</strong>, lalu cari nama yang bersangkutan.</li>
+  <li>Tekan <strong>Rekap</strong> pada barisnya.</li>
+  <li>Pilih bulan dan tahun.</li>
+  <li>Periksa rincian harian. Warna menandai jenis hari: hadir, terlambat, cuti, dinas, libur, atau tanpa keterangan.</li>
+  <li>Tekan <strong>Unduh PDF</strong> untuk menyimpan rekap dalam bentuk siap cetak, atau <strong>Unduh CSV</strong> untuk diolah di Excel.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Cara membaca angka</div>
+  <p>Hadir menghitung absen yang benar-benar dilakukan. Dinas berdiri sendiri dan tidak menambah angka Hadir, tetapi juga tidak masuk Tanpa keterangan. Cuti hanya dihitung pada hari kerja. Jumlah Hadir, Dinas, Cuti, dan Tanpa keterangan seharusnya sama dengan total hari kerja pada bulan itu.</p>
+</div>
+
+<h2 id="s8"><span class="num">8</span>Hari libur</h2>
+<p class="path">/super-admin/holidays</p>
+
+<p>Hari libur dipakai untuk menutup absen dan mengeluarkan tanggal dari perhitungan hari kerja. Menu ini hanya tersedia untuk Super Admin.</p>
+
+<ol class="steps">
+  <li>Pilih tahun pada saringan di kanan atas.</li>
+  <li>Tekan <strong>Tambah Hari Libur</strong>.</li>
+  <li>Isi tanggal dan nama libur.</li>
+  <li>Centang <strong>Cuti bersama</strong> bila tanggal tersebut memakai jatah cuti bersama.</li>
+  <li>Simpan.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Libur dan pekerja shift</div>
+  <p>Pekerja shift yang tetap dijadwalkan masuk pada hari libur tetap dihitung bekerja, karena acuannya jadwal shift. Aturan absen di hari libur mengikuti Pengaturan: ditolak, atau tetap dicatat dengan status khusus libur.</p>
+</div>
+
+<h2 id="s9"><span class="num">9</span>Audit log</h2>
+<p class="path">/super-admin/audit-log</p>
+
+<p>Audit Log mencatat tindakan pengelola yang mengubah data atau memutuskan pengajuan. Gunakan halaman ini ketika ada data yang berubah dan perlu diketahui siapa pelakunya.</p>
+
+<table class="grid compact">
+  <thead><tr><th style="width:60mm">Yang tercatat</th><th>Contoh tindakan</th></tr></thead>
+  <tbody>
+    <tr><td>Data karyawan</td><td>Tambah, perbarui, hapus, reset kata sandi.</td></tr>
+    <tr><td>Akun admin wilayah</td><td>Tambah, perbarui, aktifkan, nonaktifkan, hapus.</td></tr>
+    <tr><td>Cuti</td><td>Persetujuan per level, persetujuan akhir, penolakan, penghapusan.</td></tr>
+    <tr><td>Toleransi</td><td>Persetujuan, penolakan, penghapusan.</td></tr>
+    <tr><td>Pengumuman</td><td>Penghapusan.</td></tr>
+  </tbody>
+</table>
+
+<ol class="steps">
+  <li>Buka menu <strong>Audit Log</strong>.</li>
+  <li>Saring berdasarkan jenis tindakan, nama pelaku, atau rentang tanggal.</li>
+  <li>Baca keterangan pada baris untuk mengetahui objek dan pelakunya.</li>
+</ol>
+
+<h2 id="s10"><span class="num">10</span>Jika ada masalah</h2>
+
+<table class="grid">
+  <thead><tr><th style="width:62mm">Gejala</th><th>Kemungkinan sebab dan tindakan</th></tr></thead>
+  <tbody>
+    <tr><td>Karyawan tidak bisa absen, muncul pesan titik belum di-assign</td><td>Karyawan belum terhubung ke titik. Buka titik yang benar, lalu tambahkan atau pindahkan karyawan tersebut.</td></tr>
+    <tr><td>Absen ditolak karena di luar radius</td><td>Posisi ponsel jauh dari titik, atau radius terlalu kecil. Periksa jarak pada detail absensi, lalu sesuaikan radius bila perlu.</td></tr>
+    <tr><td>Admin Wilayah tidak bisa mengubah Pengaturan</td><td>Memang demikian. Pengaturan hanya dapat diubah Super Admin. Admin Wilayah melihat halaman dalam mode baca.</td></tr>
+    <tr><td>Akun admin tidak bisa membuka panel</td><td>Akun masih memakai sandi bawaan. Ganti sandi lewat halaman Profil terlebih dahulu.</td></tr>
+    <tr><td>Impor gagal seluruhnya</td><td>Periksa kolom wajib, batas 1000 baris dan 5 MB, serta format NIK yang berubah menjadi angka.</td></tr>
+    <tr><td>Karyawan hasil impor tidak punya titik</td><td>Pastikan titik tujuan dipilih pada langkah 2. Bila kolom Titik Proyek dipakai, pastikan namanya sama persis dengan nama titik yang ada.</td></tr>
+    <tr><td>Rekap menampilkan banyak hari tanpa keterangan</td><td>Periksa jadwal shift bila pekerja shift, dan periksa hari kerja pada Pengaturan bila pekerja biasa.</td></tr>
+    <tr><td>Pengajuan cuti tidak bisa disetujui</td><td>Pengajuan harus berstatus Menunggu. Bila sudah disetujui atau ditolak, status tidak dapat diubah lagi.</td></tr>
+  </tbody>
+</table>
+
+<div class="end">
+  <p><strong>Panduan Super Admin, versi 1.0.</strong> Disusun oleh Rahmat Dani S, Oktober 2026. Untuk hal yang berlaku umum di semua peran, termasuk cara masuk dan absen di dua titik, lihat Panduan Umum.</p>
+</div>
+
+</body>
+</html>

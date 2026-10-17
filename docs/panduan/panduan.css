@@ -1,0 +1,341 @@
+/* ============================================================
+   Panduan pengguna SIAPPOMJEN
+   Tema dokumen A4, satu bahasa visual dengan aplikasi.
+   ============================================================ */
+
+@page {
+  size: A4;
+  margin: 20mm 17mm 18mm;
+}
+
+* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+html { font-size: 10.5pt; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+  color: #1E293B;
+  line-height: 1.55;
+  font-size: 10.5pt;
+}
+
+p { margin: 0 0 8px; }
+a { color: #1E3A8A; text-decoration: none; }
+strong { color: #0F172A; }
+small { font-size: 9pt; color: #64748B; }
+
+/* ---------- Sampul ---------- */
+
+.band {
+  background: #0F172A;
+  color: #FFFFFF;
+  padding: 26px 28px 28px;
+  margin-bottom: 16px;
+}
+
+.band .eyebrow {
+  font-size: 8pt;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #FCB833;
+  font-weight: 700;
+}
+
+.band h1 {
+  font-size: 25pt;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 10px 0 8px;
+}
+
+.band .sub {
+  font-size: 11.5pt;
+  color: #CBD5E1;
+  margin: 0;
+  max-width: 150mm;
+}
+
+.band .role {
+  display: inline-block;
+  margin-top: 14px;
+  background: #FCB833;
+  color: #0F172A;
+  font-size: 8.5pt;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 3px;
+}
+
+/* ---------- Tabel meta sampul ---------- */
+
+table.meta {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 18px;
+}
+
+table.meta td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #E2E8F0;
+  vertical-align: top;
+}
+
+table.meta tr:last-child td { border-bottom: 0; }
+
+table.meta td.k {
+  width: 34mm;
+  color: #64748B;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- Paragraf pembuka ---------- */
+
+.lead {
+  border-left: 4px solid #FCB833;
+  background: #FFFBF0;
+  padding: 12px 16px;
+  margin: 0 0 20px;
+  font-size: 10pt;
+}
+
+.lead p:last-child { margin-bottom: 0; }
+
+/* ---------- Daftar isi ---------- */
+
+.toc {
+  border: 1px solid #E2E8F0;
+  padding: 14px 18px 10px;
+  margin-bottom: 8px;
+  break-inside: avoid;
+}
+
+.toc .t {
+  font-size: 8.5pt;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #64748B;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.toc ol {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 9.8pt;
+}
+
+.toc li { margin-bottom: 3px; }
+
+/* ---------- Judul bagian ---------- */
+
+h2 {
+  font-size: 14pt;
+  color: #0F172A;
+  letter-spacing: -0.01em;
+  margin: 24px 0 8px;
+  padding-top: 10px;
+  border-top: 1px solid #E2E8F0;
+  break-after: avoid;
+}
+
+h2 .num {
+  display: inline-block;
+  min-width: 22px;
+  background: #0F172A;
+  color: #FCB833;
+  font-size: 9pt;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 8px;
+  vertical-align: 2px;
+}
+
+h3 {
+  font-size: 11pt;
+  color: #0F172A;
+  margin: 15px 0 5px;
+  break-after: avoid;
+}
+
+h4 {
+  font-size: 10pt;
+  color: #334155;
+  margin: 12px 0 4px;
+  break-after: avoid;
+}
+
+/* ---------- Alamat halaman ---------- */
+
+.url {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 8.8pt;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: #0F172A;
+  white-space: nowrap;
+}
+
+.url.long { white-space: normal; word-break: break-all; }
+
+.path {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9pt;
+  color: #1E3A8A;
+  margin: 1px 0 6px;
+}
+
+/* ---------- Langkah bernomor ---------- */
+
+ol.steps {
+  counter-reset: st;
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 12px;
+}
+
+ol.steps > li {
+  counter-increment: st;
+  position: relative;
+  padding-left: 27px;
+  margin-bottom: 7px;
+  break-inside: avoid;
+}
+
+ol.steps > li::before {
+  content: counter(st);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #FCB833;
+  color: #0F172A;
+  font-size: 8.5pt;
+  font-weight: 700;
+  text-align: center;
+  line-height: 18px;
+}
+
+ol.steps ul { margin: 4px 0 0; padding-left: 16px; }
+
+ul.plain { margin: 4px 0 10px; padding-left: 18px; }
+ul.plain li { margin-bottom: 3px; }
+
+/* ---------- Tabel ---------- */
+
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0 14px;
+  font-size: 9.3pt;
+  break-inside: auto;
+}
+
+table.grid tr { break-inside: avoid; }
+table.grid thead { display: table-header-group; }
+table.grid.keep { break-inside: avoid; }
+table.grid.tight th, table.grid.tight td { padding: 4px 7px; }
+table.grid.dense th, table.grid.dense td { padding: 3px 7px; }
+
+table.grid th {
+  background: #0F172A;
+  color: #FFFFFF;
+  text-align: left;
+  padding: 6px 9px;
+  font-weight: 600;
+  font-size: 8.8pt;
+  vertical-align: bottom;
+}
+
+table.grid td {
+  padding: 6px 9px;
+  border-bottom: 1px solid #E2E8F0;
+  vertical-align: top;
+}
+
+table.grid tbody tr:nth-child(even) td { background: #F8FAFC; }
+table.grid td.n { white-space: nowrap; }
+table.grid .url { font-size: 8.2pt; }
+
+table.grid.compact { font-size: 8.8pt; }
+table.grid.compact th, table.grid.compact td { padding: 5px 7px; }
+
+/* ---------- Kotak keterangan ---------- */
+
+.note, .warn, .key {
+  border: 1px solid #E2E8F0;
+  border-left: 4px solid #0D9488;
+  background: #F0FDFA;
+  padding: 10px 14px;
+  margin: 8px 0 14px;
+  font-size: 9.7pt;
+  break-inside: avoid;
+}
+
+.note .t, .warn .t, .key .t {
+  font-weight: 700;
+  font-size: 8.5pt;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  color: #0F766E;
+}
+
+.note p:last-child, .warn p:last-child, .key p:last-child { margin-bottom: 0; }
+
+.warn { border-left-color: #B45309; background: #FFFBEB; }
+.warn .t { color: #B45309; }
+
+.key { border-left-color: #0F172A; background: #F8FAFC; }
+.key .t { color: #0F172A; }
+
+/* ---------- Label kecil ---------- */
+
+.tag {
+  display: inline-block;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: #EFF6FF;
+  color: #1E3A8A;
+  vertical-align: 1px;
+}
+
+.tag.gold { background: #FFF7E6; color: #92400E; }
+.tag.green { background: #ECFDF5; color: #065F46; }
+.tag.red { background: #FEF2F2; color: #991B1B; }
+
+/* ---------- Halaman penutup ---------- */
+
+.end {
+  margin-top: 18px;
+  border-top: 3px solid #0F172A;
+  padding-top: 10px;
+  font-size: 9pt;
+  color: #64748B;
+  break-inside: avoid;
+}
+
+.end strong { color: #0F172A; }
+
+/* ---------- Utilitas ---------- */
+
+.avoid { break-inside: avoid; }
+.spacer { height: 8px; }
+.muted { color: #64748B; }

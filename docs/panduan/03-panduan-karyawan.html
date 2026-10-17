@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Panduan Karyawan, Sistem Absensi dan Kepegawaian BBWS Pompengan Jeneberang</title>
+<link rel="stylesheet" href="panduan.css">
+<style>
+  @page {
+    @bottom-left {
+      content: "Panduan Karyawan · SIAPPOMJEN BBWS Pompengan Jeneberang";
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #94A3B8;
+    }
+    @bottom-right {
+      content: "Hal " counter(page) " dari " counter(pages);
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #94A3B8;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="band">
+  <div class="eyebrow">Panduan Pengguna</div>
+  <h1>Panduan Karyawan</h1>
+  <p class="sub">Absen harian dari ponsel, mengajukan cuti, toleransi, pulang cepat, dan dinas, lalu memeriksa rekap kehadiran sendiri.</p>
+  <span class="role">Karyawan</span>
+</div>
+
+<table class="meta">
+  <tr><td class="k">Peran</td><td>Karyawan</td></tr>
+  <tr><td class="k">Alamat aplikasi</td><td>https://siappomjen.id/karyawan</td></tr>
+  <tr><td class="k">Jumlah halaman</td><td>8 menu utama, ditambah halaman Rekap</td></tr>
+  <tr><td class="k">Perlu izin ponsel</td><td>Lokasi dan kamera</td></tr>
+  <tr><td class="k">Versi dokumen</td><td>1.0, Oktober 2026</td></tr>
+  <tr><td class="k">Disusun oleh</td><td>Rahmat Dani S</td></tr>
+</table>
+
+<div class="lead">
+  <p>Panduan ini menjelaskan apa yang Anda lihat dan lakukan sebagai karyawan, dari absen pertama di pagi hari sampai mengunduh rekap bulanan. Semua pengajuan yang Anda kirim akan masuk ke meja atasan atau Admin Wilayah untuk diputuskan.</p>
+</div>
+
+<div class="toc">
+  <div class="t">Isi panduan</div>
+  <ol>
+    <li><a href="#s1">Apa yang bisa Anda lakukan</a></li>
+    <li><a href="#s2">Peta menu</a></li>
+    <li><a href="#s3">Masuk pertama kali dan ganti sandi</a></li>
+    <li><a href="#s4">Beranda</a></li>
+    <li><a href="#s5">Absen masuk</a></li>
+    <li><a href="#s6">Absen pulang</a></li>
+    <li><a href="#s7">Rekap bulanan</a></li>
+    <li><a href="#s8">Cuti</a></li>
+    <li><a href="#s9">Toleransi</a></li>
+    <li><a href="#s10">Pulang cepat</a></li>
+    <li><a href="#s11">Dinas</a></li>
+    <li><a href="#s12">Info dan pengumuman</a></li>
+    <li><a href="#s13">Profil dan kata sandi</a></li>
+    <li><a href="#s14">Jika ada masalah</a></li>
+  </ol>
+</div>
+
+<h2 id="s1"><span class="num">1</span>Apa yang bisa Anda lakukan</h2>
+
+<table class="grid">
+  <thead><tr><th style="width:52mm">Pekerjaan</th><th>Halaman</th><th>Perlu persetujuan</th></tr></thead>
+  <tbody>
+    <tr><td>Absen masuk dan pulang</td><td>Absensi</td><td>Tidak</td></tr>
+    <tr><td>Melihat rekap dan mengunduh PDF</td><td>Rekap</td><td>Tidak</td></tr>
+    <tr><td>Mengajukan cuti</td><td>Cuti</td><td>Ya, bertingkat</td></tr>
+    <tr><td>Klaim lupa absen</td><td>Toleransi</td><td>Ya, satu level</td></tr>
+    <tr><td>Izin pulang lebih awal</td><td>Pulang Cepat</td><td>Ya, sebelum absen pulang</td></tr>
+    <tr><td>Mengajukan perjalanan tugas</td><td>Dinas</td><td>Ya</td></tr>
+    <tr><td>Membaca pengumuman</td><td>Info</td><td>Tidak</td></tr>
+    <tr><td>Mengubah nomor telepon, email, foto, sandi</td><td>Profil</td><td>Tidak</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s2"><span class="num">2</span>Peta menu</h2>
+
+<p>Semua alamat diawali <span class="url">https://siappomjen.id</span>. Menu tampil di bagian bawah layar pada ponsel. Halaman Rekap tidak berada di menu bawah, melainkan dibuka dari pintasan pada Beranda.</p>
+
+<table class="grid compact">
+  <thead><tr><th style="width:32mm">Menu</th><th style="width:52mm">Alamat</th><th>Kegunaan</th></tr></thead>
+  <tbody>
+    <tr><td>Beranda</td><td><span class="url">/karyawan</span></td><td>Ringkasan hari ini dan pintasan absen.</td></tr>
+    <tr><td>Absensi</td><td><span class="url">/karyawan/absensi</span></td><td>Absen masuk dan pulang.</td></tr>
+    <tr><td>Rekap</td><td><span class="url">/karyawan/rekap</span></td><td>Rekap bulanan dan unduh PDF. Dibuka dari Beranda.</td></tr>
+    <tr><td>Cuti</td><td><span class="url">/karyawan/cuti</span></td><td>Pengajuan dan riwayat cuti.</td></tr>
+    <tr><td>Toleransi</td><td><span class="url">/karyawan/love</span></td><td>Klaim lupa absen datang atau pulang.</td></tr>
+    <tr><td>Pulang Cepat</td><td><span class="url">/karyawan/pulang-cepat</span></td><td>Izin pulang sebelum jam selesai.</td></tr>
+    <tr><td>Dinas</td><td><span class="url">/karyawan/dinas</span></td><td>Perjalanan tugas dan surat tugas.</td></tr>
+    <tr><td>Info</td><td><span class="url">/karyawan/pengumuman</span></td><td>Pengumuman pusat dan wilayah.</td></tr>
+    <tr><td>Profil</td><td><span class="url">/karyawan/profil</span></td><td>Data pribadi, foto, kata sandi.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s3"><span class="num">3</span>Masuk pertama kali dan ganti sandi</h2>
+
+<ol class="steps">
+  <li>Buka <span class="url">https://siappomjen.id/login</span>.</li>
+  <li>Masukkan email Anda dan sandi bawaan yang diberikan pengelola.</li>
+  <li>Tekan <strong>Masuk</strong>. Anda langsung diarahkan ke Beranda.</li>
+  <li>Buka menu <strong>Profil</strong>, lalu ganti kata sandi.</li>
+</ol>
+
+<h3>Aturan kata sandi baru</h3>
+<ul class="plain">
+  <li>Minimal 8 karakter.</li>
+  <li>Mengandung huruf besar, huruf kecil, dan angka.</li>
+  <li>Tidak boleh sama dengan sandi bawaan.</li>
+  <li>Konfirmasi harus sama persis dengan sandi baru.</li>
+</ul>
+
+<div class="note">
+  <div class="t">Sandi bawaan bersifat sementara</div>
+  <p>Sandi bawaan dipakai bersama oleh semua akun baru. Karena itu, segera ganti setelah masuk pertama kali. Bila Anda juga bertugas sebagai admin, panel admin baru terbuka setelah sandi diganti.</p>
+</div>
+
+<h2 id="s4"><span class="num">4</span>Beranda</h2>
+<p class="path">/karyawan</p>
+
+<p>Beranda menampilkan ringkasan keadaan hari ini: apakah Anda sudah absen masuk, jam berapa, serta pintasan menuju halaman absensi. Dari sini Anda juga dapat melihat pengumuman terbaru dan pengajuan yang masih menunggu persetujuan.</p>
+
+<ol class="steps">
+  <li>Periksa nama titik absen Anda dan radiusnya.</li>
+  <li>Bila belum absen, tekan pintasan <strong>Absensi</strong>.</li>
+  <li>Bila ada pengajuan yang ditolak, buka halamannya untuk membaca catatan dari atasan.</li>
+</ol>
+
+<h2 id="s5"><span class="num">5</span>Absen masuk</h2>
+<p class="path">/karyawan/absensi</p>
+
+<p>Absen masuk memerlukan tiga hal sekaligus: posisi ponsel di dalam radius titik absen, swafoto langsung dari kamera, dan koneksi internet. Bila salah satu tidak terpenuhi, absen tidak dikirim.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Absensi</strong>. Halaman menampilkan nama titik absen, radius, dan jarak ponsel Anda saat ini.</li>
+  <li>Pastikan jarak yang tertera tidak lebih besar dari radius. Bila di luar radius, dekatkan diri ke titik absen.</li>
+  <li>Tekan tombol <strong>Absen Masuk</strong>.</li>
+  <li>Ambil swafoto saat itu juga. Foto dari galeri tidak diterima.</li>
+  <li>Tunggu sampai muncul konfirmasi bahwa absen tercatat.</li>
+</ol>
+
+<h3>Kapan dianggap terlambat</h3>
+<p>Batas tepat waktu adalah jam masuk ditambah kelonggaran. Misalnya jam masuk 07.30 dan kelonggaran 15 menit, maka absen sampai 07.45 masih dihitung tepat waktu. Setelah itu statusnya terlambat, tetapi absen tetap tercatat.</p>
+
+<div class="note">
+  <div class="t">Bila Anda pekerja shift</div>
+  <p>Acuan waktu Anda bukan jam masuk global, melainkan jadwal shift yang disusun Admin Wilayah. Pastikan jadwal shift bulan ini sudah terisi. Bila jadwal kosong, tanyakan ke Admin Wilayah sebelum hari kerja dimulai.</p>
+</div>
+
+<div class="warn">
+  <div class="t">Absen hanya sekali per hari</div>
+  <p>Setelah absen masuk tercatat, tombol absen masuk tidak berlaku lagi untuk hari itu. Bila Anda merasa absen tidak tercatat padahal sudah menekan tombol, jangan mengulang berulang kali. Periksa di halaman Rekap, lalu gunakan klaim toleransi bila memang tidak ada catatannya.</p>
+</div>
+
+<h3>Absen di hari libur</h3>
+<p>Pada hari libur atau di luar hari kerja, absen dapat ditolak dengan pesan bahwa hari tersebut libur. Bila Anda memang dijadwalkan bekerja, hal ini biasanya sudah diatur lewat jadwal shift. Bila tetap tidak bisa absen, hubungi Admin Wilayah.</p>
+
+<h2 id="s6"><span class="num">6</span>Absen pulang</h2>
+
+<p>Absen pulang juga memerlukan posisi di dalam radius dan swafoto, ditambah satu hal lagi: catatan pekerjaan hari itu. Catatan ini yang nantinya terlihat oleh admin pada daftar absensi.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Absensi</strong> pada akhir hari kerja.</li>
+  <li>Tekan tombol <strong>Absen Pulang</strong>.</li>
+  <li>Tulis catatan pekerjaan, antara 1 sampai 500 karakter. Tuliskan pekerjaan yang benar-benar dilakukan hari itu.</li>
+  <li>Ambil swafoto.</li>
+  <li>Kirim, lalu pastikan muncul konfirmasi.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Tombol pulang belum terbuka</div>
+  <p>Sebelum jam selesai, tombol absen pulang menolak dengan pesan belum waktunya pulang. Bila Anda memang harus pulang lebih awal, ajukan <strong>Pulang Cepat</strong> lebih dulu, lalu tunggu persetujuan. Setelah disetujui, absen pulang dapat dilakukan.</p>
+</div>
+
+<h2 id="s7"><span class="num">7</span>Rekap bulanan</h2>
+<p class="path">/karyawan/rekap</p>
+
+<p>Rekap menampilkan kehadiran Anda satu bulan penuh. Angka di bagian atas menunjukkan jumlah Hadir, Terlambat, dan Cuti. Di bawahnya, setiap tanggal ditampilkan beserta statusnya.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Rekap</strong>.</li>
+  <li>Pilih bulan dan tahun.</li>
+  <li>Periksa tanggal yang statusnya tidak sesuai. Warna menandai jenis hari: hadir, terlambat, cuti, libur, atau tanpa keterangan.</li>
+  <li>Tekan <strong>Unduh PDF</strong> bila perlu menyimpan atau mencetak rekap.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Hari tanpa keterangan</div>
+  <p>Hari kerja yang tidak memiliki absen, cuti, atau dinas akan tampil sebagai tanpa keterangan. Bila itu terjadi karena Anda lupa absen, segera ajukan klaim toleransi pada bulan yang sama. Klaim yang disetujui akan memperbaiki catatan tersebut.</p>
+</div>
+
+<h2 id="s8"><span class="num">8</span>Cuti</h2>
+<p class="path">/karyawan/cuti</p>
+
+<p>Cuti diajukan sebelum tanggalnya, bukan setelah cuti dijalani. Sisa kuota tahunan tampil di bagian atas halaman.</p>
+
+<h3>Mengajukan cuti</h3>
+<ol class="steps">
+  <li>Tekan <strong>Ajukan Cuti</strong>.</li>
+  <li>Pilih jenis: <strong>Tahunan</strong>, <strong>Sakit</strong>, <strong>Besar</strong>, atau <strong>Melahirkan</strong>.</li>
+  <li>Isi tanggal mulai dan tanggal selesai.</li>
+  <li>Tulis alasan cuti.</li>
+  <li>Pilih approver level 1 bila diminta. Daftar ini berisi akun admin yang berwenang.</li>
+  <li>Kirim pengajuan.</li>
+</ol>
+
+<h3>Kuota cuti</h3>
+<p>Kuota dihitung dalam hari kerja. Akhir pekan dan hari libur nasional tidak mengurangi jatah. Bila rentang tanggal yang Anda pilih melebihi sisa kuota, aplikasi menolak pengajuan dan menampilkan jumlah hari kerja yang diminta beserta sisanya.</p>
+
+<h3>Perjalanan persetujuan</h3>
+<p>Setiap pengajuan melewati tiga tahap. Nama tahap tampil sebagai rangkaian penanda pada kartu pengajuan, dan tahap yang sedang berjalan ditandai warna berbeda.</p>
+
+<table class="grid compact">
+  <thead><tr><th style="width:40mm">Tahap</th><th>Arti</th></tr></thead>
+  <tbody>
+    <tr><td>Atasan</td><td>Tahap pertama. Bila Anda memilih approver level 1, orang tersebut yang memutuskan di sini.</td></tr>
+    <tr><td>Admin Wilayah</td><td>Tahap kedua, diputuskan admin wilayah Anda.</td></tr>
+    <tr><td>Kantor Pusat</td><td>Tahap akhir. Setelah disetujui di sini, status pengajuan menjadi Disetujui.</td></tr>
+  </tbody>
+</table>
+
+<p>Status pengajuan hanya tiga: <strong>Menunggu</strong>, <strong>Disetujui</strong>, dan <strong>Ditolak</strong>. Selama masih Menunggu pada tahap pertama, Anda dapat menekan <strong>Batalkan pengajuan</strong> untuk menariknya kembali.</p>
+
+<p>Bila cuti ditolak, Anda dapat mengajukan ulang dengan tanggal atau alasan yang berbeda. Pengajuan yang sudah diputuskan tidak dapat diubah sendiri.</p>
+
+<h2 id="s9"><span class="num">9</span>Toleransi</h2>
+<p class="path">/karyawan/love</p>
+
+<p>Toleransi dipakai ketika Anda lupa absen datang atau lupa absen pulang. Setiap klaim memakai satu jatah dari kuota bulanan. Sisa kuota tampil di bagian atas halaman.</p>
+
+<h3>Mengajukan klaim</h3>
+<ol class="steps">
+  <li>Pilih jenis: <strong>Lupa absen datang</strong> atau <strong>Lupa absen pulang</strong>.</li>
+  <li>Isi tanggal kejadian. Tanggal tidak boleh melewati hari ini dan tidak boleh jatuh pada akhir pekan.</li>
+  <li>Isi jam yang seharusnya tercatat, dalam format 24 jam.</li>
+  <li>Pilih atasan yang akan menyetujui. Isian ini wajib.</li>
+  <li>Tulis alasan, misalnya ponsel kehabisan baterai atau lupa menekan tombol sebelum meninggalkan lokasi.</li>
+  <li>Kirim. Klaim menunggu persetujuan satu level.</li>
+</ol>
+
+<div class="warn">
+  <div class="t">Kuota habis</div>
+  <p>Bila sisa toleransi nol, pengajuan tidak dapat dikirim. Kuota diperbarui setiap awal bulan. Klaim yang masih menunggu sudah menahan satu jatah, jadi sisa kuota bisa berkurang sebelum klaim disetujui. Bila klaim ditolak, jatahnya kembali.</p>
+</div>
+
+<h2 id="s10"><span class="num">10</span>Pulang cepat</h2>
+<p class="path">/karyawan/pulang-cepat</p>
+
+<p>Pulang cepat adalah izin meninggalkan pekerjaan sebelum jam selesai. Persetujuan diperlukan agar absen pulang dapat dilakukan lebih awal.</p>
+
+<ol class="steps">
+  <li>Tekan <strong>Ajukan Pulang Cepat</strong>.</li>
+  <li>Pilih tanggal. Tanggal tidak boleh melewati hari ini, dan paling lama 7 hari ke belakang.</li>
+  <li>Isi rencana jam pulang.</li>
+  <li>Tulis alasan, misalnya keperluan keluarga atau sakit.</li>
+  <li>Pilih atasan, lalu kirim.</li>
+  <li>Setelah disetujui, lakukan absen pulang seperti biasa.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Urutan yang benar</div>
+  <p>Ajukan izin lebih dulu, tunggu persetujuan, baru absen pulang. Bila Anda menekan absen pulang sebelum izin disetujui, aplikasi akan menolak dengan pesan belum waktunya pulang.</p>
+</div>
+
+<h2 id="s11"><span class="num">11</span>Dinas</h2>
+<p class="path">/karyawan/dinas</p>
+
+<p>Dinas dipakai untuk perjalanan tugas ke luar titik absen. Pengajuan wajib disertai surat tugas yang diunggah.</p>
+
+<ol class="steps">
+  <li>Tekan <strong>Ajukan Dinas</strong>.</li>
+  <li>Isi nomor surat tugas.</li>
+  <li>Isi tanggal mulai dan tanggal selesai. Tanggal selesai tidak boleh lebih awal dari tanggal mulai.</li>
+  <li>Tulis keterangan tugas, minimal 5 karakter.</li>
+  <li>Isi tujuan. Transportasi dan pembebanan anggaran boleh dikosongkan.</li>
+  <li>Unggah surat tugas berformat PDF atau gambar, ukuran maksimal 5 MB.</li>
+  <li>Kirim, lalu tunggu persetujuan Admin Wilayah.</li>
+</ol>
+
+<div class="key">
+  <div class="t">Dinas bukan absen biasa</div>
+  <p>Setelah disetujui, tanggal dinas tercatat pada kolom Dinas di rekap, bukan pada kolom Hadir. Bila pada hari itu Anda tetap berada di titik absen, lakukan absen seperti biasa agar kehadiran Anda juga tercatat.</p>
+</div>
+
+<h2 id="s12"><span class="num">12</span>Info dan pengumuman</h2>
+<p class="path">/karyawan/pengumuman</p>
+
+<p>Halaman Info memuat pengumuman dari pusat dan dari wilayah Anda. Gunakan tab di bagian atas untuk menyaring sumbernya. Pengumuman yang disematkan tampil paling atas.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Info</strong>.</li>
+  <li>Pilih tab <strong>Semua</strong>, <strong>Pusat</strong>, atau wilayah Anda.</li>
+  <li>Tekan judul untuk membaca isi lengkap.</li>
+  <li>Setelah dibaca, pengumuman ditandai sudah dibaca sehingga tidak lagi dihitung sebagai informasi baru.</li>
+</ol>
+
+<h2 id="s13"><span class="num">13</span>Profil dan kata sandi</h2>
+<p class="path">/karyawan/profil</p>
+
+<p>Halaman Profil menampilkan identitas Anda: nama, jabatan, unit, status, golongan, NIK, NIP, dan wilayah. Sebagian data hanya dapat dibaca, karena perubahan data kepegawaian dilakukan admin.</p>
+
+<h3>Yang dapat Anda ubah sendiri</h3>
+<table class="grid compact">
+  <thead><tr><th style="width:34mm">Bagian</th><th>Keterangan</th></tr></thead>
+  <tbody>
+    <tr><td>Foto profil</td><td>Unggah dari galeri. Foto dapat dihapus kembali.</td></tr>
+    <tr><td>Nomor telepon</td><td>Boleh dikosongkan.</td></tr>
+    <tr><td>Email</td><td>Dipakai untuk masuk. Bila diubah, gunakan email baru saat masuk berikutnya.</td></tr>
+    <tr><td>Kata sandi</td><td>Perlu sandi lama, sandi baru, dan konfirmasi.</td></tr>
+  </tbody>
+</table>
+
+<h3>Mengganti kata sandi</h3>
+<ol class="steps">
+  <li>Buka bagian kata sandi.</li>
+  <li>Isi kata sandi saat ini.</li>
+  <li>Isi kata sandi baru, minimal 8 karakter dengan huruf besar, huruf kecil, dan angka.</li>
+  <li>Ulangi sandi baru pada kolom konfirmasi.</li>
+  <li>Simpan.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Tombol Buka panel admin</div>
+  <p>Bila akun Anda juga diberi peran admin, tombol ini muncul di halaman Profil. Tekan untuk berpindah ke panel admin. Bila tombol belum terlihat, ganti dulu kata sandi bawaan.</p>
+</div>
+
+<h2 id="s14"><span class="num">14</span>Jika ada masalah</h2>
+
+<table class="grid">
+  <thead><tr><th style="width:58mm">Gejala</th><th>Kemungkinan sebab dan tindakan</th></tr></thead>
+  <tbody>
+    <tr><td>Titik belum di-assign, tidak bisa absen</td><td>Akun Anda belum dihubungkan ke titik. Hubungi Admin Wilayah.</td></tr>
+    <tr><td>Di luar radius</td><td>Posisi ponsel lebih jauh dari radius titik. Dekatkan diri, atau ajukan dinas bila sedang bertugas di tempat lain.</td></tr>
+    <tr><td>Lokasi belum siap atau gagal membaca GPS</td><td>Nyalakan lokasi dan izinkan akses lokasi untuk situs ini di pengaturan peramban.</td></tr>
+    <tr><td>Kamera tidak terbuka saat absen</td><td>Izinkan akses kamera untuk situs ini. Muat ulang halaman setelah mengizinkan.</td></tr>
+    <tr><td>Absen masuk tidak tercatat padahal sudah menekan tombol</td><td>Periksa halaman Rekap. Bila tidak ada, ajukan klaim toleransi pada bulan yang sama.</td></tr>
+    <tr><td>Belum waktunya pulang</td><td>Ajukan pulang cepat lebih dulu, lalu tunggu persetujuan.</td></tr>
+    <tr><td>Absen ditolak karena hari libur</td><td>Anda tidak dijadwalkan bekerja pada tanggal itu. Hubungi Admin Wilayah bila seharusnya masuk.</td></tr>
+    <tr><td>Pengajuan cuti ditolak karena kuota</td><td>Rentang tanggal melebihi sisa kuota. Perpendek rentangnya atau pilih jenis cuti lain.</td></tr>
+    <tr><td>Klaim toleransi tidak bisa dikirim</td><td>Sisa kuota nol, tanggal jatuh pada akhir pekan, atau atasan belum dipilih.</td></tr>
+    <tr><td>Tidak bisa masuk</td><td>Periksa email dan sandi. Bila tetap gagal, minta Admin Wilayah mereset sandi.</td></tr>
+  </tbody>
+</table>
+
+<div class="end">
+  <p><strong>Panduan Karyawan, versi 1.0.</strong> Disusun oleh Rahmat Dani S, Oktober 2026. Untuk hal yang berlaku umum, termasuk cara masuk dan absen di dua titik, lihat Panduan Umum.</p>
+</div>
+
+</body>
+</html>
