@@ -18,16 +18,16 @@ class AuthWorkflowTest extends TestCase
         $this->seed(DatabaseSeeder::class);
     }
 
-    public function test_guest_redirected_to_login_pages(): void
+    public function test_guest_redirected_to_login_page(): void
     {
-        $this->get('/super-admin')->assertRedirect('/super-admin/login');
-        $this->get('/admin')->assertRedirect('/admin/login');
-        $this->get('/karyawan')->assertRedirect('/karyawan/login');
+        $this->get('/super-admin')->assertRedirect('/login');
+        $this->get('/admin')->assertRedirect('/login');
+        $this->get('/karyawan')->assertRedirect('/login');
     }
 
     public function test_employee_can_login_with_email_and_access_pages(): void
     {
-        $this->post('/karyawan/login', [
+        $this->post('/login', [
             'login' => 'andi@bbws-pj.go.id',
             'password' => 'password123',
         ])->assertRedirect('/karyawan');
@@ -40,7 +40,7 @@ class AuthWorkflowTest extends TestCase
 
     public function test_employee_login_rejected_on_wrong_password(): void
     {
-        $this->post('/karyawan/login', [
+        $this->post('/login', [
             'login' => 'andi@bbws-pj.go.id',
             'password' => 'salah',
         ])->assertSessionHasErrors('login');
@@ -48,7 +48,7 @@ class AuthWorkflowTest extends TestCase
 
     public function test_admin_wilayah_login_and_blocked_from_super_admin(): void
     {
-        $this->post('/admin/login', [
+        $this->post('/login', [
             'email' => 'admin.gowa@bbws-pj.go.id',
             'password' => 'password123',
         ])->assertRedirect('/pilih-peran');
@@ -59,22 +59,18 @@ class AuthWorkflowTest extends TestCase
         $this->get('/admin/regions')->assertOk();
     }
 
-    public function test_pintu_super_admin_tetap_mengarahkan_admin_wilayah_ke_panel_wilayah(): void
+    public function test_alamat_login_lama_dialihkan_ke_pintu_tunggal(): void
     {
-        // Satu pintu masuk melayani semua peran. Admin wilayah yang mengetik
-        // alamat /super-admin/login tidak diberi akses pusat; ia diarahkan ke
-        // panel wilayahnya sendiri.
-        $this->post('/super-admin/login', [
-            'email' => 'admin.gowa@bbws-pj.go.id',
-            'password' => 'password123',
-        ])->assertRedirect('/pilih-peran');
-
-        $this->get('/super-admin')->assertRedirect('/admin');
+        // Halaman login hanya satu. Alamat lama tidak lagi melayani formulir,
+        // tetapi tetap mengantar pengunjung ke /login.
+        foreach (['/karyawan/login', '/admin/login', '/super-admin/login', '/wilayah/login'] as $lama) {
+            $this->get($lama)->assertRedirect('/login');
+        }
     }
 
     public function test_super_admin_login_and_reaches_pusat_area(): void
     {
-        $this->post('/super-admin/login', [
+        $this->post('/login', [
             'email' => 'pusat@bbws-pj.go.id',
             'password' => 'password123',
         ])->assertRedirect('/super-admin');
@@ -87,13 +83,13 @@ class AuthWorkflowTest extends TestCase
     {
         $admin = User::where('email', 'pusat@bbws-pj.go.id')->first();
 
-        $this->actingAs($admin)->get('/karyawan')->assertRedirect('/karyawan/login');
+        $this->actingAs($admin)->get('/karyawan')->assertRedirect('/login');
     }
 
     public function test_employee_guard_cannot_access_admin_pages(): void
     {
         $employee = Employee::where('nik', '7371001234567890')->first();
 
-        $this->actingAs($employee, 'employee')->get('/admin')->assertRedirect('/admin/login');
+        $this->actingAs($employee, 'employee')->get('/admin')->assertRedirect('/login');
     }
 }

@@ -195,7 +195,7 @@ class AttendanceCatatanTest extends TestCase
 
         $this->actingAs($me, 'employee')
             ->put("/super-admin/attendances/{$row->id}/catatan", ['catatan_pulang' => 'Diubah karyawan'])
-            ->assertRedirect('/super-admin/login');
+            ->assertRedirect('/login');
 
         $this->assertSame('Catatan asli', $row->fresh()->catatan_pulang);
     }

@@ -189,7 +189,7 @@ class FullSimulationTest extends TestCase
 
     public function test_login_karyawan_pakai_email(): void
     {
-        $this->post('/karyawan/login', [
+        $this->post('/login', [
             'login' => 'andi@bbws-pj.go.id',
             'password' => 'password123',
         ])->assertRedirect('/karyawan');
@@ -199,7 +199,7 @@ class FullSimulationTest extends TestCase
 
     public function test_login_karyawan_email_case_insensitive(): void
     {
-        $this->post('/karyawan/login', [
+        $this->post('/login', [
             'login' => 'ANDI@BBWS-PJ.GO.ID',
             'password' => 'password123',
         ])->assertRedirect('/karyawan');
@@ -209,33 +209,33 @@ class FullSimulationTest extends TestCase
 
     public function test_login_karyawan_nik_nip_ditolak(): void
     {
-        $this->from('/karyawan/login')->post('/karyawan/login', [
+        $this->from('/login')->post('/login', [
             'login' => '7371001234567890',
             'password' => 'password123',
-        ])->assertRedirect('/karyawan/login')->assertSessionHasErrors('login');
+        ])->assertRedirect('/login')->assertSessionHasErrors('login');
 
         $this->assertGuest('employee');
     }
 
     public function test_login_karyawan_password_salah_ditolak(): void
     {
-        $this->from('/karyawan/login')->post('/karyawan/login', [
+        $this->from('/login')->post('/login', [
             'login' => 'andi@bbws-pj.go.id',
             'password' => 'salah-sekali',
-        ])->assertRedirect('/karyawan/login')->assertSessionHasErrors('login');
+        ])->assertRedirect('/login')->assertSessionHasErrors('login');
 
         $this->assertGuest('employee');
     }
 
-    public function test_login_ketiga_panel_admin(): void
+    public function test_login_semua_panel_admin_di_pintu_tunggal(): void
     {
-        $this->post('/super-admin/login', ['email' => 'pusat@bbws-pj.go.id', 'password' => 'password123'])
+        $this->post('/login', ['email' => 'pusat@bbws-pj.go.id', 'password' => 'password123'])
             ->assertRedirect('/super-admin');
         $this->assertAuthenticatedAs($this->superAdmin());
 
         Auth::guard('web')->logout();
 
-        $this->post('/admin/login', ['email' => 'admin.gowa@bbws-pj.go.id', 'password' => 'password123'])
+        $this->post('/login', ['email' => 'admin.gowa@bbws-pj.go.id', 'password' => 'password123'])
             ->assertRedirect('/pilih-peran');
         $this->assertAuthenticatedAs($this->adminGowa());
     }
@@ -244,7 +244,7 @@ class FullSimulationTest extends TestCase
     {
         // Satu pintu masuk: kata sandinya sah, jadi login berhasil. Yang
         // membatasi akses bukan halaman login, melainkan penjaga area.
-        $this->post('/super-admin/login', ['email' => 'admin.gowa@bbws-pj.go.id', 'password' => 'password123'])
+        $this->post('/login', ['email' => 'admin.gowa@bbws-pj.go.id', 'password' => 'password123'])
             ->assertRedirect('/pilih-peran');
 
         $this->get('/super-admin')->assertRedirect('/admin');
@@ -267,9 +267,9 @@ class FullSimulationTest extends TestCase
 
     public function test_tamu_tidak_bisa_masuk_panel_mana_pun(): void
     {
-        $this->get('/karyawan')->assertRedirect('/karyawan/login');
-        $this->get('/admin')->assertRedirect('/admin/login');
-        $this->get('/super-admin')->assertRedirect('/super-admin/login');
+        $this->get('/karyawan')->assertRedirect('/login');
+        $this->get('/admin')->assertRedirect('/login');
+        $this->get('/super-admin')->assertRedirect('/login');
     }
 
     public function test_karyawan_tidak_bisa_masuk_panel_admin(): void
@@ -277,15 +277,15 @@ class FullSimulationTest extends TestCase
         // Guard berbeda: sesi karyawan tidak boleh dianggap sesi admin.
         $this->actingAs($this->karyawan(), 'employee')
             ->get('/admin')
-            ->assertRedirect('/admin/login');
+            ->assertRedirect('/login');
     }
 
     public function test_admin_nonaktif_tidak_bisa_login(): void
     {
         $this->adminGowa()->update(['is_active' => false]);
 
-        $this->from('/admin/login')
-            ->post('/admin/login', ['email' => 'admin.gowa@bbws-pj.go.id', 'password' => 'password123'])
+        $this->from('/login')
+            ->post('/login', ['email' => 'admin.gowa@bbws-pj.go.id', 'password' => 'password123'])
             ->assertSessionHasErrors('email');
 
         $this->assertGuest();
@@ -1127,7 +1127,7 @@ class FullSimulationTest extends TestCase
 
         // Password baru harus benar-benar bisa dipakai login.
         Auth::guard('employee')->logout();
-        $this->post('/karyawan/login', ['login' => 'andi@bbws-pj.go.id', 'password' => 'KuatSekali123'])
+        $this->post('/login', ['login' => 'andi@bbws-pj.go.id', 'password' => 'KuatSekali123'])
             ->assertRedirect('/karyawan');
     }
 
@@ -1445,7 +1445,7 @@ class FullSimulationTest extends TestCase
             ->assertRedirect();
         $this->assertFalse((bool) $baru->fresh()->is_active);
 
-        $this->post('/admin/login', ['email' => 'admin.simulasi@bbws-pj.go.id', 'password' => 'RahasiaKuat123'])
+        $this->post('/login', ['email' => 'admin.simulasi@bbws-pj.go.id', 'password' => 'RahasiaKuat123'])
             ->assertSessionHasErrors('email');
     }
 
@@ -1691,6 +1691,6 @@ class FullSimulationTest extends TestCase
 
         $this->asAdmin($admin->fresh())
             ->get('/admin')
-            ->assertRedirect('/admin/login');
+            ->assertRedirect('/login');
     }
 }

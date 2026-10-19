@@ -51,24 +51,15 @@ class SecurityTest extends TestCase
         $this->assertTrue(Hash::check(Employee::SANDI_BAWAAN, $emp->password), 'Password default harus sama dengan sandi bawaan');
     }
 
-    public function test_endpoint_login_admin_dan_karyawan_dilindungi_throttle_middleware(): void
+    public function test_endpoint_login_dilindungi_throttle_middleware(): void
     {
         $routes = Route::getRoutes();
-        $loginRoutes = [
-            'login',
-            'super-admin/login',
-            'admin/login',
-            'wilayah/login',
-            'karyawan/login',
-        ];
+        $route = collect($routes)->first(fn ($r) => $r->uri() === 'login' && in_array('POST', $r->methods(), true));
 
-        foreach ($loginRoutes as $path) {
-            $route = collect($routes)->first(fn ($r) => $r->uri() === $path && in_array('POST', $r->methods(), true));
-            $this->assertNotNull($route, "Route POST {$path} tidak ditemukan");
-            $middleware = $route->gatherMiddleware();
-            $hasThrottle = collect($middleware)->contains(fn ($m) => str_contains($m, 'throttle'));
-            $this->assertTrue($hasThrottle, "POST {$path} harus punya middleware throttle");
-        }
+        $this->assertNotNull($route, 'Route POST login tidak ditemukan');
+        $middleware = $route->gatherMiddleware();
+        $hasThrottle = collect($middleware)->contains(fn ($m) => str_contains($m, 'throttle'));
+        $this->assertTrue($hasThrottle, 'POST login harus punya middleware throttle');
     }
 
     public function test_audit_log_dibuat_saat_reset_password_karyawan(): void
@@ -132,7 +123,7 @@ class SecurityTest extends TestCase
 
     public function test_header_keamanan_dasar_selalu_terpasang(): void
     {
-        $res = $this->get('/karyawan/login');
+        $res = $this->get('/login');
 
         $res->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('X-Frame-Options', 'DENY')
@@ -141,10 +132,10 @@ class SecurityTest extends TestCase
 
     public function test_csp_hanya_dipasang_saat_debug_mati(): void
     {
-        $this->get('/karyawan/login')->assertHeaderMissing('Content-Security-Policy');
+        $this->get('/login')->assertHeaderMissing('Content-Security-Policy');
 
         config(['app.debug' => false]);
-        $csp = $this->get('/karyawan/login')->headers->get('Content-Security-Policy');
+        $csp = $this->get('/login')->headers->get('Content-Security-Policy');
 
         $this->assertStringContainsString("script-src 'self'", (string) $csp);
         $this->assertStringNotContainsString('unsafe-eval', (string) $csp);

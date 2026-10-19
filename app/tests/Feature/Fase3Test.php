@@ -402,7 +402,7 @@ class Fase3Test extends TestCase
         Announcement::create(['judul'=>'Maros','konten'=>'maros','scope'=>'Wilayah','region_id'=>3,'pin'=>false,'created_by'=>$super->id]);
         AnnouncementRead::create(['announcement_id'=>$global->id,'employee_id'=>$maros->id]);
 
-        $this->get('/karyawan/login')->assertOk()
+        $this->get('/login')->assertOk()
             ->assertInertia(fn (Assert $p) => $p->where('notifications.unreadAnnouncements', 0));
         $this->actingAs($super)->get('/super-admin')->assertOk()
             ->assertInertia(fn (Assert $p) => $p->where('notifications.unreadAnnouncements', 0));

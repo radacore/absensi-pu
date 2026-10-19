@@ -177,7 +177,7 @@ class AdminMasterDataTest extends TestCase
 
         // login karyawan memakai sandi bawaan
         $this->post('/karyawan/logout');
-        $login = $this->post('/karyawan/login', [
+        $login = $this->post('/login', [
             'login' => $emp->email,
             'password' => Employee::SANDI_BAWAAN,
         ]);
@@ -212,8 +212,8 @@ class AdminMasterDataTest extends TestCase
     public function test_reset_password_route_requires_admin_authentication(): void
     {
         $emp = Employee::first();
-        $this->post("/super-admin/employees/{$emp->id}/reset-password")->assertRedirect('/super-admin/login');
-        $this->post("/admin/employees/{$emp->id}/reset-password")->assertRedirect('/admin/login');
+        $this->post("/super-admin/employees/{$emp->id}/reset-password")->assertRedirect('/login');
+        $this->post("/admin/employees/{$emp->id}/reset-password")->assertRedirect('/login');
     }
 
     public function test_must_change_password_flag_shared_to_inertia_and_cleared_after_update(): void
@@ -230,7 +230,7 @@ class AdminMasterDataTest extends TestCase
         // mengalihkan halaman karyawan mana pun ke profil sampai kata sandi
         // diganti, jadi flag-nya diperiksa di halaman profil.
         $this->post('/karyawan/logout');
-        $this->post('/karyawan/login', ['login' => $emp->email, 'password' => Employee::SANDI_BAWAAN]);
+        $this->post('/login', ['login' => $emp->email, 'password' => Employee::SANDI_BAWAAN]);
 
         $this->get('/karyawan')->assertRedirect('/karyawan/profil');
 
@@ -260,7 +260,7 @@ class AdminMasterDataTest extends TestCase
         $emp->forceFill(['password' => bcrypt(Employee::SANDI_BAWAAN), 'must_change_password' => true])->save();
 
         $this->post('/karyawan/logout');
-        $this->post('/karyawan/login', ['login' => $emp->email, 'password' => Employee::SANDI_BAWAAN]);
+        $this->post('/login', ['login' => $emp->email, 'password' => Employee::SANDI_BAWAAN]);
 
         // tanpa huruf besar → gagal
         $this->put('/karyawan/profil/password', [

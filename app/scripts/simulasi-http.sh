@@ -112,22 +112,25 @@ echo
 echo "[1] Halaman publik & login"
 # ------------------------------------------------------------------
 code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -c "$JAR" "$BASE/")
-check "GET / dialihkan ke login karyawan" 302 "$code"
+check "GET / dialihkan ke login" 302 "$code"
 redir=$(curl -s -o /dev/null -w '%{redirect_url}' --noproxy '*' "$BASE/")
 # Pemotongan skema+host pakai parameter expansion, bukan `sed 's|^https\?://...|'`:
 # `\?` tidak dikenali sed BSD (macOS) sehingga pemeriksaan ini selalu gagal di sana.
 redir_path="${redir#*://}"; redir_path="/${redir_path#*/}"
-check "GET / mengarah ke /karyawan/login" "/karyawan/login" "$redir_path"
-code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -b "$JAR" -c "$JAR" "$BASE/karyawan/login")
-check "GET /karyawan/login" 200 "$code"
-code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -b "$JAR" -c "$JAR" "$BASE/admin/login")
-check "GET /admin/login" 200 "$code"
-code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -b "$JAR" -c "$JAR" "$BASE/super-admin/login")
-check "GET /super-admin/login" 200 "$code"
+check "GET / mengarah ke /login" "/login" "$redir_path"
+code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' -b "$JAR" -c "$JAR" "$BASE/login")
+check "GET /login" 200 "$code"
 
-code=$(req POST /karyawan/login \
+# Halaman login hanya satu; alamat lama mengalihkan ke /login.
+for p in /karyawan/login /admin/login /super-admin/login /wilayah/login; do
+  redir=$(curl -s -o /dev/null -w '%{redirect_url}' --noproxy '*' -b "$JAR" -c "$JAR" "$BASE$p")
+  redir_path="${redir#*://}"; redir_path="/${redir_path#*/}"
+  check "GET $p dialihkan ke /login" "/login" "$redir_path"
+done
+
+code=$(req POST /login \
   -d "login=andi@bbws-pj.go.id" -d "password=password123")
-check "POST /karyawan/login (email + sandi benar)" 302 "$code"
+check "POST /login (email + sandi benar)" 302 "$code"
 
 code=$(req GET /karyawan)
 check "GET /karyawan (dasbor karyawan)" 200 "$code"
@@ -279,9 +282,9 @@ echo "[6] Logout & login admin"
 code=$(req POST /karyawan/logout)
 check "POST /karyawan/logout" 302 "$code"
 
-code=$(req POST /admin/login \
+code=$(req POST /login \
   -d "email=admin.gowa@bbws-pj.go.id" -d "password=password123")
-check "POST /admin/login (admin wilayah)" 302 "$code"
+check "POST /login (admin wilayah)" 302 "$code"
 
 for p in /admin /admin/employees /admin/regions /admin/attendances /admin/cuti \
          /admin/dinas /admin/love /admin/pengumuman /admin/settings; do
@@ -346,9 +349,9 @@ echo "[8] Super admin"
 code=$(req POST /admin/logout)
 check "POST /admin/logout" 302 "$code"
 
-code=$(req POST /super-admin/login \
+code=$(req POST /login \
   -d "email=pusat@bbws-pj.go.id" -d "password=password123")
-check "POST /super-admin/login" 302 "$code"
+check "POST /login" 302 "$code"
 
 for p in /super-admin /super-admin/employees /super-admin/regions \
          /super-admin/holidays /super-admin/settings /super-admin/admin-wilayah \

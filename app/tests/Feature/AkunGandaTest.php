@@ -114,10 +114,10 @@ class AkunGandaTest extends TestCase
         $this->assertAuthenticatedAs($karyawan, 'employee');
     }
 
-    public function test_pintu_lama_tetap_melayani_aplikasi_karyawan_yang_sudah_terpasang(): void
+    public function test_formulir_lama_tetap_diterima_di_pintu_tunggal(): void
     {
         // PWA lama mengirim `login`, bukan `email`.
-        $this->post('/karyawan/login', [
+        $this->post('/login', [
             'login' => 'andi@bbws-pj.go.id',
             'password' => 'password123',
         ])->assertRedirect('/karyawan');
@@ -125,12 +125,15 @@ class AkunGandaTest extends TestCase
         $this->assertAuthenticatedAs(Employee::where('email', 'andi@bbws-pj.go.id')->first(), 'employee');
     }
 
-    public function test_halaman_login_lama_menampilkan_pintu_yang_sama(): void
+    public function test_hanya_satu_halaman_login(): void
     {
-        foreach (['/login', '/karyawan/login', '/admin/login', '/super-admin/login', '/wilayah/login'] as $path) {
-            $this->get($path)
-                ->assertOk()
-                ->assertInertia(fn ($page) => $page->component('Auth/Login'));
+        $this->get('/login')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Auth/Login'));
+
+        // Alamat lama tidak lagi merender formulir, hanya mengalihkan.
+        foreach (['/karyawan/login', '/admin/login', '/super-admin/login', '/wilayah/login'] as $path) {
+            $this->get($path)->assertRedirect('/login');
         }
     }
 
