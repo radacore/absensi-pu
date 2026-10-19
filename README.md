@@ -573,7 +573,7 @@ cat ~/.ssh/github_deploy          # tempel isinya ke secret VPS_SSH_KEY
 | `VPS_PORT` | — | default `22` |
 | `VPS_REPO_DIR` | — | lokasi repo di server; default `/var/www/absensi` |
 | `VPS_KNOWN_HOSTS` | disarankan | isi `~/.ssh/known_hosts` hasil `ssh-keyscan` |
-| `VPS_APP_URL` | disarankan | mis. `https://siappomjen.id/karyawan/login` — dipakai uji cepat |
+| `VPS_APP_URL` | disarankan | mis. `https://siappomjen.id/login` — dipakai uji cepat |
 
 > **`VPS_REPO_DIR`** diisi **folder akar repo** (yang berisi `README.md` dan `app/`), bukan folder `app/`. Contoh: bila aplikasi ada di `/root/absensi-pu`, isi `/root/absensi-pu`.
 
@@ -636,7 +636,7 @@ Aplikasi **sudah berjalan penuh di MySQL/MariaDB**. Ini bukan lagi target — st
 | Skema dari nol | `php artisan migrate:fresh --seed` | 35 berkas migrasi + 8 seeder (angka 20 Sep 2026: 19 + 6) — **perlu dijalankan ulang untuk bukti terbaru** |
 | Data ikut masuk | query `JOIN` | `employees` × `regions` mengembalikan relasi yang benar |
 | Tes (SQLite in-memory, 15 Okt 2026) | `php artisan test` | **327 tes: 322 lulus, 0 gagal, 5 di-skip, 1991 assertions** — di MySQL `absensi_pu_test`: **324 lulus, 0 gagal, 3 di-skip** |
-| Smoke test HTTP | `php artisan serve` + `curl` | `/`, `/karyawan/login`, `/admin/login`, `/super-admin/login` → **200** |
+| Smoke test HTTP | `php artisan serve` + `curl` | `/` → 302 ke `/login`, `/login` → **200**, alamat lama → 302 ke `/login` |
 
 Konfigurasi `.env` yang aktif:
 
