@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\HolidayController;
 use App\Http\Controllers\Admin\LoveController as AdminLoveController;
 use App\Http\Controllers\Admin\OvertimeController as AdminOvertimeController;
 use App\Http\Controllers\Admin\PengumumanController as AdminPengumumanController;
+use App\Http\Controllers\Admin\ProfilController as AdminProfilController;
 use App\Http\Controllers\Admin\RegionController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\ShiftPatternController;
@@ -127,6 +128,14 @@ if (! function_exists('adminMasterRoutes')) {
             Route::post('/logout', [AdminAuthController::class, 'destroy'])->name("{$label}.logout");
 
             Route::get('/', [DashboardController::class, 'index'])->name("{$label}.dashboard");
+
+            // Profil akun sendiri (Super Admin & Admin Wilayah). Ganti sandi
+            // memakai throttle yang sama dengan formulir karyawan.
+            Route::get('/profil', [AdminProfilController::class, 'index'])->name("{$label}.profil");
+            Route::put('/profil/password', [AdminProfilController::class, 'updatePassword'])
+                ->middleware('throttle:password')
+                ->name("{$label}.profil.password");
+
             Route::get('/attendances', [AttendanceController::class, 'index'])->name("{$label}.attendances");
             Route::delete('/attendances/{attendance}', [AttendanceController::class, 'destroy'])->name("{$label}.attendances.destroy");
             // D5: admin boleh mengoreksi catatan pekerjaan yang sudah tersimpan.

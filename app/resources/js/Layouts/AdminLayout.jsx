@@ -31,6 +31,7 @@ const menuDefs = [
     { path: '/holidays', label: 'Hari Libur', superOnly: true, icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg> },
     { path: '/settings', label: 'Pengaturan', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>, readOnlyWilayah: true },
     { path: '/audit-log', label: 'Audit Log', superOnly: true, icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><path d="M12 2H5a2 2 0 00-2 2v16a2 2 0 002 2h14a2 2 0 002-2V9z"/><path d="M12 2v7h7"/><path d="M9 13h6M9 17h6"/></svg> },
+    { path: '/profil', label: 'Profil & Sandi', icon: (a) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? '#FCB833' : '#64748B'} strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/><path d="M16.5 13.5l1.5 1.5 2.5-2.5"/></svg> },
 ];
 
 export default function AdminLayout({ children }) {
@@ -75,13 +76,13 @@ export default function AdminLayout({ children }) {
                     })}
                 </nav>
                 <div className="p-4 border-t border-white/10 space-y-2">
-                    <div className="bg-white/5 rounded-xl p-3 flex items-center gap-3">
+                    <Link href={`${base}/profil`} className="bg-white/5 hover:bg-white/10 rounded-xl p-3 flex items-center gap-3 transition">
                         <span className="w-9 h-9 rounded-full bg-[#FCB833] text-[#0F172A] font-semibold text-sm flex items-center justify-center shrink-0">{initials(usr?.name)}</span>
                         <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{usr?.name || (isWilayah ? 'Admin Wilayah' : 'Super Admin')}</p>
                             <p className="text-xs text-white/60 truncate">{usr?.email || (isWilayah ? 'wilayah@bbws-pj.go.id' : 'pusat@bbws-pj.go.id')}</p>
                         </div>
-                    </div>
+                    </Link>
                     {punyaAplikasiKaryawan && (
                         <Link href="/karyawan" className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FCB833] hover:bg-[#F5B32A] text-[#0F172A] text-sm font-semibold py-2.5 transition">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
@@ -124,13 +125,13 @@ export default function AdminLayout({ children }) {
                             className="w-[280px] h-full bg-[#0F172A] p-4 flex flex-col gap-1 overflow-y-auto"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="px-1 py-2 flex items-center gap-2.5 border-b border-white/10 mb-2 pb-3">
+                            <Link href={`${base}/profil`} onClick={() => setOpen(false)} className="px-1 py-2 flex items-center gap-2.5 border-b border-white/10 mb-2 pb-3">
                                 <span className="w-9 h-9 rounded-full bg-[#FCB833] text-[#0F172A] font-semibold text-sm flex items-center justify-center shrink-0">{initials(usr?.name)}</span>
                                 <div className="min-w-0">
                                     <p className="text-sm font-medium text-white truncate">{usr?.name || (isWilayah ? 'Admin Wilayah' : 'Super Admin')}</p>
                                     <p className="text-xs text-white/60 truncate">{usr?.email || ''}</p>
                                 </div>
-                            </div>
+                            </Link>
                             {menu.map((m) => {
                                 const active = m.exact ? url === m.href : url.startsWith(m.href);
                                 return (

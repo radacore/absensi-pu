@@ -13,6 +13,7 @@ function actionLabel(a) {
         'admin_wilayah.activate': 'Aktifkan Admin Wilayah',
         'admin_wilayah.deactivate': 'Nonaktifkan Admin Wilayah',
         'admin_wilayah.delete': 'Hapus Admin Wilayah',
+        'admin.change_password': 'Ganti Kata Sandi Sendiri',
         'cuti.approve_level': 'Approve Cuti (level)',
         'cuti.approve_final': 'Approve Cuti (final)',
         'cuti.reject': 'Tolak Cuti',
