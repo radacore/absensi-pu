@@ -16,9 +16,9 @@ class EnsureAdminRole
     {
         $user = Auth::guard('web')->user();
 
-        $login = str_starts_with($request->path(), 'super-admin')
-            ? '/super-admin/login'
-            : '/admin/login';
+        // Hanya ada satu halaman login, baik untuk super admin maupun admin
+        // wilayah. Peran ditentukan setelah masuk, bukan oleh alamat login.
+        $login = '/login';
 
         if (! $user) {
             return redirect($login);

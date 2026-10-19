@@ -44,12 +44,19 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// Satu pintu masuk untuk admin dan karyawan. Halaman ini yang dipakai PWA
-// (lihat start_url di vite.config.js) dan yang dituju semua tautan lama.
+// Satu-satunya pintu masuk untuk admin dan karyawan. Halaman ini yang dipakai
+// PWA (lihat start_url di vite.config.js).
 Route::get('/login', [LoginController::class, 'create'])->name('login');
 Route::post('/login', [LoginController::class, 'store'])
     ->middleware('throttle:login')
     ->name('login.store');
+
+// Alamat login lama dialihkan ke pintu tunggal di atas. Tautan, bookmark, dan
+// PWA yang terpasang sebelum penyatuan tetap sampai ke halaman yang benar.
+Route::get('/karyawan/login', fn () => redirect()->route('login'));
+Route::get('/admin/login', fn () => redirect()->route('login'));
+Route::get('/super-admin/login', fn () => redirect()->route('login'));
+Route::get('/wilayah/login', fn () => redirect()->route('login'));
 
 // Akun yang memegang dua peran berhenti di sini dulu untuk memilih mau masuk
 // ke panel admin atau ke aplikasi karyawan. Akun satu peran tidak pernah
@@ -67,13 +74,6 @@ Route::get('/absensi/{attendance}/selfie/{jenis}', [AttendanceSelfieController::
 
 // ── Karyawan PWA ──────────────────────────────────────────────
 Route::prefix('karyawan')->group(function () {
-    // Alamat lama tetap dilayani: halaman yang sama dengan /login, jadi
-    // tautan, bookmark, dan PWA yang sudah terpasang tidak berakhir 404.
-    Route::get('/login', [LoginController::class, 'create'])->name('karyawan.login');
-    Route::post('/login', [LoginController::class, 'store'])
-        ->middleware('throttle:login')
-        ->name('karyawan.login.store');
-
     Route::middleware(['employee', 'password.changed'])->group(function () {
         Route::post('/logout', [EmployeeAuthController::class, 'destroy'])->name('karyawan.logout');
         Route::get('/', [KaryawanDashboardController::class, 'index'])->name('karyawan.dashboard');
@@ -229,30 +229,12 @@ if (! function_exists('adminMasterRoutes')) {
 }
 
 // ── Super Admin Pusat ─────────────────────────────────────────
-Route::prefix('super-admin')->group(function () {
-    Route::get('/login', [LoginController::class, 'create'])->name('super_admin.login');
-    Route::post('/login', [LoginController::class, 'store'])
-        ->middleware('throttle:login')
-        ->name('super_admin.login.store');
-});
 adminMasterRoutes('super-admin', 'super_admin', 'super_admin');
 
 // ── Admin Wilayah ─────────────────────────────────────────────
-Route::prefix('admin')->group(function () {
-    Route::get('/login', [LoginController::class, 'create'])->name('admin.login');
-    Route::post('/login', [LoginController::class, 'store'])
-        ->middleware('throttle:login')
-        ->name('admin.login.store');
-});
 adminMasterRoutes('admin', 'admin_wilayah', 'admin');
 
 // ── Alias legacy /wilayah → Admin Wilayah ─────────────────────
-Route::prefix('wilayah')->group(function () {
-    Route::get('/login', [LoginController::class, 'create'])->name('wilayah.login');
-    Route::post('/login', [LoginController::class, 'store'])
-        ->middleware('throttle:login')
-        ->name('wilayah.login.store');
-});
 adminMasterRoutes('wilayah', 'admin_wilayah', 'wilayah');
 
 // Fallback: halaman 404 yang benar (status 404, bukan 200) untuk PWA/Inertia.

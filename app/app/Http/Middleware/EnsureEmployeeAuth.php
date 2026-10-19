@@ -15,7 +15,7 @@ class EnsureEmployeeAuth
     public function handle(Request $request, Closure $next): Response
     {
         if (! Auth::guard('employee')->check()) {
-            return redirect('/karyawan/login');
+            return redirect()->route('login');
         }
 
         return $next($request);
