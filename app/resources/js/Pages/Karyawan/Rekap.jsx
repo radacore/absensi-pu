@@ -194,8 +194,8 @@ export default function Rekap() {
                     </div>
                     <p className="text-xs text-[#64748B] mt-4">
                         {isShift
-                            ? `Jam mengikuti jadwal shift • Kelonggaran ${settings.toleransi}m • Absen tercatat di titik mana pun yang ditugaskan, selama masih dalam radiusnya`
-                            : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA • Kelonggaran ${settings.toleransi}m • Absen tercatat di titik mana pun yang ditugaskan, selama masih dalam radiusnya`}
+                            ? `Jam mengikuti jadwal shift • Kelonggaran ${settings.toleransi}m • Absen tercatat di titik yang ditugaskan • Di luar radius tetap dicatat dan ditandai`
+                            : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA • Kelonggaran ${settings.toleransi}m • Absen tercatat di titik yang ditugaskan • Di luar radius tetap dicatat dan ditandai`}
                     </p>
                     {isShift && (
                         <p className="text-xs text-[#64748B] mt-1">
