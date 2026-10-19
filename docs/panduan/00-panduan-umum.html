@@ -189,7 +189,7 @@
     <tr><td><strong>Toleransi</strong></td><td>Klaim saat lupa absen datang atau lupa absen pulang. Jumlahnya dibatasi per bulan.</td></tr>
     <tr><td><strong>Pulang cepat</strong></td><td>Izin pulang sebelum jam selesai, diajukan sebelum absen pulang.</td></tr>
     <tr><td><strong>Dinas</strong></td><td>Perjalanan tugas ke luar titik absen, dibuktikan dengan surat tugas yang diunggah.</td></tr>
-    <tr><td><strong>Rekap</strong></td><td>Ringkasan kehadiran satu bulan: hadir, terlambat, cuti, dinas, hari tanpa keterangan, hari WFA, hari di luar radius titik, dan lembur disetujui.</td></tr>
+    <tr><td><strong>Rekap</strong></td><td>Ringkasan kehadiran satu bulan. Berkas PDF dan CSV memuat angka tambahan: hari WFA, hari di luar radius titik, dan lembur disetujui.</td></tr>
   </tbody>
 </table>
 
@@ -238,8 +238,8 @@
 <ol class="steps">
   <li>Buka titik yang sekarang menjadi titik utama karyawan.</li>
   <li>Cari namanya pada daftar anggota.</li>
-  <li>Tekan <strong>Jadikan utama</strong>, lalu pilih titik tujuan di wilayah yang sama.</li>
-  <li>Simpan, lalu minta karyawan memuat ulang halaman Absensi.</li>
+  <li>Tekan <strong>Jadikan utama</strong>, lalu tekan <strong>Pilih</strong> pada titik tujuan di wilayah yang sama.</li>
+  <li>Minta karyawan memuat ulang halaman Absensi.</li>
 </ol>
 
 <div class="note">
@@ -252,9 +252,9 @@
 
 <ol class="steps">
   <li>Buka menu <strong>Kantor Wilayah</strong>, lalu buka titik absennya.</li>
-  <li>Tekan <strong>Ubah</strong> pada titik tersebut.</li>
+  <li>Tekan <strong>Edit Titik</strong> pada titik tersebut.</li>
   <li>Geser radius hingga mencakup kedua tempat. Nilai yang diizinkan 50 sampai 1000 meter.</li>
-  <li>Simpan, lalu minta karyawan memuat ulang halaman Absensi.</li>
+  <li>Tekan <strong>Simpan Titik</strong>, lalu minta karyawan memuat ulang halaman Absensi.</li>
 </ol>
 
 <div class="warn">
@@ -271,7 +271,7 @@
   <li>Karyawan membuka menu <strong>Dinas</strong>, lalu menekan <strong>Ajukan Dinas</strong>.</li>
   <li>Isi nomor surat, tanggal mulai, tanggal selesai, keterangan tugas, tujuan, dan transportasi.</li>
   <li>Unggah surat tugas berformat PDF atau gambar, ukuran maksimal 5 MB.</li>
-  <li>Kirim pengajuan, lalu tunggu persetujuan Admin Wilayah.</li>
+  <li>Tekan <strong>Kirim Pengajuan</strong>, lalu tunggu persetujuan Admin Wilayah.</li>
 </ol>
 
 <div class="note">
@@ -296,7 +296,7 @@
 
 <div class="note">
   <div class="t">Yang perlu diingat</div>
-  <p>Karyawan tidak memilih titik sendiri di layar absen. Aplikasi selalu memakai titik terdekat dari posisi ponsel, dan absen hanya diterima bila jaraknya masih dalam radius titik itu. Saat absen pulang, titik yang diterima mengikuti izin karyawan: hanya titik masuk bila izin mati, atau titik terdaftar mana pun bila izin hidup. Bila berada di luar semua titik, gunakan pengajuan dinas.</p>
+  <p>Karyawan tidak memilih titik sendiri di layar absen. Aplikasi selalu memakai titik terdekat dari posisi ponsel. Bila posisi itu di luar radius semua titik, absen masuk tetap tercatat dan diberi tanda <strong>di luar radius titik</strong>, bukan ditolak. Saat absen pulang, titik yang diterima mengikuti izin karyawan: hanya titik masuk bila izin mati, atau titik terdaftar mana pun bila izin hidup. WFA dapat dipilih bila pekerjaan memang dilakukan dari luar kantor.</p>
 </div>
 
 <h2 id="s6"><span class="num">6</span>Pesan yang sering muncul dan artinya</h2>
@@ -312,7 +312,7 @@
     <tr><td><em>Sudah absen hari ini</em></td><td>Absen masuk untuk hari tersebut sudah tercatat.</td><td>Tidak perlu mengulang. Bila keliru, hubungi admin untuk koreksi.</td></tr>
     <tr><td><em>Isi catatan pekerjaan dulu</em></td><td>Absen pulang mewajibkan catatan pekerjaan.</td><td>Tuliskan pekerjaan hari itu, maksimal 500 karakter.</td></tr>
     <tr><td><em>Belum waktunya pulang</em></td><td>Jam selesai shift belum tiba.</td><td>Ajukan pulang cepat, lalu tunggu persetujuan.</td></tr>
-    <tr><td><em>Absen ditolak, hari libur</em></td><td>Tanggal tersebut ditutup untuk absen.</td><td>Ajukan dispensasi ke Admin Wilayah bila memang bertugas.</td></tr>
+    <tr><td><em>Absen ditolak — hari libur. Hubungi Admin Wilayah bila perlu dispensasi.</em></td><td>Tanggal tersebut ditutup untuk absen. Pesan menyebut jenis harinya, misalnya hari libur nasional atau akhir pekan.</td><td>Ajukan dispensasi ke Admin Wilayah bila memang bertugas.</td></tr>
     <tr><td><em>Ganti kata sandi dulu sebelum membuka panel admin</em></td><td>Akun masih memakai sandi bawaan.</td><td>Ganti sandi di halaman Profil, lalu buka panel admin.</td></tr>
     <tr><td><em>Email atau kata sandi salah</em></td><td>Kombinasi tidak cocok.</td><td>Periksa ejaan email, lalu minta reset bila tetap gagal.</td></tr>
   </tbody>

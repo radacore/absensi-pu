@@ -33,7 +33,7 @@
 <table class="meta">
   <tr><td class="k">Peran</td><td>Admin Wilayah</td></tr>
   <tr><td class="k">Alamat panel</td><td>https://siappomjen.id/admin</td></tr>
-  <tr><td class="k">Jumlah menu</td><td>12 menu</td></tr>
+  <tr><td class="k">Jumlah menu</td><td>14 menu</td></tr>
   <tr><td class="k">Cakupan data</td><td>Satu wilayah, sesuai akun</td></tr>
   <tr><td class="k">Versi dokumen</td><td>1.1, Oktober 2026</td></tr>
   <tr><td class="k">Disusun oleh</td><td>Rahmat Dani S</td></tr>
@@ -70,7 +70,7 @@
     <tr><td>Menambah dan mengubah titik absen di wilayahnya</td><td>Mengubah Pengaturan global</td></tr>
     <tr><td>Menambah, mengubah, dan mereset sandi karyawan wilayahnya</td><td>Membuka menu Admin Wilayah</td></tr>
     <tr><td>Mengimpor karyawan ke wilayahnya</td><td>Membuka menu Hari Libur</td></tr>
-    <tr><td>Menyetujui cuti, toleransi, pulang cepat, dan dinas</td><td>Membuka Audit Log</td></tr>
+    <tr><td>Menyetujui cuti, toleransi, pulang cepat, dinas, WFA, dan lembur</td><td>Membuka Audit Log</td></tr>
     <tr><td>Menerbitkan pengumuman untuk wilayahnya</td><td>Mengubah pengumuman Global</td></tr>
     <tr><td>Mengatur pola dan jadwal shift wilayahnya</td><td>Melihat data wilayah lain</td></tr>
   </tbody>
@@ -129,8 +129,8 @@
 <ol class="steps">
   <li>Buka menu <strong>Kantor Wilayah</strong>.</li>
   <li>Pilih titik yang ingin diperiksa. Halaman titik menampilkan peta, alamat, radius, dan daftar anggotanya.</li>
-  <li>Tekan <strong>Ubah</strong> untuk memperbaiki nama, alamat, koordinat, atau radius.</li>
-  <li>Simpan.</li>
+  <li>Tekan <strong>Edit Titik</strong> untuk memperbaiki nama, alamat, koordinat, atau radius.</li>
+  <li>Tekan <strong>Simpan Titik</strong>.</li>
 </ol>
 
 <h3>Menambah titik baru</h3>
@@ -139,7 +139,7 @@
   <li>Isi nama dan alamat titik.</li>
   <li>Klik lokasi yang benar pada peta.</li>
   <li>Atur radius antara 50 dan 1000 meter.</li>
-  <li>Simpan, lalu tambahkan karyawan ke titik tersebut.</li>
+  <li>Tekan <strong>Simpan Titik</strong>, lalu tambahkan karyawan ke titik tersebut.</li>
 </ol>
 
 <h3>Menambah titik tambahan karyawan</h3>
@@ -148,7 +148,7 @@
 <ol class="steps">
   <li>Buka titik yang ingin ditambahkan.</li>
   <li>Tekan <strong>Tambah Anggota</strong>.</li>
-  <li>Centang karyawan yang bersangkutan, lalu simpan.</li>
+  <li>Centang karyawan yang bersangkutan, lalu tekan tombol <strong>Tambah</strong>.</li>
   <li>Minta karyawan memuat ulang halaman Absensi agar titik barunya terbaca.</li>
 </ol>
 
@@ -175,8 +175,8 @@
   <li>Buka titik asal karyawan.</li>
   <li>Cari namanya pada daftar anggota.</li>
   <li>Tekan <strong>Jadikan utama</strong> pada barisnya.</li>
-  <li>Pilih titik tujuan. Titik tujuan harus berada di wilayah yang sama.</li>
-  <li>Simpan, lalu minta karyawan memuat ulang halaman Absensi.</li>
+  <li>Tekan <strong>Pilih</strong> pada titik tujuan. Titik tujuan harus berada di wilayah yang sama.</li>
+  <li>Minta karyawan memuat ulang halaman Absensi.</li>
 </ol>
 
 <div class="note">
@@ -258,7 +258,7 @@
   <li>Tekan <strong>Detail</strong> pada baris absensi untuk melihat swafoto datang dan pulang, jam keduanya, koordinat absen, jarak ke titik beserta batas radius, status, dan catatan pekerjaan. Bila karyawan masuk dan pulang di titik berbeda, kedua titik ditampilkan terpisah dan ditandai <strong>Berpindah lokasi</strong>.</li>
   <li>Untuk memperbaiki catatan pekerjaan, tekan <strong>Ubah</strong> pada bagian catatan di dalam rincian, tulis yang benar, lalu simpan.</li>
   <li>Untuk menghapus absen yang jelas keliru, tekan <strong>Hapus</strong> di dalam rincian dan setujui peringatan.</li>
-  <li>Tekan <strong>Ekspor CSV</strong> untuk mengunduh daftar sesuai saringan yang aktif.</li>
+  <li>Tekan <strong>Export CSV</strong> untuk mengunduh daftar sesuai saringan yang aktif.</li>
 </ol>
 
 <div class="warn">
@@ -358,7 +358,7 @@
 
 <div class="key">
   <div class="t">Lembur dihitung terpisah dari kehadiran</div>
-  <p>Menit lembur yang disetujui masuk ke rekap bulanan sebagai angka <strong>Lembur disetujui</strong> dan sebagai keterangan pada tanggalnya. Angka Hadir, Terlambat, dan Cuti tidak berubah. Lembur juga tidak menutupi keterlambatan atau absen yang hilang.</p>
+  <p>Menit lembur yang disetujui tampil pada keterangan tanggal di rekap layar, dan menjadi angka <strong>Lembur disetujui</strong> pada berkas PDF dan CSV. Angka Hadir, Terlambat, dan Cuti tidak berubah. Lembur juga tidak menutupi keterlambatan atau absen yang hilang.</p>
 </div>
 
 <h2 id="s8"><span class="num">8</span>Pengumuman wilayah</h2>
@@ -367,11 +367,11 @@
 <p>Admin Wilayah hanya dapat menerbitkan pengumuman untuk wilayahnya sendiri. Cakupan Global tidak tersedia, dan pengumuman Global milik pusat tidak dapat diubah atau dihapus dari sini.</p>
 
 <ol class="steps">
-  <li>Tekan <strong>Tambah Pengumuman</strong>.</li>
+  <li>Tekan <strong>Buat Pengumuman</strong>.</li>
   <li>Isi judul dan isi.</li>
   <li>Cakupan sudah terisi wilayah sendiri dan tidak dapat diubah.</li>
-  <li>Centang <strong>Sematkan</strong> bila pengumuman harus tampil paling atas.</li>
-  <li>Simpan.</li>
+  <li>Centang <strong>Pinned (disematkan di atas)</strong> bila pengumuman harus tampil paling atas.</li>
+  <li>Tekan <strong>Terbitkan</strong>.</li>
 </ol>
 
 <h2 id="s9"><span class="num">9</span>Pola dan jadwal shift</h2>
@@ -417,8 +417,8 @@
   <li>Buka menu <strong>Karyawan</strong>, lalu cari namanya.</li>
   <li>Tekan <strong>Rekap</strong>.</li>
   <li>Pilih bulan dan tahun.</li>
-  <li>Periksa ringkasan Hadir, Terlambat, Cuti, Dinas, dan Tanpa keterangan, ditambah tiga angka ringkasan: Hari WFA, Hari di luar radius titik, dan Lembur disetujui.</li>
-  <li>Tekan <strong>Unduh PDF</strong> untuk versi siap cetak, atau <strong>Unduh CSV</strong> untuk diolah di Excel.</li>
+  <li>Periksa kartu ringkasan Hadir, Tanpa keterangan, Dinas, dan Cuti, serta angka Terlambat pada kelompok rincian jam masuk. Tabel harian memuat keterangan tiap tanggal, termasuk WFA, absen di luar radius titik, dan lembur yang disetujui.</li>
+  <li>Tekan <strong>Unduh PDF</strong> untuk versi siap cetak, atau <strong>Unduh CSV</strong> untuk diolah di Excel. Kedua berkas itu memuat tiga angka tambahan: Hari WFA, Hari di luar radius titik, dan Lembur disetujui (menit).</li>
 </ol>
 
 <div class="note">

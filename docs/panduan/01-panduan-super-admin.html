@@ -33,7 +33,7 @@
 <table class="meta">
   <tr><td class="k">Peran</td><td>Super Admin Kantor Pusat</td></tr>
   <tr><td class="k">Alamat panel</td><td>https://siappomjen.id/super-admin</td></tr>
-  <tr><td class="k">Jumlah menu</td><td>15 menu</td></tr>
+  <tr><td class="k">Jumlah menu</td><td>17 menu</td></tr>
   <tr><td class="k">Versi dokumen</td><td>1.1, Oktober 2026</td></tr>
   <tr><td class="k">Disusun oleh</td><td>Rahmat Dani S</td></tr>
 </table>
@@ -166,7 +166,7 @@
 <ol class="steps">
   <li>Tekan <strong>Tambah Wilayah</strong>.</li>
   <li>Isi nama wilayah, lalu pilih tipe <strong>Pusat</strong> atau <strong>Cabang</strong>.</li>
-  <li>Simpan. Wilayah baru muncul di daftar beserta jumlah titik dan karyawannya.</li>
+  <li>Tekan <strong>Simpan Wilayah</strong>. Wilayah baru muncul di daftar beserta jumlah titik dan karyawannya.</li>
 </ol>
 
 <p>Hanya boleh ada satu wilayah bertipe Pusat. Bila perlu mengubah tipe, lakukan pada wilayah yang sudah ada, bukan dengan menambah wilayah pusat kedua.</p>
@@ -183,15 +183,15 @@
   <li>Isi nama titik dan alamat.</li>
   <li>Klik lokasi yang benar di peta. Koordinat terisi otomatis dan bisa disesuaikan manual.</li>
   <li>Atur radius antara 50 dan 1000 meter.</li>
-  <li>Simpan.</li>
+  <li>Tekan <strong>Simpan Titik</strong>.</li>
 </ol>
 
 <h4>Mengubah titik dan mengelola anggota</h4>
 <ol class="steps">
   <li>Buka titik dari daftar wilayah.</li>
-  <li>Tekan <strong>Ubah</strong> untuk memperbaiki nama, alamat, koordinat, atau radius.</li>
-  <li>Untuk menambah titik absensi karyawan, tekan <strong>Tambah Anggota</strong>, centang namanya, lalu simpan.</li>
-  <li>Untuk memindahkan titik utama, cari karyawan di daftar anggota, lalu tekan <strong>Jadikan utama</strong> dan pilih titik tujuan di wilayah yang sama.</li>
+  <li>Tekan <strong>Edit Titik</strong> untuk memperbaiki nama, alamat, koordinat, atau radius, lalu tekan <strong>Simpan Titik</strong>.</li>
+  <li>Untuk menambah titik absensi karyawan, tekan <strong>Tambah Anggota</strong>, centang namanya, lalu tekan tombol <strong>Tambah</strong>.</li>
+  <li>Untuk memindahkan titik utama, cari karyawan di daftar anggota, tekan <strong>Jadikan utama</strong>, lalu tekan <strong>Pilih</strong> pada titik tujuan di wilayah yang sama.</li>
 </ol>
 
 <div class="warn">
@@ -303,7 +303,7 @@
 <ol class="steps">
   <li>Tekan <strong>Tambah Admin Wilayah</strong>.</li>
   <li>Isi nama, email, dan pilih wilayah yang dikelola.</li>
-  <li>Bila orang ini juga karyawan, pilih namanya pada daftar <strong>Karyawan terkait</strong>.</li>
+  <li>Bila orang ini juga karyawan, pilih namanya pada daftar <strong>Karyawan</strong>.</li>
   <li>Simpan. Akun aktif dengan sandi bawaan dan wajib diganti saat pertama masuk.</li>
 </ol>
 
@@ -349,7 +349,7 @@
 <p>Buka <strong>Detail</strong> pada baris yang bersangkutan, lalu tekan <strong>Hapus</strong> dan setujui peringatan. Data yang dihapus tidak bisa dikembalikan. Gunakan hanya untuk absen yang jelas keliru, misalnya tercatat pada tanggal yang salah.</p>
 
 <h4>Mengunduh data</h4>
-<p>Tekan <strong>Ekspor CSV</strong> untuk mengunduh daftar sesuai saringan yang sedang aktif. Berkas CSV bisa dibuka di Excel.</p>
+<p>Tekan <strong>Export CSV</strong> untuk mengunduh daftar sesuai saringan yang sedang aktif. Berkas CSV bisa dibuka di Excel.</p>
 
 <h3>5.2 Cuti</h3>
 <p class="path">/super-admin/cuti</p>
@@ -415,15 +415,47 @@
 <p>Super Admin dapat menerbitkan pengumuman untuk semua wilayah (Global) atau untuk satu wilayah saja. Pengumuman bersifat sematan (pin) akan tampil paling atas di daftar karyawan.</p>
 
 <ol class="steps">
-  <li>Tekan <strong>Tambah Pengumuman</strong>.</li>
+  <li>Tekan <strong>Buat Pengumuman</strong>.</li>
   <li>Isi judul dan isi pengumuman.</li>
   <li>Pilih cakupan: <strong>Global</strong> atau <strong>Wilayah</strong>.</li>
   <li>Bila memilih wilayah, tentukan wilayahnya.</li>
-  <li>Centang <strong>Sematkan</strong> bila pengumuman harus selalu di atas.</li>
-  <li>Simpan.</li>
+  <li>Centang <strong>Pinned (disematkan di atas)</strong> bila pengumuman harus selalu di atas.</li>
+  <li>Tekan <strong>Terbitkan</strong>.</li>
 </ol>
 
 <p>Pengumuman Global tidak dapat diubah atau dihapus oleh Admin Wilayah. Pengumuman wilayah hanya dapat diubah oleh admin wilayah yang bersangkutan atau oleh Super Admin.</p>
+
+<h3>5.7 WFA</h3>
+<p class="path">/super-admin/wfa</p>
+
+<p>WFA diajukan karyawan saat absen masuk, dengan alasan tertulis. Absennya sudah tercatat lebih dulu, sehingga halaman ini hanya memutuskan statusnya. Daftar mencakup seluruh wilayah dan menampilkan pengajuan yang masih menunggu di urutan atas, lengkap dengan tanggal, jam masuk, alasan, koordinat, dan lokasi yang tercatat.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>WFA</strong>. Saring status <strong>Menunggu</strong> atau wilayah bila daftarnya panjang.</li>
+  <li>Periksa nama, tanggal, alasan, serta koordinat absen. Koordinat membantu memastikan lokasi WFA masuk akal.</li>
+  <li>Tekan <strong>Setujui</strong>, atau <strong>Tolak</strong> dengan menuliskan alasannya.</li>
+</ol>
+
+<div class="note">
+  <div class="t">Menolak WFA tidak menghapus absen</div>
+  <p>Absen tetap tercatat dan tetap dihitung sebagai kehadiran. Yang berubah hanya tanda WFA pada rekap, dari <strong>WFA (Menunggu)</strong> menjadi <strong>WFA (Disetujui)</strong> atau <strong>WFA (Ditolak)</strong> beserta catatan Anda. Alasan penolakan wajib diisi, paling sedikit 3 karakter.</p>
+</div>
+
+<h3>5.8 Lembur</h3>
+<p class="path">/super-admin/lembur</p>
+
+<p>Pengajuan lembur berisi tanggal, jam mulai, jam selesai, keterangan pekerjaan, dan nama atasan yang dipilih karyawan. Durasi dihitung otomatis, termasuk lembur yang melewati tengah malam. Satu pengajuan paling sedikit 15 menit dan paling banyak 720 menit.</p>
+
+<ol class="steps">
+  <li>Buka menu <strong>Lembur</strong>. Pengajuan yang menunggu tampil lebih dulu.</li>
+  <li>Periksa tanggal, jam, durasi, keterangan pekerjaan, dan wilayah karyawan.</li>
+  <li>Tekan <strong>Setujui</strong>, atau <strong>Tolak</strong> dengan menuliskan alasannya.</li>
+</ol>
+
+<div class="key">
+  <div class="t">Lembur dihitung terpisah dari kehadiran</div>
+  <p>Menit lembur yang disetujui tampil pada keterangan tanggal di rekap layar, dan menjadi angka <strong>Lembur disetujui</strong> pada berkas PDF dan CSV. Angka Hadir, Terlambat, dan Cuti tidak berubah. Lembur juga tidak menutupi keterlambatan atau absen yang hilang.</p>
+</div>
 
 <h2 id="s6"><span class="num">6</span>Mengelola shift</h2>
 
@@ -467,19 +499,19 @@
 <h2 id="s7"><span class="num">7</span>Rekap per karyawan</h2>
 <p class="path">/super-admin/employees, tombol Rekap pada baris karyawan</p>
 
-<p>Rekap menampilkan satu bulan penuh untuk satu karyawan, lengkap dengan ringkasan angka di bagian atas: Hadir, Terlambat, Cuti, Dinas, Tanpa keterangan, serta Hari WFA, Hari di luar radius titik, dan Lembur disetujui.</p>
+<p>Rekap menampilkan satu bulan penuh untuk satu karyawan. Di layar, kartu ringkasan menunjukkan Hadir, Tanpa keterangan, Dinas, dan Cuti, sedangkan angka Terlambat ada pada kelompok rincian jam masuk. Tabel harian memuat keterangan tiap tanggal, termasuk WFA, absen di luar radius titik, dan lembur yang disetujui. Berkas PDF dan CSV menambahkan tiga angka ringkasan: Hari WFA, Hari di luar radius titik, dan Lembur disetujui (menit).</p>
 
 <ol class="steps">
   <li>Buka menu <strong>Karyawan</strong>, lalu cari nama yang bersangkutan.</li>
   <li>Tekan <strong>Rekap</strong> pada barisnya.</li>
   <li>Pilih bulan dan tahun.</li>
-  <li>Periksa rincian harian. Warna menandai jenis hari: hadir, terlambat, cuti, dinas, libur, atau tanpa keterangan.</li>
+  <li>Periksa tabel Rekap harian dan kartu Detail Harian. Keterangan tiap tanggal memuat status kehadiran, WFA, absen di luar radius titik, dan lembur. Kartu hari libur, cuti, dinas, dan tanpa keterangan diberi warna berbeda.</li>
   <li>Tekan <strong>Unduh PDF</strong> untuk menyimpan rekap dalam bentuk siap cetak, atau <strong>Unduh CSV</strong> untuk diolah di Excel.</li>
 </ol>
 
 <div class="note">
   <div class="t">Cara membaca angka</div>
-  <p>Hadir menghitung absen yang benar-benar dilakukan. Dinas berdiri sendiri dan tidak menambah angka Hadir, tetapi juga tidak masuk Tanpa keterangan. Cuti hanya dihitung pada hari kerja. Jumlah Hadir, Dinas, Cuti, dan Tanpa keterangan seharusnya sama dengan total hari kerja pada bulan itu. Tiga angka lain berdiri sendiri: Hari WFA dan Hari di luar radius titik tidak mengubah angka Hadir, sedangkan Lembur disetujui dinyatakan dalam menit.</p>
+  <p>Hadir menghitung absen yang benar-benar dilakukan. Dinas berdiri sendiri dan tidak menambah angka Hadir, tetapi juga tidak masuk Tanpa keterangan. Cuti hanya dihitung pada hari kerja. Jumlah Hadir, Dinas, Cuti, dan Tanpa keterangan seharusnya sama dengan total hari kerja pada bulan itu. Tiga angka tambahan hanya ada pada berkas PDF dan CSV: Hari WFA dan Hari di luar radius titik tidak mengubah angka Hadir, sedangkan Lembur disetujui dinyatakan dalam menit.</p>
 </div>
 
 <h2 id="s8"><span class="num">8</span>Hari libur</h2>
@@ -489,10 +521,10 @@
 
 <ol class="steps">
   <li>Pilih tahun pada saringan di kanan atas.</li>
-  <li>Tekan <strong>Tambah Hari Libur</strong>.</li>
+  <li>Tekan <strong>+ Tambah Libur</strong>.</li>
   <li>Isi tanggal dan nama libur.</li>
-  <li>Centang <strong>Cuti bersama</strong> bila tanggal tersebut memakai jatah cuti bersama.</li>
-  <li>Simpan.</li>
+  <li>Centang <strong>Ini adalah Cuti Bersama</strong> bila tanggal tersebut memakai jatah cuti bersama.</li>
+  <li>Tekan <strong>Tambah</strong>. Untuk mengubah libur yang sudah ada, tekan <strong>Edit</strong> pada barisnya, lalu <strong>Simpan Perubahan</strong>.</li>
 </ol>
 
 <div class="note">

@@ -148,7 +148,7 @@
 <ol class="steps">
   <li>Buka menu <strong>Absensi</strong>. Halaman menampilkan seluruh titik absensi Anda, radius, serta jarak ponsel ke tiap titik.</li>
   <li>Aplikasi memilih titik terdekat otomatis. Periksa jaraknya. Bila melebihi radius, absen masih bisa dikirim, tetapi akan ditandai.</li>
-  <li>Pilih jenis kerja: <strong>Di kantor</strong> atau <strong>Di luar kantor</strong>. Untuk WFA, tuliskan alasannya.</li>
+  <li>Pilih jenis kerja: <strong>WFO</strong> (bekerja di kantor) atau <strong>WFA</strong> (bekerja dari luar kantor). Untuk WFA, tuliskan alasannya.</li>
   <li>Tekan tombol <strong>Absen Masuk</strong>.</li>
   <li>Ambil swafoto saat itu juga. Foto dari galeri tidak diterima.</li>
   <li>Tunggu sampai muncul konfirmasi bahwa absen tercatat.</li>
@@ -168,7 +168,7 @@
 </div>
 
 <h3>Bekerja dari luar kantor (WFA)</h3>
-<p>Bila hari itu Anda bekerja dari rumah atau tempat lain di luar kantor, pilih <strong>Di luar kantor</strong> sebelum menekan Absen Masuk, lalu tuliskan alasan singkat. Posisi dan swafoto tetap diminta, tetapi radius titik tidak lagi menjadi syarat. Absen WFA tercatat lebih dulu, lalu menunggu persetujuan Admin Wilayah. Selama masih menunggu, rekap menampilkan tanda <strong>WFA (Menunggu)</strong>.</p>
+<p>Bila hari itu Anda bekerja dari rumah atau tempat lain di luar kantor, pilih <strong>WFA</strong> sebelum menekan Absen Masuk, lalu tuliskan alasan singkat, paling sedikit 10 karakter. Posisi dan swafoto tetap diminta, tetapi radius titik tidak lagi menjadi syarat. Absen WFA tercatat lebih dulu, lalu menunggu persetujuan Admin Wilayah. Selama masih menunggu, statusnya tercatat sebagai <strong>WFA (Menunggu)</strong> dan terlihat pada berkas rekap PDF serta pada halaman WFA di panel admin.</p>
 
 <p>WFA tidak memakai kuota bulanan. Pekerja shift tidak memakai WFA karena jam kerjanya sudah diatur lewat jadwal shift.</p>
 
@@ -177,7 +177,7 @@
 
 <h2 id="s6"><span class="num">6</span>Absen pulang</h2>
 
-<p>Absen pulang memerlukan posisi di dalam radius titik absensi yang sah, swafoto, dan catatan pekerjaan hari itu. Catatan inilah yang terlihat oleh admin.</p>
+<p>Absen pulang memerlukan swafoto dan catatan pekerjaan hari itu. Pada hari WFO, posisi ponsel juga harus berada di dalam radius titik yang berlaku untuk pulang. Pada hari WFA, radius tidak menjadi syarat. Catatan pekerjaan inilah yang terlihat oleh admin.</p>
 
 <div class="key">
   <div class="t">Titik mana yang bisa dipakai untuk pulang</div>
@@ -187,7 +187,7 @@
 <ol class="steps">
   <li>Buka menu <strong>Absensi</strong> pada akhir hari kerja.</li>
   <li>Tekan tombol <strong>Absen Pulang</strong>.</li>
-  <li>Pastikan posisi ponsel berada di dalam radius titik yang berlaku untuk pulang.</li>
+  <li>Pastikan posisi ponsel berada di dalam radius titik yang berlaku untuk pulang. Pada hari WFA, langkah ini tidak diperlukan.</li>
   <li>Tulis catatan pekerjaan, antara 1 sampai 500 karakter. Tuliskan pekerjaan yang benar-benar dilakukan hari itu.</li>
   <li>Ambil swafoto.</li>
   <li>Kirim, lalu pastikan muncul konfirmasi.</li>
@@ -215,7 +215,7 @@
 <h2 id="s8"><span class="num">8</span>Lembur</h2>
 <p class="path">/karyawan/lembur</p>
 
-<p>Lembur diajukan terpisah dari absensi. Jam lembur tidak mengubah status masuk atau pulang Anda, dan tidak menutupi keterlambatan. Lembur yang disetujui hanya menambah angka lembur pada rekap bulanan.</p>
+<p>Lembur diajukan terpisah dari absensi. Jam lembur tidak mengubah status masuk atau pulang Anda, dan tidak menutupi keterlambatan. Lembur yang disetujui hanya menambah angka lembur pada berkas rekap PDF.</p>
 
 <ol class="steps">
   <li>Buka kartu <strong>Lembur</strong> pada Beranda.</li>
@@ -223,7 +223,7 @@
   <li>Isi jam mulai dan jam selesai.</li>
   <li>Tuliskan keterangan pekerjaan, paling sedikit 5 karakter. Sebutkan pekerjaan yang benar-benar dikerjakan.</li>
   <li>Pilih atasan atau Admin Wilayah yang akan memutuskan.</li>
-  <li>Kirim pengajuan, lalu tunggu keputusan.</li>
+  <li>Tekan <strong>Kirim Pengajuan Lembur</strong>, lalu tunggu keputusan.</li>
 </ol>
 
 <h3>Aturan durasi</h3>
@@ -232,21 +232,21 @@
 <p>Durasi paling sedikit 15 menit dan paling banyak 720 menit atau 12 jam untuk satu pengajuan. Untuk tanggal yang sama, hanya boleh ada satu pengajuan yang masih menunggu. Pengajuan yang masih menunggu dapat Anda batalkan sendiri; pengajuan yang sudah diputuskan tidak dapat dibatalkan.</p>
 
 <h3>Setelah diputuskan</h3>
-<p>Bila disetujui, menit lembur muncul pada rekap bulanan sebagai angka <strong>Lembur disetujui</strong>, terpisah dari jumlah kehadiran. Bila ditolak, alasan penolakan tampil pada riwayat pengajuan di halaman Lembur.</p>
+<p>Bila disetujui, menit lembur muncul pada berkas rekap PDF sebagai angka <strong>Lembur disetujui</strong> dan pada keterangan tanggalnya, terpisah dari jumlah kehadiran. Bila ditolak, alasan penolakan tampil pada riwayat pengajuan di halaman Lembur.</p>
 
 <h2 id="s9"><span class="num">9</span>Rekap bulanan</h2>
 <p class="path">/karyawan/rekap</p>
 
-<p>Rekap menampilkan kehadiran Anda satu bulan penuh. Angka di bagian atas menunjukkan jumlah Hadir, Terlambat, dan Cuti, ditambah tiga angka ringkasan: <strong>Hari WFA</strong>, <strong>Hari di luar radius titik</strong>, dan <strong>Lembur disetujui</strong>. Di bawahnya, setiap tanggal ditampilkan beserta statusnya.</p>
+<p>Rekap menampilkan kehadiran Anda satu bulan penuh dalam bentuk kalender. Angka di bagian atas menunjukkan jumlah Hadir, Terlambat, dan Cuti, ditambah persentase Kehadiran. Setiap tanggal diberi warna sesuai statusnya.</p>
 
-<p>Hari WFA ditandai pada tanggal yang bersangkutan beserta status persetujuannya. Hari ketika absen Anda di luar semua radius titik diberi keterangan <strong>di luar radius titik</strong>. Menit lembur yang disetujui juga tampil pada tanggalnya, tetapi tidak mengubah status kehadiran.</p>
+<p>Rincian yang lebih lengkap ada pada berkas PDF. Di sana tercantum angka <strong>Hari WFA</strong>, <strong>Hari di luar radius titik</strong>, dan <strong>Lembur disetujui</strong>, serta keterangan pada tanggal yang bersangkutan: status WFA, tanda di luar radius titik, dan menit lembur yang disetujui. Menit lembur tidak mengubah status kehadiran.</p>
 
-<p>Bila Anda diberi izin pulang di titik lain, hari dengan titik masuk dan pulang berbeda tetap dihitung satu kehadiran dan diberi tanda <strong>Berpindah lokasi</strong>. Buka detail hari itu untuk melihat titik masuk dan titik pulang beserta jaraknya masing-masing.</p>
+<p>Bila Anda diberi izin pulang di titik lain, hari dengan titik masuk dan pulang berbeda tetap dihitung satu kehadiran dan diberi tanda <strong>Berpindah lokasi</strong> pada keterangan harian di berkas PDF.</p>
 
 <ol class="steps">
-  <li>Buka menu <strong>Rekap</strong>.</li>
+  <li>Buka kartu <strong>Rekap</strong> pada Beranda.</li>
   <li>Pilih bulan dan tahun.</li>
-  <li>Periksa tanggal yang statusnya tidak sesuai. Warna menandai jenis hari: hadir, terlambat, cuti, libur, atau tanpa keterangan.</li>
+  <li>Periksa tanggal yang statusnya tidak sesuai. Warna menandai jenis hari: hadir, terlambat, cuti, dan libur. Hari kerja yang belum memiliki absen tampil abu-abu.</li>
   <li>Tekan <strong>Unduh PDF</strong> bila perlu menyimpan atau mencetak rekap.</li>
 </ol>
 
@@ -262,12 +262,12 @@
 
 <h3>Mengajukan cuti</h3>
 <ol class="steps">
-  <li>Tekan <strong>Ajukan Cuti</strong>.</li>
+  <li>Tekan <strong>Ajukan cuti</strong>.</li>
   <li>Pilih jenis: <strong>Tahunan</strong>, <strong>Sakit</strong>, <strong>Besar</strong>, atau <strong>Melahirkan</strong>.</li>
   <li>Isi tanggal mulai dan tanggal selesai.</li>
   <li>Tulis alasan cuti.</li>
   <li>Pilih approver level 1 bila diminta. Daftar ini berisi akun admin yang berwenang.</li>
-  <li>Kirim pengajuan.</li>
+  <li>Tekan <strong>Kirim pengajuan</strong>.</li>
 </ol>
 
 <h3>Kuota cuti</h3>
@@ -301,7 +301,7 @@
   <li>Isi jam yang seharusnya tercatat, dalam format 24 jam.</li>
   <li>Pilih atasan yang akan menyetujui. Isian ini wajib.</li>
   <li>Tulis alasan, misalnya ponsel kehabisan baterai atau lupa menekan tombol sebelum meninggalkan lokasi.</li>
-  <li>Kirim. Klaim menunggu persetujuan satu level.</li>
+  <li>Tekan tombol kirim toleransi. Nama atasan yang Anda pilih tampil pada tombol itu. Klaim menunggu persetujuan satu level.</li>
 </ol>
 
 <div class="warn">
@@ -315,11 +315,11 @@
 <p>Pulang cepat adalah izin meninggalkan pekerjaan sebelum jam selesai. Persetujuan diperlukan agar absen pulang dapat dilakukan lebih awal.</p>
 
 <ol class="steps">
-  <li>Tekan <strong>Ajukan Pulang Cepat</strong>.</li>
+  <li>Buka menu <strong>Pulang Cepat</strong>, lalu isi formulirnya.</li>
   <li>Pilih tanggal. Tanggal tidak boleh melewati hari ini, dan paling lama 7 hari ke belakang.</li>
   <li>Isi rencana jam pulang.</li>
   <li>Tulis alasan, misalnya keperluan keluarga atau sakit.</li>
-  <li>Pilih atasan, lalu kirim.</li>
+  <li>Pilih atasan, lalu tekan <strong>Kirim Pengajuan</strong>.</li>
   <li>Setelah disetujui, lakukan absen pulang seperti biasa.</li>
 </ol>
 
@@ -340,7 +340,7 @@
   <li>Tulis keterangan tugas, minimal 5 karakter.</li>
   <li>Isi tujuan. Transportasi dan pembebanan anggaran boleh dikosongkan.</li>
   <li>Unggah surat tugas berformat PDF atau gambar, ukuran maksimal 5 MB.</li>
-  <li>Kirim, lalu tunggu persetujuan Admin Wilayah.</li>
+  <li>Tekan <strong>Kirim Pengajuan</strong>, lalu tunggu persetujuan Admin Wilayah.</li>
 </ol>
 
 <div class="key">
@@ -412,7 +412,7 @@
 </table>
 
 <div class="end">
-  <p><strong>Panduan Karyawan, versi 1.0.</strong> Disusun oleh Rahmat Dani S, Oktober 2026. Untuk hal yang berlaku umum, termasuk cara masuk dan absen di dua titik, lihat Panduan Umum.</p>
+  <p><strong>Panduan Karyawan, versi 1.1.</strong> Disusun oleh Rahmat Dani S, Oktober 2026. Untuk hal yang berlaku umum, termasuk cara masuk dan absen di dua titik, lihat Panduan Umum.</p>
 </div>
 
 </body>
