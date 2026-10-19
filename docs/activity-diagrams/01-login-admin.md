@@ -1,6 +1,6 @@
 # 01 — Login Admin (Super Admin dan Admin Wilayah)
 
-Alur autentikasi untuk akun admin. Rute `/super-admin/login` dan `/admin/login` sama-sama diproses oleh `AdminAuthController::store`, yang membedakan adalah role check setelah login sukses.
+Alur autentikasi untuk akun admin. Semua peran masuk lewat satu halaman, `/login`, yang dilayani `LoginController::store`. Setelah sesi terbuka, middleware `EnsureAdminRole` yang menentukan area mana yang boleh dibuka.
 
 ## Aktor
 - **Admin** — Super Admin (role `super_admin`) atau Admin Wilayah (role `admin_wilayah`).
@@ -12,7 +12,7 @@ Alur autentikasi untuk akun admin. Rute `/super-admin/login` dan `/admin/login` 
 flowchart TD
     START([MULAI]):::se
 
-    A1["1. Buka halaman login<br/>/super-admin/login atau /admin/login"]:::user
+    A1["1. Buka halaman login<br/>/login"]:::user
     A2["2. Isi email dan kata sandi"]:::user
     A3["3. Klik tombol Masuk"]:::user
 
@@ -81,7 +81,7 @@ flowchart TD
 
 ## Langkah-Langkah Detail
 
-1. Admin membuka halaman `/super-admin/login` atau `/admin/login`.
+1. Admin membuka halaman `/login`.
 2. Admin mengisi field email dan kata sandi.
 3. Admin menekan tombol Masuk.
 4. Sistem validasi bahwa email dan kata sandi terisi.
@@ -91,7 +91,7 @@ flowchart TD
 8. Kalau semua lolos, redirect ke `/super-admin` atau `/admin` — dashboard tampil.
 
 ## Catatan implementasi
-- `AdminAuthController::store` (`app/Http/Controllers/Auth/AdminAuthController.php`) memanggil `Auth::guard('web')->attempt($credentials + ['is_active' => true])` — akun nonaktif otomatis ditolak.
+- `LoginController::store` (`app/Http/Controllers/Auth/LoginController.php`) mencari akun di `users` dan `employees`, lalu memakai kata sandi karyawan bila akun admin tertaut ke karyawan. Akun nonaktif ditolak.
 - Session regenerate untuk mitigasi session fixation.
-- Role validasi ambil `$isSuper = str_starts_with($request->path(), 'super-admin')` lalu bandingkan dengan `$user->role`. Salah area → logout paksa dan lempar `ValidationException`.
+- Pemisahan area dilakukan middleware `EnsureAdminRole` berdasarkan role akun, bukan berdasarkan alamat login.
 - Toast error dirender oleh `ToastHost` global yang membaca `errors` dari Inertia shared props.

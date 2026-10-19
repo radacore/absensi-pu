@@ -72,7 +72,7 @@ flowchart TD
    - **3b.** Klik Ya → form POST ke endpoint logout area terkait dikirim.
 4. Controller memanggil `Auth::guard($active)->logout()` sesuai guard (`web` untuk admin, `employee` untuk karyawan).
 5. Sistem invalidate session dan regenerate CSRF token.
-6. Sistem redirect user ke halaman login area asal (`/super-admin/login`, `/admin/login`, atau `/karyawan/login`).
+6. Sistem redirect user ke halaman login (`/login`).
 
 ## Catatan implementasi
 - Karyawan `Profil.jsx` dan Admin `AdminLayout.jsx` sama-sama pakai `useConfirm({ tone: 'danger' })` sebelum POST ke rute logout — konsisten dengan aturan konfirmasi untuk aksi destructive.

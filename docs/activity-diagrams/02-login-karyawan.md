@@ -1,6 +1,6 @@
 # 02 — Login Karyawan
 
-Karyawan login memakai **NIP atau NIK** sebagai identifier. Rute `/karyawan/login` diproses `EmployeeAuthController::store` dengan guard `employee`. Kalau password masih sama dengan NIK, karyawan diarahkan untuk ganti password.
+Karyawan masuk lewat halaman yang sama dengan semua peran, `/login`, memakai email dan kata sandi. `LoginController::store` membuka sesi guard `employee` bila email cocok dengan baris karyawan. Kalau kata sandi masih sandi bawaan, karyawan diarahkan untuk menggantinya lebih dulu.
 
 ## Aktor
 - **Karyawan** — pegawai dengan akun di tabel `employees`.
@@ -12,8 +12,8 @@ Karyawan login memakai **NIP atau NIK** sebagai identifier. Rute `/karyawan/logi
 flowchart TD
     START([MULAI]):::se
 
-    A1["1. Buka halaman<br/>/karyawan/login"]:::user
-    A2["2. Isi NIP atau NIK<br/>dan kata sandi"]:::user
+    A1["1. Buka halaman<br/>/login"]:::user
+    A2["2. Isi email<br/>dan kata sandi"]:::user
     A3["3. Klik tombol Masuk"]:::user
 
     S1["4. Validasi input:<br/>login dan sandi wajib"]:::sys
@@ -24,13 +24,13 @@ flowchart TD
 
     S3["6. Auth::guard(employee)::login<br/>Session::regenerate()"]:::sys
     S4["7. Baca flag<br/>must_change_password"]:::sys
-    D3{"Password<br/>masih = NIK?"}:::dec
+    D3{"Masih memakai<br/>sandi bawaan?"}:::dec
 
     S5["8a. Redirect ke<br/>/karyawan (dashboard)"]:::sys
     S6["8b. Tampilkan banner kuning<br/>Ganti sandi sekarang"]:::sys
     A4["9. Klik Ganti sekarang<br/>ke /karyawan/profil"]:::user
 
-    E1["ERROR<br/>NIP/NIK atau<br/>sandi salah"]:::err
+    E1["ERROR<br/>Email atau<br/>sandi salah"]:::err
 
     OK["SUKSES<br/>Dashboard Karyawan tampil"]:::ok
     END([SELESAI]):::se
@@ -83,18 +83,18 @@ flowchart TD
 
 ## Langkah-Langkah Detail
 
-1. Karyawan membuka halaman `/karyawan/login`.
-2. Karyawan mengisi field NIP atau NIK dan kata sandi.
+1. Karyawan membuka halaman `/login`.
+2. Karyawan mengisi email dan kata sandi.
 3. Karyawan menekan tombol Masuk.
-4. Sistem validasi input `login` dan `password` wajib terisi.
-5. Sistem query tabel `employees` dengan `Employee::where('nip', $login)->orWhere('nik', $login)->first()`.
+4. Sistem validasi input `login` atau `email` dan `password` wajib terisi.
+5. Sistem query tabel `employees` dengan `LOWER(email) = ?` memakai email yang dikirim.
 6. Kalau employee ketemu dan `Hash::check` sandi cocok, `Auth::guard('employee')->login($employee)` + `session()->regenerate()`.
 7. Sistem baca flag `employee.must_change_password` dan bagikan lewat shared prop `auth.employee`.
-8. Kalau password masih sama dengan NIK, banner kuning tampil di dashboard; kalau tidak, langsung redirect ke `/karyawan`.
+8. Kalau kata sandi masih sandi bawaan, banner kuning tampil di dashboard; kalau tidak, langsung redirect ke `/karyawan`.
 9. Karyawan klik tombol "Ganti sekarang" untuk masuk ke `/karyawan/profil` dan mengganti password.
 
 ## Catatan implementasi
-- `EmployeeAuthController::store` (`app/Http/Controllers/Auth/EmployeeAuthController.php`) menerima input `login` yang bisa NIP atau NIK.
+- `LoginController::store` (`app/Http/Controllers/Auth/LoginController.php`) menerima input `login` maupun `email`, keduanya berisi alamat email.
 - Password di-hash bcrypt via cast `'password' => 'hashed'` di model `Employee`.
 - `HandleInertiaRequests::share` mengekspor `auth.employee.must_change_password` untuk mendeteksi apakah karyawan perlu ganti password. Detail alur banner ada di [`18-ganti-password-karyawan.md`](./18-ganti-password-karyawan.md).
 - Toast error dirender oleh `ToastHost` global yang membaca `errors` dari Inertia shared props.
