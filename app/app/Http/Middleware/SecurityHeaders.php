@@ -48,12 +48,19 @@ class SecurityHeaders
         // yang pasti diblokir CSP; pada hasil `npm run build` semua skrip dan
         // gaya keluar sebagai berkas terpisah.
         if (! config('app.debug')) {
-            // img-src: data:/blob: untuk swafoto & grafik PDF, tile OSM untuk peta.
+            // img-src: data:/blob: untuk swafoto & grafik PDF, tile OSM untuk peta,
+            // ditambah host object storage tempat foto profil disimpan.
+            $imgSrc = "img-src 'self' data: blob: https://*.tile.openstreetmap.org";
+
+            if ($origin = $this->uploadImageOrigin()) {
+                $imgSrc .= ' '.$origin;
+            }
+
             $headers->set('Content-Security-Policy', implode('; ', [
                 "default-src 'self'",
                 "script-src 'self'",
                 "style-src 'self' 'unsafe-inline'",
-                "img-src 'self' data: blob: https://*.tile.openstreetmap.org",
+                $imgSrc,
                 "font-src 'self' data:",
                 "connect-src 'self'",
                 "worker-src 'self'",
@@ -70,5 +77,45 @@ class SecurityHeaders
         }
 
         return $response;
+    }
+
+    /**
+     * Origin host foto unggahan pada disk publik.
+     *
+     * Foto profil disimpan lewat disk yang bisa berupa object storage, jadi
+     * URL-nya sering berbeda domain dengan aplikasi. Tanpa origin ini `img-src`
+     * memblokir semua foto di produksi (CSP hanya aktif saat debug mati) dan
+     * avatar tampil rusak. Nilainya diturunkan dari konfigurasi disk, bukan
+     * ditulis tetap, supaya berpindah penyedia storage cukup lewat env.
+     */
+    private function uploadImageOrigin(): ?string
+    {
+        $disk = (string) config('filesystems.uploads.public_disk', 'public');
+        $url = config("filesystems.disks.{$disk}.url")
+            ?: config("filesystems.disks.{$disk}.endpoint");
+
+        // S3 tanpa url/endpoint khusus memakai domain bawaan AWS.
+        if (! $url && $disk === 's3') {
+            $bucket = (string) config('filesystems.disks.s3.bucket');
+            $region = (string) config('filesystems.disks.s3.region');
+
+            if ($bucket !== '' && $region !== '') {
+                $url = "https://{$bucket}.s3.{$region}.amazonaws.com";
+            }
+        }
+
+        if (! is_string($url) || $url === '') {
+            return null;
+        }
+
+        $parts = parse_url($url);
+
+        if (! is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            return null;
+        }
+
+        $origin = $parts['scheme'].'://'.$parts['host'];
+
+        return isset($parts['port']) ? $origin.':'.$parts['port'] : $origin;
     }
 }

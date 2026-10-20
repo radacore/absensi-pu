@@ -140,4 +140,57 @@ class SecurityTest extends TestCase
         $this->assertStringContainsString("script-src 'self'", (string) $csp);
         $this->assertStringNotContainsString('unsafe-eval', (string) $csp);
     }
+
+    /**
+     * Foto profil disimpan di object storage, bukan di domain aplikasi.
+     * Tanpa host ini di `img-src`, CSP produksi memblokir semua foto dan
+     * avatar tampil rusak walau berkasnya benar-benar ada.
+     */
+    public function test_csp_mengizinkan_host_foto_dari_disk_publik(): void
+    {
+        config([
+            'app.debug' => false,
+            'filesystems.uploads.public_disk' => 's3',
+            'filesystems.disks.s3.url' => null,
+            'filesystems.disks.s3.endpoint' => 'https://s3.nevaobjects.id',
+        ]);
+
+        $csp = (string) $this->get('/login')->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString(
+            "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://s3.nevaobjects.id",
+            $csp
+        );
+    }
+
+    public function test_csp_memakai_url_disk_bila_dikonfigurasi(): void
+    {
+        config([
+            'app.debug' => false,
+            'filesystems.uploads.public_disk' => 's3',
+            'filesystems.disks.s3.url' => 'https://cdn.contoh.id/foto',
+            'filesystems.disks.s3.endpoint' => 'https://s3.nevaobjects.id',
+        ]);
+
+        $csp = (string) $this->get('/login')->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString('https://cdn.contoh.id', $csp);
+        $this->assertStringNotContainsString('https://s3.nevaobjects.id', $csp);
+    }
+
+    public function test_csp_memakai_domain_bawaan_s3_bila_tanpa_url_dan_endpoint(): void
+    {
+        config([
+            'app.debug' => false,
+            'filesystems.uploads.public_disk' => 's3',
+            'filesystems.disks.s3.url' => null,
+            'filesystems.disks.s3.endpoint' => null,
+            'filesystems.disks.s3.bucket' => 'bbws-foto',
+            'filesystems.disks.s3.region' => 'ap-southeast-1',
+        ]);
+
+        $csp = (string) $this->get('/login')->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString('https://bbws-foto.s3.ap-southeast-1.amazonaws.com', $csp);
+    }
 }
