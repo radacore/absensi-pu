@@ -25,12 +25,24 @@ class OvertimeController extends Controller
         return $u->role === 'super_admin' ? null : $u->region_id;
     }
 
+    /** Admin wilayah hanya melihat pengajuan yang ditujukan kepadanya. */
+    private function approverScope(): ?int
+    {
+        $u = Auth::guard('web')->user();
+
+        return $u->role === 'super_admin' ? null : (int) $u->id;
+    }
+
     public function index()
     {
         $scope = $this->scope();
+        $approver = $this->approverScope();
 
         $rows = OvertimeClaim::with(['employee.region', 'employee.site', 'approver', 'approvedBy'])
             ->when($scope, fn ($q) => $q->where('region_id', $scope))
+            ->when($approver, fn ($q) => $q->where(fn ($qq) => $qq
+                ->where('approver_id', $approver)
+                ->orWhereNull('approver_id')))
             ->orderByRaw("case when status = 'Menunggu' then 0 else 1 end")
             ->orderByDesc('tanggal')
             ->orderByDesc('id')
@@ -111,7 +123,13 @@ class OvertimeController extends Controller
 
     private function authorizeRow(OvertimeClaim $lembur): void
     {
-        $scope = $this->scope();
+        $u = Auth::guard('web')->user();
+        $scope = $u->role === 'super_admin' ? null : $u->region_id;
+
         abort_if($scope !== null && (int) $lembur->region_id !== $scope, 403, 'Pengajuan ini di luar cakupan Anda.');
+
+        if ($u->role !== 'super_admin' && $lembur->approver_id && (int) $lembur->approver_id !== (int) $u->id) {
+            abort(403, 'Pengajuan ini ditugaskan ke approver lain.');
+        }
     }
 }

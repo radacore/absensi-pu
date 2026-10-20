@@ -90,6 +90,7 @@ export default function LoveAdmin(){
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Klaim Toleransi — ${ownRegion}` : `Klaim Toleransi — kuota ${loveMax}/bulan`}</h1>
                         <p className="text-sm text-[#64748B]">Hanya <span className="font-medium text-[#0F172A]">lupa absen datang / lupa absen pulang bulan sama</span> • Persetujuan 1 level Admin • 1 toleransi = 1 pengajuan • max {loveMax}/bulan</p>
                         <p className="text-xs text-[#64748B] mt-1">1 karyawan = 1 titik • Reset tgl 1 pukul 00:00 WITA</p>
+                        {isWilayah && <p className="text-xs text-[#1E3A8A] mt-1">Hanya pengajuan yang ditujukan kepada Anda yang tampil di daftar ini.</p>}
                     </div>
                     <span className="shrink-0 bg-[#FFF7E6] border border-[#FCB833]/30 text-[#92400E] text-xs font-medium px-3 py-1.5 rounded-full">{counts.pending} pending • {counts.approved} approved bulan ini • max {loveMax}</span>
                 </div>

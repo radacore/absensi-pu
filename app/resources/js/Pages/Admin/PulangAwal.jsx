@@ -77,6 +77,7 @@ export default function PulangAwalAdmin() {
                         Pekerja shift tidak bisa absen pulang sebelum jam shiftnya berakhir. Bila ada keperluan mendesak, karyawan mengajukan di sini dan menunggu persetujuan Anda.
                     </p>
                     <p className="text-xs text-[#64748B] mt-1">{menunggu} pengajuan menunggu persetujuan.</p>
+                    {isWilayah && <p className="text-xs text-[#1E3A8A] mt-1">Hanya pengajuan yang ditujukan kepada Anda yang tampil di daftar ini.</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl p-4 flex flex-wrap gap-3 items-end shadow-[0_2px_16px_rgba(15,23,42,0.04)]">

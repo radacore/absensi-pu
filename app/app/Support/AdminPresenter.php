@@ -340,10 +340,22 @@ class AdminPresenter
 
     // ── Leaves / Tolerance / Announcements ──────────────────
 
-    public static function leavesFor(?int $regionId): array
+    /**
+     * @param  int|null  $approverId  id admin wilayah yang sedang melihat.
+     *                                Null = super admin (lihat semua wilayah).
+     */
+    public static function leavesFor(?int $regionId, ?int $approverId = null): array
     {
         return Leave::with(['employee.region', 'approver', 'approvedBy'])
             ->when($regionId, fn ($q) => $q->whereHas('employee', fn ($qq) => $qq->where('region_id', $regionId)))
+            // Level 0 masih di meja approver yang ditunjuk karyawan; level
+            // berikutnya terbuka untuk admin wilayah mana pun di wilayah itu
+            // (lihat CutiController::ensureApprover). Cuti tanpa approver —
+            // akunnya sudah dihapus — tetap terlihat agar tidak menggantung.
+            ->when($approverId, fn ($q) => $q->where(fn ($qq) => $qq
+                ->where('level', '>', 0)
+                ->orWhere('approver_id', $approverId)
+                ->orWhereNull('approver_id')))
             ->orderByDesc('created_at')
             ->limit(500)->get()
             ->map(function (Leave $l) {
@@ -381,10 +393,19 @@ class AdminPresenter
             })->values()->all();
     }
 
-    public static function lovesFor(?int $regionId): array
+    /**
+     * @param  int|null  $approverId  id admin wilayah yang sedang melihat.
+     *                                Null = super admin (lihat semua wilayah).
+     */
+    public static function lovesFor(?int $regionId, ?int $approverId = null): array
     {
         return ToleranceClaim::with(['employee.region', 'approver.region'])
             ->when($regionId, fn ($q) => $q->where('region_id', $regionId))
+            // Hanya klaim yang ditujukan ke admin ini. Klaim tanpa approver
+            // (akunnya sudah dihapus) tetap terlihat supaya bisa diurus.
+            ->when($approverId, fn ($q) => $q->where(fn ($qq) => $qq
+                ->where('approver_id', $approverId)
+                ->orWhereNull('approver_id')))
             ->orderByDesc('created_at')
             ->limit(500)->get()
             ->map(function (ToleranceClaim $c) {

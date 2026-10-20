@@ -24,6 +24,27 @@ class CutiController extends Controller
         return $u->role === 'super_admin' ? null : $u->region_id;
     }
 
+    /** Admin wilayah hanya melihat cuti level 0 yang ditujukan kepadanya. */
+    private function approverScope(): ?int
+    {
+        $u = Auth::guard('web')->user();
+
+        return $u->role === 'super_admin' ? null : (int) $u->id;
+    }
+
+    /**
+     * Cuti level 0 masih di meja approver yang ditunjuk karyawan. Level 1 ke
+     * atas terbuka untuk admin wilayah mana pun (lihat ensureApprover()).
+     */
+    private function ensureAssigned(Leave $cuti): void
+    {
+        $u = Auth::guard('web')->user();
+
+        if ($u->role !== 'super_admin' && (int) $cuti->level === 0 && $cuti->approver_id && (int) $cuti->approver_id !== (int) $u->id) {
+            abort(403, 'Cuti ini ditugaskan ke approver lain.');
+        }
+    }
+
     /**
      * Gerbang approver: hanya akun admin, dan admin wilayah hanya untuk
      * cuti di wilayahnya sendiri. Dipakai approve() dan reject().
@@ -40,10 +61,7 @@ class CutiController extends Controller
         $scope = $u->role === 'super_admin' ? null : $u->region_id;
         abort_if($scope !== null && (int) $cuti->employee?->region_id !== $scope, 403);
 
-        // Kalau karyawan menunjuk approver tertentu, hanya dia (atau Super Admin) yang boleh level 1.
-        if ((int) $cuti->level === 0 && $cuti->approver_id && $u->role !== 'super_admin') {
-            abort_if((int) $cuti->approver_id !== (int) $u->id, 403, 'Cuti ini ditugaskan ke approver lain.');
-        }
+        $this->ensureAssigned($cuti);
     }
 
     public function index()
@@ -52,7 +70,7 @@ class CutiController extends Controller
 
         return Inertia::render('Admin/Cuti', [
             'regions' => AdminPresenter::regionsFor($scope),
-            'list' => AdminPresenter::leavesFor($scope),
+            'list' => AdminPresenter::leavesFor($scope, $this->approverScope()),
         ]);
     }
 
@@ -62,12 +80,17 @@ class CutiController extends Controller
         $leave = Leave::with(['employee.region'])->findOrFail($id);
         $empRegion = $leave->employee?->region_id;
         abort_if($scope !== null && (int) $empRegion !== $scope, 403, 'Cuti di luar cakupan Anda.');
+        $this->ensureAssigned($leave);
+
+        // Tanpa filter approver: baris yang sedang dibuka harus tetap ketemu
+        // walau bukan milik akun ini (mis. level 0 yang dibuka Super Admin).
+        $semua = AdminPresenter::leavesFor(null);
 
         return Inertia::render('Admin/CutiDetail', [
             'id' => $leave->id,
             'regions' => AdminPresenter::regionsFor($scope),
-            'item' => AdminPresenter::leavesFor(null) ? collect(AdminPresenter::leavesFor(null))->firstWhere('id', $leave->id) : null,
-            'list' => AdminPresenter::leavesFor($scope),
+            'item' => $semua ? collect($semua)->firstWhere('id', $leave->id) : null,
+            'list' => AdminPresenter::leavesFor($scope, $this->approverScope()),
             // Ringkasan kuota tahunan karyawan pada tahun cuti diajukan, agar
             // approver tahu sisa jatah saat memutuskan.
             'kuota' => $leave->employee
@@ -133,6 +156,7 @@ class CutiController extends Controller
     {
         $scope = $this->scope();
         abort_if($scope !== null && (int) $cuti->employee?->region_id !== $scope, 403);
+        $this->ensureAssigned($cuti);
         $empName = $cuti->employee?->name ?? '-';
         $snapshot = ['jenis' => $cuti->jenis, 'status' => $cuti->status, 'level' => $cuti->level];
         $cuti->delete();

@@ -16,15 +16,19 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $scope = Auth::guard('web')->user()->role === 'super_admin' ? null : Auth::guard('web')->user()->region_id;
+        $u = Auth::guard('web')->user();
+        $scope = $u->role === 'super_admin' ? null : $u->region_id;
+        // Antrean approval dashboard mengikuti approver yang ditunjuk, bukan
+        // seluruh wilayah — sama dengan daftar di masing-masing menu.
+        $approver = $u->role === 'super_admin' ? null : (int) $u->id;
 
         return Inertia::render('Admin/Dashboard', [
             'regions' => AdminPresenter::regionsFor($scope),
             'employees' => AdminPresenter::employeesFor($scope),
             'attendances' => AdminPresenter::attendancesFor($scope),
             'settings' => AdminPresenter::settingsFor(),
-            'cuti' => AdminPresenter::leavesFor($scope),
-            'love' => AdminPresenter::lovesFor($scope),
+            'cuti' => AdminPresenter::leavesFor($scope, $approver),
+            'love' => AdminPresenter::lovesFor($scope, $approver),
             'activities' => $this->activities($scope),
         ]);
     }

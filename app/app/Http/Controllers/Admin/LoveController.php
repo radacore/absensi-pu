@@ -22,21 +22,47 @@ class LoveController extends Controller
         return $u->role === 'super_admin' ? null : $u->region_id;
     }
 
+    /**
+     * Admin wilayah hanya melihat klaim yang ditujukan kepadanya; super admin
+     * melihat semua. Null berarti tanpa filter approver.
+     */
+    private function approverScope(): ?int
+    {
+        $u = Auth::guard('web')->user();
+
+        return $u->role === 'super_admin' ? null : (int) $u->id;
+    }
+
+    /**
+     * Gerbang aksi: cakupan wilayah + approver yang ditunjuk. Klaim tanpa
+     * approver (akunnya sudah dihapus) tetap boleh diurus admin wilayah.
+     */
+    private function authorizeRow(ToleranceClaim $love): void
+    {
+        $u = Auth::guard('web')->user();
+        $scope = $u->role === 'super_admin' ? null : $u->region_id;
+
+        abort_if($scope !== null && (int) $love->region_id !== $scope, 403, 'Pengajuan ini di luar cakupan Anda.');
+
+        if ($u->role !== 'super_admin' && $love->approver_id && (int) $love->approver_id !== (int) $u->id) {
+            abort(403, 'Pengajuan ini ditugaskan ke approver lain.');
+        }
+    }
+
     public function index()
     {
         $scope = $this->scope();
 
         return Inertia::render('Admin/Love', [
             'regions' => AdminPresenter::regionsFor($scope),
-            'claims' => AdminPresenter::lovesFor($scope),
+            'claims' => AdminPresenter::lovesFor($scope, $this->approverScope()),
             'settings' => AdminPresenter::settingsFor(),
         ]);
     }
 
     public function approve(ToleranceClaim $love)
     {
-        $scope = $this->scope();
-        abort_if($scope !== null && (int) $love->region_id !== $scope, 403);
+        $this->authorizeRow($love);
         if ($love->status !== 'pending') {
             return back()->with('error', 'Hanya pending bisa di-approve.');
         }
@@ -68,8 +94,7 @@ class LoveController extends Controller
 
     public function reject(Request $request, ToleranceClaim $love)
     {
-        $scope = $this->scope();
-        abort_if($scope !== null && (int) $love->region_id !== $scope, 403);
+        $this->authorizeRow($love);
         if ($love->status !== 'pending') {
             return back()->with('error', 'Hanya pending bisa ditolak.');
         }
@@ -98,8 +123,7 @@ class LoveController extends Controller
 
     public function destroy(ToleranceClaim $love)
     {
-        $scope = $this->scope();
-        abort_if($scope !== null && (int) $love->region_id !== $scope, 403);
+        $this->authorizeRow($love);
         $empName = $love->employee?->name ?? '-';
         $snapshot = ['jenis' => $love->jenis, 'status' => $love->status, 'claim_date' => (string) $love->claim_date];
 

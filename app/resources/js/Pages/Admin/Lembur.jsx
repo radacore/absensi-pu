@@ -86,6 +86,7 @@ export default function LemburAdmin() {
                         Lembur diajukan karyawan terpisah dari jam kerja biasa. Hanya pengajuan yang disetujui yang dihitung di rekap bulanan.
                     </p>
                     <p className="text-xs text-[#64748B] mt-1">{menunggu} pengajuan menunggu persetujuan • {durasi(totalMenit)} disetujui pada daftar ini.</p>
+                    {isWilayah && <p className="text-xs text-[#1E3A8A] mt-1">Hanya pengajuan yang ditujukan kepada Anda yang tampil di daftar ini.</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl p-4 flex flex-wrap gap-3 items-end shadow-[0_2px_16px_rgba(15,23,42,0.04)]">

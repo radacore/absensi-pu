@@ -81,7 +81,7 @@ export default function CutiAdmin(){
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F172A]">{isWilayah ? `Cuti — ${ownRegion}` : 'Cuti — Berjenjang'}</h1>
-                        <p className="text-sm text-[#64748B]">{isWilayah ? `Approve own region level sesuai kewenangan • ${ownRegion} • 1 karyawan = 1 titik` : 'Atasan → Admin Wilayah → Kantor Pusat • 3 level, reject terminal • 1 karyawan = 1 titik'}</p>
+                        <p className="text-sm text-[#64748B]">{isWilayah ? `Level 1 hanya untuk approver yang ditunjuk karyawan; level lanjutan terbuka untuk admin wilayah • ${ownRegion} • 1 karyawan = 1 titik` : 'Atasan → Admin Wilayah → Kantor Pusat • 3 level, reject terminal • 1 karyawan = 1 titik'}</p>
                     </div>
                     <span className="hidden lg:inline-flex bg-[#F8FAFC] border border-[#E2E8F0] text-xs font-medium px-3 py-1.5 rounded-full text-[#64748B]">{filtered.length} hasil • {counts.pending} menunggu</span>
                 </div>
