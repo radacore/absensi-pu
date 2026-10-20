@@ -275,10 +275,15 @@
 
 <p>Enam jenis pengajuan melewati meja Admin Wilayah. Semuanya memiliki pola yang sama: buka daftar, periksa rincian, lalu setujui atau tolak dengan catatan.</p>
 
+<div class="key">
+  <div class="t">Antrean milik akun Anda sendiri</div>
+  <p>Cuti, klaim toleransi, pulang cepat, dan lembur hanya tampil pada akun yang dipilih karyawan sebagai approver. Bila satu wilayah memiliki beberapa Admin Wilayah, pengajuan tidak berpindah ke akun lain dan tidak bisa diproses dari akun itu. Pengajuan yang approvernya sudah dihapus tetap tampil untuk semua Admin Wilayah di wilayah tersebut agar tidak menggantung. Super Admin selalu melihat dan dapat memproses semuanya.</p>
+</div>
+
 <h3>7.1 Cuti</h3>
 <p class="path">/admin/cuti</p>
 
-<p>Cuti disetujui bertingkat melalui tiga tahap: Atasan, Admin Wilayah, lalu Kantor Pusat. Setiap persetujuan menaikkan level, dan pengajuan menjadi <strong>Disetujui</strong> setelah tahap terakhir. Karyawan dapat menunjuk approver level 1 saat mengajukan; bila tidak, admin wilayah yang berwenang memprosesnya.</p>
+<p>Cuti disetujui bertingkat melalui tiga tahap: Atasan, Admin Wilayah, lalu Kantor Pusat. Setiap persetujuan menaikkan level, dan pengajuan menjadi <strong>Disetujui</strong> setelah tahap terakhir. Karyawan dapat menunjuk approver level 1 saat mengajukan; bila tidak, admin wilayah yang berwenang memprosesnya. Pada level 0, hanya akun yang ditunjuk itu yang melihat dan boleh memprosesnya. Setelah naik ke level 1, pengajuan terbuka untuk Admin Wilayah mana pun di wilayah yang sama.</p>
 
 <ol class="steps">
   <li>Buka menu <strong>Cuti</strong>, lalu saring status <strong>Menunggu</strong>.</li>
@@ -296,7 +301,7 @@
 <h3>7.2 Klaim toleransi</h3>
 <p class="path">/admin/love</p>
 
-<p>Klaim toleransi dipakai saat karyawan lupa absen datang atau lupa absen pulang. Jumlah klaim dibatasi per bulan sesuai Pengaturan global.</p>
+<p>Klaim toleransi dipakai saat karyawan lupa absen datang atau lupa absen pulang. Jumlah klaim dibatasi per bulan sesuai Pengaturan global. Klaim hanya tampil pada akun approver yang dipilih karyawan saat mengajukan; Admin Wilayah lain di wilayah yang sama tidak melihatnya.</p>
 
 <ol class="steps">
   <li>Buka menu <strong>Klaim Toleransi</strong>.</li>
@@ -308,7 +313,7 @@
 <h3>7.3 Pulang cepat</h3>
 <p class="path">/admin/pulang-cepat</p>
 
-<p>Persetujuan pulang cepat membuka jalan bagi karyawan untuk melakukan absen pulang sebelum jam selesai. Tanpa persetujuan, absen pulang ditolak oleh aplikasi.</p>
+<p>Persetujuan pulang cepat membuka jalan bagi karyawan untuk melakukan absen pulang sebelum jam selesai. Tanpa persetujuan, absen pulang ditolak oleh aplikasi. Pengajuannya hanya tampil pada akun approver yang dipilih karyawan.</p>
 
 <ol class="steps">
   <li>Buka menu <strong>Pulang Cepat</strong>.</li>
@@ -353,7 +358,7 @@
 <h3>7.6 Lembur</h3>
 <p class="path">/admin/lembur</p>
 
-<p>Pengajuan lembur berisi tanggal, jam mulai, jam selesai, keterangan pekerjaan, dan nama atasan yang dipilih karyawan. Durasi dihitung otomatis, termasuk lembur yang melewati tengah malam. Satu pengajuan paling sedikit 15 menit dan paling banyak 720 menit.</p>
+<p>Pengajuan lembur berisi tanggal, jam mulai, jam selesai, keterangan pekerjaan, dan nama atasan yang dipilih karyawan. Durasi dihitung otomatis, termasuk lembur yang melewati tengah malam. Satu pengajuan paling sedikit 15 menit dan paling banyak 720 menit. Pengajuannya hanya tampil pada akun approver yang dipilih karyawan.</p>
 
 <ol class="steps">
   <li>Buka menu <strong>Lembur</strong>. Pengajuan yang menunggu tampil lebih dulu.</li>
