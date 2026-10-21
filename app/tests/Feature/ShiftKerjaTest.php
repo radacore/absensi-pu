@@ -397,6 +397,118 @@ class ShiftKerjaTest extends TestCase
         $this->assertNotNull($rows->first()->clock_out_at);
     }
 
+    // ── Shift malam beruntun: shift yang baru berakhir tetap acuan ──
+    //
+    // Regresi: pukul 08.05 shift malam kemarin baru selesai, tetapi jadwal hari
+    // ini juga shift malam (mulai 20.00). Halaman absen dulu menempel ke jadwal
+    // hari ini, sehingga tombol "Absen pulang" terkunci padahal shiftnya sudah
+    // berakhir.
+
+    public function test_current_shift_memilih_shift_yang_baru_berakhir(): void
+    {
+        $e = $this->karyawan();
+        $p = $this->pola(); // 2 shift mulai 07:00 → malam 19:00–07:00
+        $this->jadikanShift($e, 2, $p, '2026-10-12');
+        $this->jadikanShift($e, 2, $p, '2026-10-13');
+
+        $current = ShiftResolver::currentShift($e, Carbon::parse('2026-10-13 07:05:00', 'Asia/Makassar'));
+
+        $this->assertNotNull($current);
+        $this->assertSame('2026-10-12', $current['schedule']->tanggal->toDateString(), 'Shift malam 12 Okt baru selesai 07:00.');
+        $this->assertSame('07:00', $current['selesai']->format('H:i'));
+    }
+
+    public function test_shift_malam_beruntun_tombol_absen_pulang_terbuka_setelah_shift_berakhir(): void
+    {
+        $e = $this->karyawan();
+        $p = $this->pola();
+        $this->jadikanShift($e, 2, $p, '2026-10-12');
+        $this->jadikanShift($e, 2, $p, '2026-10-13');
+
+        $this->jam(20, 0);
+        $this->absenMasuk($e)->assertSessionHasNoErrors();
+
+        // 08.05 — shift malam 12 Okt sudah berakhir 07:00.
+        $this->jam(8, 5, '2026-10-13');
+
+        $this->actingAs($e, 'employee')->get('/karyawan/absensi')
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Karyawan/Absensi')
+                ->where('bolehPulang', true)
+                ->where('workDateAktif', '2026-10-12')
+                ->where('shift.tanggal', '2026-10-12')
+                ->where('shift.jamSelesai', '07:00'));
+
+        $this->absenPulang($e)->assertSessionHasNoErrors();
+
+        $row = Attendance::where('employee_id', $e->id)->whereDate('work_date', '2026-10-12')->firstOrFail();
+        $this->assertNotNull($row->clock_out_at, 'Absen pulang harus mengisi baris shift malam 12 Okt.');
+    }
+
+    public function test_shift_malam_yang_belum_ditutup_tetap_acuan_tombol_pulang_sampai_sore(): void
+    {
+        $e = $this->karyawan();
+        $p = $this->pola();
+        $this->jadikanShift($e, 2, $p, '2026-10-12');
+        $this->jadikanShift($e, 2, $p, '2026-10-13');
+
+        $this->jam(20, 0);
+        $this->absenMasuk($e)->assertSessionHasNoErrors();
+
+        // 15.00 — `currentShift()` sudah menunjuk shift malam 13 Okt (mulai
+        // 19.00), tetapi baris 12 Okt masih terbuka. Acuannya baris itu.
+        $this->jam(15, 0, '2026-10-13');
+
+        $this->actingAs($e, 'employee')->get('/karyawan/absensi')
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Karyawan/Absensi')
+                ->where('bolehPulang', true)
+                ->where('workDateAktif', '2026-10-12'));
+    }
+
+    public function test_form_pulang_cepat_memakai_tanggal_kerja_shift_malam(): void
+    {
+        $e = $this->karyawan();
+        $p = $this->pola();
+        $this->jadikanShift($e, 2, $p, '2026-10-12');
+        $this->jadikanShift($e, 2, $p, '2026-10-13');
+
+        $this->jam(20, 0);
+        $this->absenMasuk($e)->assertSessionHasNoErrors();
+
+        // 02.00 dini hari — masih di dalam shift malam yang mulai 19.00 kemarin.
+        $this->jam(2, 0, '2026-10-13');
+
+        $this->actingAs($e, 'employee')->get('/karyawan/pulang-cepat')
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Karyawan/PulangAwal')
+                ->where('shift.tanggal', '2026-10-12'));
+    }
+
+    public function test_absen_masuk_ditolak_saat_shift_sebelumnya_belum_ditutup(): void
+    {
+        $e = $this->karyawan();
+        $p = $this->pola();
+        $this->jadikanShift($e, 2, $p, '2026-10-12');
+        $this->jadikanShift($e, 2, $p, '2026-10-13');
+
+        $this->jam(20, 0);
+        $this->absenMasuk($e)->assertSessionHasNoErrors();
+
+        // Malam berikutnya, absen pulang shift 12 Okt terlewat.
+        $this->jam(19, 5, '2026-10-13');
+        $this->absenMasuk($e)->assertSessionHasErrors('work_date');
+        $this->assertSame(1, Attendance::where('employee_id', $e->id)->count(), 'Absen masuk baru tidak boleh membuat baris menggantung.');
+
+        // Setelah shift sebelumnya ditutup, absen masuk berjalan normal.
+        $this->jam(7, 5, '2026-10-13');
+        $this->absenPulang($e)->assertSessionHasNoErrors();
+
+        $this->jam(19, 5, '2026-10-13');
+        $this->absenMasuk($e)->assertSessionHasNoErrors();
+        $this->assertSame(2, Attendance::where('employee_id', $e->id)->count());
+    }
+
     public function test_pekerja_shift_tetap_bisa_absen_pada_hari_libur_nasional(): void
     {
         AttendanceSetting::firstOrFail()->update(['absen_libur_aktif' => true, 'absen_libur_mode' => 'tolak']);

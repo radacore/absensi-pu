@@ -98,24 +98,47 @@ class AttendanceController extends Controller
             'ditolak' => $liburLabel !== null && ($settings?->absen_libur_mode ?: 'tolak') === 'tolak',
         ];
 
+        // Baris absensi yang masih terbuka (belum absen pulang). Untuk shift
+        // malam, baris ini bertanggal kemarin.
+        $openRow = Attendance::where('employee_id', $me->id)
+            ->whereNull('clock_out_at')
+            ->whereDate('work_date', '>=', $now->copy()->subDay()->toDateString())
+            ->orderByDesc('work_date')
+            ->first();
+
         // ── Info shift untuk halaman absen (hanya pekerja shift).
-        $current = $isShift ? ShiftResolver::currentShift($me, $now) : null;
+        //
+        // Baris yang masih terbuka jadi acuan utama, bukan `currentShift()`.
+        // Pukul 08.05 `currentShift()` sudah menunjuk shift malam berikutnya
+        // (mulai 20.00 hari ini), padahal yang belum ditutup adalah shift malam
+        // kemarin. Acuan yang dipakai di sini sama dengan gerbang absen pulang
+        // di server (gerbangPulangCepat), jadi tombol "Absen pulang" tidak bisa
+        // berbeda keputusan dengan server.
         $shift = null;
-        $bolehPulang = true;
+        $selesaiShift = null;
+
+        if ($isShift) {
+            $rentang = $openRow
+                ? $this->rentangBaris($me, $openRow)
+                : $this->rentangBerjalan($me, $now);
+
+            if ($rentang) {
+                $shift = [
+                    'label' => $rentang['label'],
+                    'tanggal' => $rentang['tanggal'],
+                    'jamMulai' => $rentang['mulai']->format('H:i'),
+                    'jamSelesai' => $rentang['selesai']->format('H:i'),
+                ];
+                $selesaiShift = $rentang['selesai'];
+            }
+        }
+
+        $bolehPulang = $selesaiShift === null || $now->gte($selesaiShift);
         $pulangCepat = null;
 
-        if ($current) {
-            $tanggalShift = $current['schedule']->tanggal->toDateString();
-            $shift = [
-                'label' => $current['pattern']->labelShift((int) $current['schedule']->shift_ke),
-                'tanggal' => $tanggalShift,
-                'jamMulai' => $current['mulai']->format('H:i'),
-                'jamSelesai' => $current['selesai']->format('H:i'),
-            ];
-            $bolehPulang = $now->gte($current['selesai']);
-
+        if ($shift !== null) {
             $req = EarlyLeaveRequest::where('employee_id', $me->id)
-                ->whereDate('tanggal', $tanggalShift)
+                ->whereDate('tanggal', $shift['tanggal'])
                 ->orderByDesc('id')
                 ->first();
             if ($req) {
@@ -130,14 +153,6 @@ class AttendanceController extends Controller
                 }
             }
         }
-
-        // Baris absensi yang masih terbuka (belum absen pulang). Untuk shift
-        // malam, baris ini bisa bertanggal kemarin.
-        $openRow = Attendance::where('employee_id', $me->id)
-            ->whereNull('clock_out_at')
-            ->whereDate('work_date', '>=', $now->copy()->subDay()->toDateString())
-            ->orderByDesc('work_date')
-            ->first();
 
         $todayRow = Attendance::where('employee_id', $me->id)->whereDate('work_date', $today)->first();
 
@@ -226,6 +241,20 @@ class AttendanceController extends Controller
         // Pola shift dicari memakai titik yang benar-benar dipakai hari ini.
         $shift = ShiftResolver::currentShift($me, $now, (int) $site->id);
         $workDate = $shift ? $shift['schedule']->tanggal->toDateString() : $now->toDateString();
+
+        // Baris shift sebelumnya yang belum ditutup berarti shift itu belum
+        // selesai secara administrasi. Absen masuk baru hanya akan menambah
+        // baris menggantung, jadi karyawan diarahkan menutupnya dulu. Dibatasi
+        // satu hari supaya baris lama yang terlantar tidak mengunci selamanya.
+        if ($shift && Attendance::where('employee_id', $me->id)
+            ->whereNull('clock_out_at')
+            ->whereDate('work_date', '<', $workDate)
+            ->whereDate('work_date', '>=', $now->copy()->subDay()->toDateString())
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'work_date' => 'Absen pulang shift sebelumnya belum tercatat. Absen pulang dulu sebelum absen masuk lagi.',
+            ]);
+        }
 
         if (Attendance::where('employee_id', $me->id)->whereDate('work_date', $workDate)->exists()) {
             throw ValidationException::withMessages(['work_date' => 'Sudah absen hari ini.']);
@@ -523,6 +552,61 @@ class AttendanceController extends Controller
 
         return 'Belum waktunya pulang — shift berakhir pukul '.$selesai->format('H:i')
             .'. Ajukan pulang cepat lalu tunggu persetujuan Admin Wilayah.';
+    }
+
+    /**
+     * Rentang shift untuk satu baris absensi.
+     *
+     * Pola diambil dari titik tempat karyawan absen masuk hari itu — sama
+     * seperti gerbang absen pulang — supaya halaman absen dan server memakai
+     * acuan yang sama.
+     *
+     * @return array{label: string, tanggal: string, mulai: Carbon, selesai: Carbon}|null
+     */
+    private function rentangBaris(Employee $me, Attendance $row): ?array
+    {
+        if (! $me->is_shift || ! $row->shift_ke) {
+            return null;
+        }
+
+        $pattern = ShiftResolver::patternFor($me, null, $row->site_id ? (int) $row->site_id : null);
+        if (! $pattern) {
+            return null;
+        }
+
+        $tanggal = $row->work_date instanceof Carbon
+            ? $row->work_date->copy()->startOfDay()
+            : Carbon::parse((string) $row->work_date)->startOfDay();
+
+        $w = $pattern->windowFor($tanggal, (int) $row->shift_ke);
+
+        return [
+            'label' => $pattern->labelShift((int) $row->shift_ke),
+            'tanggal' => $tanggal->toDateString(),
+            'mulai' => $w['mulai'],
+            'selesai' => $w['selesai'],
+        ];
+    }
+
+    /**
+     * Rentang shift yang sedang berjalan menurut jadwal — dipakai hanya bila
+     * belum ada baris absensi yang terbuka.
+     *
+     * @return array{label: string, tanggal: string, mulai: Carbon, selesai: Carbon}|null
+     */
+    private function rentangBerjalan(Employee $me, Carbon $now): ?array
+    {
+        $current = ShiftResolver::currentShift($me, $now);
+        if (! $current) {
+            return null;
+        }
+
+        return [
+            'label' => $current['pattern']->labelShift((int) $current['schedule']->shift_ke),
+            'tanggal' => $current['schedule']->tanggal->toDateString(),
+            'mulai' => $current['mulai'],
+            'selesai' => $current['selesai'],
+        ];
     }
 
     /** Rekap: data untuk kalender + ringkasan satu bulan (bawaan: bulan berjalan). */

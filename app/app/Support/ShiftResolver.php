@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\ShiftPattern;
 use App\Models\ShiftSchedule;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * Satu tempat untuk menjawab "shift apa yang berlaku sekarang?".
@@ -22,6 +23,14 @@ class ShiftResolver
 {
     /** Karyawan boleh absen masuk sampai sekian menit sebelum jam shift. */
     public const AWAL_MENIT = 120;
+
+    /**
+     * Shift yang baru berakhir masih dianggap berjalan sampai sekian menit
+     * setelah jam selesai. Dipakai agar karyawan yang absen pulang terlambat
+     * (atau membuka halaman tepat setelah shift usai) tetap melihat shift yang
+     * barusan dijalaninya, bukan shift berikutnya.
+     */
+    public const AKHIR_MENIT = 120;
 
     /** Cakupan pencarian pola yang berlaku. */
     public static function cakupan(?AttendanceSetting $settings = null): string
@@ -92,7 +101,7 @@ class ShiftResolver
      * Resolusi pola untuk banyak karyawan sekaligus — dipakai halaman admin
      * supaya tidak menembak satu query per karyawan.
      *
-     * @param  \Illuminate\Support\Collection<int, Employee>  $employees
+     * @param  Collection<int, Employee>  $employees
      * @return array<int, ShiftPattern|null> kunci = employee_id
      */
     public static function patternsFor($employees, ?AttendanceSetting $settings = null): array
@@ -142,6 +151,19 @@ class ShiftResolver
      * malam yang melewati tengah malam tetap tertangkap. Kembalian null berarti
      * tidak ada shift berjalan (mis. pekerja shift sedang libur).
      *
+     * Urutan keputusan bila $now tidak berada di dalam jendela shift mana pun:
+     *
+     *   1. shift yang BARU SAJA berakhir (≤ AKHIR_MENIT lalu) — shift malam
+     *      beruntun: pukul 08.05 shift kemarin baru usai, sedangkan jadwal hari
+     *      ini baru mulai 20.00;
+     *   2. shift berikutnya yang belum berakhir — supaya halaman absen dan
+     *      form pulang cepat tetap menunjuk jadwal hari ini;
+     *   3. shift terakhir yang sudah lama berakhir.
+     *
+     * Tanpa aturan 1, halaman absen mengira karyawan sedang di awal shift
+     * berikutnya sehingga tombol "Absen pulang" terkunci padahal shiftnya sudah
+     * berakhir.
+     *
      * @return array{schedule: ShiftSchedule, pattern: ShiftPattern, mulai: Carbon, selesai: Carbon}|null
      */
     public static function currentShift(Employee $employee, Carbon $now, ?int $siteId = null): ?array
@@ -150,7 +172,9 @@ class ShiftResolver
             return null;
         }
 
-        $cadangan = null;
+        $baruSelesai = null;
+        $akanDatang = null;
+        $terakhir = null;
 
         foreach ([0, 1] as $mundur) {
             $tanggal = $now->copy()->startOfDay()->subDays($mundur);
@@ -172,11 +196,19 @@ class ShiftResolver
                 return $hasil;
             }
 
-            // Datang jauh sebelum jam shift: tetap tempelkan ke jadwal hari ini
-            // supaya karyawan tidak terkunci ("tidak ada shift berjalan").
-            $cadangan ??= $hasil;
+            if ($now->gt($w['selesai'])) {
+                // Jadwal hari ini diperiksa lebih dulu, jadi yang pertama
+                // ditemukan adalah shift yang paling akhir berakhir.
+                $terakhir ??= $hasil;
+
+                if ($now->getTimestamp() - $w['selesai']->getTimestamp() <= self::AKHIR_MENIT * 60) {
+                    $baruSelesai ??= $hasil;
+                }
+            } else {
+                $akanDatang ??= $hasil;
+            }
         }
 
-        return $cadangan;
+        return $baruSelesai ?? $akanDatang ?? $terakhir;
     }
 }
