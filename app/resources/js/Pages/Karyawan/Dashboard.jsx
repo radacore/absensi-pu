@@ -6,7 +6,7 @@ export default function Dashboard(){
     const { props } = usePage();
     const me = props.me ?? { nama:'—', region:'' };
     const assigned = props.assigned ?? { site:{ nama_lokasi:'—', radius:'—' }, regionName: me.region };
-    const settings = props.settings ?? { jamMasuk:'07:30', jamPulang:'16:00', loveMax:4 };
+    const settings = props.settings ?? { jamMasuk:'07:30', jamPulang:'16:00', jamPulangHariIni:'16:00', loveMax:4 };
     const quota = props.quota ?? { sisa: settings.loveMax ?? 4, max: settings.loveMax ?? 4 };
     const hadir = props.hadir ?? 0;
     const unread = props.unread ?? 0;
@@ -37,7 +37,7 @@ export default function Dashboard(){
                     </div>
                     <h2 className="font-semibold text-[18px] tracking-tight text-[#0F172A] mt-1 text-center">{greeting}, {me.nama || '—'}</h2>
                     <p className="text-sm text-[#64748B] text-center mt-1">{dateStr} • {timeStr} WITA</p>
-                    <p className="text-xs text-center mt-2 bg-[#EFF6FF] text-[#1E3A8A] px-2.5 py-1 rounded-full inline-flex mx-auto">{assigned.site.nama_lokasi} • {assigned.site.radius} m • {me.region || assigned.regionName || ''} • {isShift ? (shiftHariIni ? `Shift ${shiftHariIni}` : 'Libur shift hari ini') : `${settings.jamMasuk}–${settings.jamPulang} WITA`}</p>
+                    <p className="text-xs text-center mt-2 bg-[#EFF6FF] text-[#1E3A8A] px-2.5 py-1 rounded-full inline-flex mx-auto">{assigned.site.nama_lokasi} • {assigned.site.radius} m • {me.region || assigned.regionName || ''} • {isShift ? (shiftHariIni ? `Shift ${shiftHariIni}` : 'Libur shift hari ini') : `${settings.jamMasuk}–${settings.jamPulangHariIni ?? settings.jamPulang} WITA`}</p>
                     <Link href="/karyawan/love" className="mt-4 flex items-center justify-center gap-2">
                         {Array.from({length:loveMax},(_,i)=>(
                             <span key={i} className={`w-8 h-8 rounded-xl flex items-center justify-center ${i < sisaLove ? 'bg-[#FFF7E6] border border-[#FCB833]/20' : 'bg-[#F1F5F9]'}`}>

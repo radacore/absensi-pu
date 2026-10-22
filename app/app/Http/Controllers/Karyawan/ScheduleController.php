@@ -114,7 +114,9 @@ class ScheduleController extends Controller
                     'hariKe' => $iso,
                     'label' => $bekerja ? 'Hari kerja' : 'Libur',
                     'jamMulai' => $bekerja ? substr((string) ($settings?->jam_masuk ?? '08:00'), 0, 5) : null,
-                    'jamSelesai' => $bekerja ? substr((string) ($settings?->jam_pulang ?? '17:00'), 0, 5) : null,
+                    // Jumat bisa punya jam pulang sendiri; lihat
+                    // AttendanceSetting::jamPulangPada().
+                    'jamSelesai' => $bekerja ? ($settings?->jamPulangPada($d->copy()) ?? '17:00') : null,
                     'lewatTengahMalam' => false,
                     'libur' => ! $bekerja,
                     'belumDijadwalkan' => false,
@@ -152,6 +154,8 @@ class ScheduleController extends Controller
                 : [
                     'masuk' => substr((string) ($settings?->jam_masuk ?? '08:00'), 0, 5),
                     'pulang' => substr((string) ($settings?->jam_pulang ?? '17:00'), 0, 5),
+                    // Kosong bila Jumat ikut jam pulang biasa.
+                    'pulangJumat' => substr((string) ($settings?->jam_pulang_jumat ?? ''), 0, 5),
                 ],
             'minggu' => $minggu,
             'rentang' => [

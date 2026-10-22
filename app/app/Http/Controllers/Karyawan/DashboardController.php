@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnnouncementRead;
+use App\Models\AttendanceSetting;
 use App\Models\Leave;
 use App\Models\ToleranceClaim;
 use App\Support\AdminPresenter;
@@ -17,6 +18,9 @@ class DashboardController extends Controller
     {
         $me = Auth::guard('employee')->user()->load(['region','site']);
         $settings = AdminPresenter::settingsFor();
+        // Jam pulang yang berlaku hari ini (Jumat bisa lebih awal). Dihitung di
+        // server supaya tidak bergantung zona waktu perangkat.
+        $settings['jamPulangHariIni'] = AttendanceSetting::first()?->jamPulangPada(now('Asia/Makassar')) ?? '16:00';
         $loveMax = $settings['loveMax'] ?? 4;
         $quota = AdminPresenter::loveQuota($me->id, $loveMax);
         $assigned = $me->site ? [

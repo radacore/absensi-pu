@@ -187,12 +187,13 @@ class AdminPresenter
     {
         $s = AttendanceSetting::first();
         if (! $s) {
-            return ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15, 'loveMax' => 4, 'cutiTahunanMax' => AttendanceSetting::CUTI_TAHUNAN_DEFAULT, 'hariKerja' => ['1', '2', '3', '4', '5'], 'timezone' => 'Asia/Makassar', 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak'];
+            return ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'jamPulangJumat' => '', 'toleransi' => 15, 'loveMax' => 4, 'cutiTahunanMax' => AttendanceSetting::CUTI_TAHUNAN_DEFAULT, 'hariKerja' => ['1', '2', '3', '4', '5'], 'timezone' => 'Asia/Makassar', 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak'];
         }
 
         return [
             'jamMasuk' => substr((string) $s->jam_masuk, 0, 5),
             'jamPulang' => substr((string) $s->jam_pulang, 0, 5),
+            'jamPulangJumat' => substr((string) $s->jam_pulang_jumat, 0, 5),
             'toleransi' => (int) $s->toleransi_late_menit,
             'loveMax' => (int) $s->love_max,
             'cutiTahunanMax' => CutiKuota::max($s),

@@ -28,7 +28,7 @@ export default function Absensi() {
     // terdekat dari posisi GPS, jadi UI cukup menampilkan daftarnya.
     const sites = useMemo(() => props.sites ?? [], [props.sites]);
     const assigned = sites[0] ?? null;
-    const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15 };
+    const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', jamPulangHariIni: '16:00', toleransi: 15 };
     const history = props.history ?? [];
     const todayISO = props.todayISO ?? new Date().toISOString().slice(0, 10);
     // Tanggal kerja yang sedang berlaku: untuk shift malam yang melewati
@@ -303,7 +303,7 @@ export default function Absensi() {
                         })}
                     </ul>
                     <p className="text-xs text-[#64748B] mt-2">
-                        {isShift ? 'Jam mengikuti jadwal shift' : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA`} • {terkunciPulang ? 'Pulang hanya bisa di titik tempat Anda absen masuk.' : 'Absen dicatat di titik terdekat yang sah.'}
+                        {isShift ? 'Jam mengikuti jadwal shift' : `Jam ${settings.jamMasuk}–${settings.jamPulangHariIni ?? settings.jamPulang} WITA`} • {terkunciPulang ? 'Pulang hanya bisa di titik tempat Anda absen masuk.' : 'Absen dicatat di titik terdekat yang sah.'}
                     </p>
                 </div>
 

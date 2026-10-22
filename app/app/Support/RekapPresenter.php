@@ -203,6 +203,13 @@ class RekapPresenter
                 }
             }
 
+            // Jam pulang acuan hari ini. Jumat bisa lebih awal (setelan khusus
+            // Jumat), tapi aturan itu hanya untuk karyawan non-shift — pekerja
+            // shift tanpa jadwal di hari itu tetap memakai jam global.
+            $jamPulangMinHariIni = (! $isShift && $settings)
+                ? $settings->jamPulangMenitPada($date)
+                : $jamPulangMin;
+
             // Jam acuan penilaian masuk: jadwal shift bila ada, kalau tidak
             // setelan global (perilaku lama untuk pekerja non-shift).
             $acuanMasukMin = $shiftMulaiMin ?? $jamMasukMin;
@@ -331,8 +338,8 @@ class RekapPresenter
                         $p = Carbon::parse($att->clock_out_at);
                         $outMin = (int) $p->format('G') * 60 + (int) $p->format('i');
                         $trenPulangMin = $outMin;
-                        if (! $isWeekend && ! $isHoliday && $outMin < $jamPulangMin) {
-                            $menitPSW = $jamPulangMin - $outMin;
+                        if (! $isWeekend && ! $isHoliday && $outMin < $jamPulangMinHariIni) {
+                            $menitPSW = $jamPulangMinHariIni - $outMin;
                             // gabung PSW ke keterlambatan yang sama kalau ada; kalau tidak, tambah row baru
                             $found = false;
                             foreach ($keterlambatan as &$row) {

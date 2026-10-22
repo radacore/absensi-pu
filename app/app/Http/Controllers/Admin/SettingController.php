@@ -21,6 +21,7 @@ class SettingController extends Controller
             'settings' => $s ? [
                 'jamMasuk' => substr((string) $s->jam_masuk, 0, 5),
                 'jamPulang' => substr((string) $s->jam_pulang, 0, 5),
+                'jamPulangJumat' => substr((string) $s->jam_pulang_jumat, 0, 5),
                 'toleransi' => (int) $s->toleransi_late_menit,
                 'loveMax' => (int) $s->love_max,
                 'cutiTahunanMax' => CutiKuota::max($s),
@@ -29,7 +30,7 @@ class SettingController extends Controller
                 'absenLiburAktif' => (bool) $s->absen_libur_aktif,
                 'absenLiburMode' => $s->absen_libur_mode ?: 'tolak',
                 'hariKerja' => $s->hari_kerja ?? ['1', '2', '3', '4', '5'],
-            ] : ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15, 'loveMax' => 4, 'cutiTahunanMax' => AttendanceSetting::CUTI_TAHUNAN_DEFAULT, 'cakupanPolaShift' => AttendanceSetting::CAKUPAN_POLA_DEFAULT, 'cutiShiftMax' => AttendanceSetting::CUTI_SHIFT_DEFAULT, 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak', 'hariKerja' => ['1', '2', '3', '4', '5']],
+            ] : ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'jamPulangJumat' => '', 'toleransi' => 15, 'loveMax' => 4, 'cutiTahunanMax' => AttendanceSetting::CUTI_TAHUNAN_DEFAULT, 'cakupanPolaShift' => AttendanceSetting::CAKUPAN_POLA_DEFAULT, 'cutiShiftMax' => AttendanceSetting::CUTI_SHIFT_DEFAULT, 'absenLiburAktif' => false, 'absenLiburMode' => 'tolak', 'hariKerja' => ['1', '2', '3', '4', '5']],
             'cakupanPola' => AttendanceSetting::CAKUPAN_POLA,
             'readOnly' => $isWilayah,
         ]);
@@ -43,6 +44,9 @@ class SettingController extends Controller
         $data = $request->validate([
             'jamMasuk' => ['required', 'date_format:H:i'],
             'jamPulang' => ['required', 'date_format:H:i'],
+            // Jam pulang khusus Jumat — opsional. Kosong = ikut jam pulang
+            // global, jadi pemanggil lama tetap valid.
+            'jamPulangJumat' => ['nullable', 'date_format:H:i'],
             'toleransi' => ['required', 'integer', 'min:0', 'max:60'],
             'loveMax' => ['required', 'integer', 'min:1', 'max:10'],
             // Kuota cuti tahunan — opsional supaya pemanggil lama tetap valid.
@@ -63,9 +67,19 @@ class SettingController extends Controller
             return back()->withErrors(['jamMasuk' => 'Jam masuk harus sebelum jam pulang.']);
         }
 
+        // Jumat hanya mengganti jam pulang; jam masuknya tetap sama. Karena itu
+        // yang diperiksa cukup jam masuk global.
+        $pulangJumat = $data['jamPulangJumat'] ?? null;
+        if ($pulangJumat !== null && $pulangJumat !== '' && $pulangJumat <= $data['jamMasuk']) {
+            return back()->withErrors(['jamPulangJumat' => 'Jam pulang Jumat harus setelah jam masuk.']);
+        }
+
         $s = AttendanceSetting::first() ?? new AttendanceSetting;
         $s->jam_masuk = $data['jamMasuk'].':00';
         $s->jam_pulang = $data['jamPulang'].':00';
+        if (array_key_exists('jamPulangJumat', $data)) {
+            $s->jam_pulang_jumat = ($pulangJumat === null || $pulangJumat === '') ? null : $pulangJumat.':00';
+        }
         $s->toleransi_late_menit = $data['toleransi'];
         $s->love_max = $data['loveMax'];
         if (array_key_exists('cutiTahunanMax', $data)) {

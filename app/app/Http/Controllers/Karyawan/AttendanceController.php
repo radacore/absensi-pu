@@ -174,8 +174,11 @@ class AttendanceController extends Controller
             'settings' => $settings ? [
                 'jamMasuk' => substr((string) $settings->jam_masuk, 0, 5),
                 'jamPulang' => substr((string) $settings->jam_pulang, 0, 5),
+                // Jam pulang yang berlaku HARI INI — Jumat bisa lebih awal.
+                // Dihitung di server supaya tidak bergantung zona waktu HP.
+                'jamPulangHariIni' => $settings->jamPulangPada($now),
                 'toleransi' => (int) $settings->toleransi_late_menit,
-            ] : ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'toleransi' => 15],
+            ] : ['jamMasuk' => '07:30', 'jamPulang' => '16:00', 'jamPulangHariIni' => '16:00', 'toleransi' => 15],
             'absenLibur' => $absenLibur,
             'alreadyToday' => (bool) $todayRow,
             'todayISO' => $today,
@@ -685,6 +688,8 @@ class AttendanceController extends Controller
             'settings' => [
                 'jamMasuk' => $jamMasuk,
                 'jamPulang' => $jamPulang,
+                // Kosong bila Jumat ikut jam pulang biasa.
+                'jamPulangJumat' => substr((string) ($settings?->jam_pulang_jumat ?? ''), 0, 5),
                 'toleransi' => $settings ? (int) $settings->toleransi_late_menit : 15,
                 'loveMax' => $loveMax,
                 'loveQuota' => AdminPresenter::loveQuota($me->id, $loveMax),

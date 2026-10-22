@@ -34,7 +34,7 @@ export default function Jadwal() {
                     <p className="font-semibold text-sm mt-0.5">
                         {isShift
                             ? (polaRingkasan || 'Pola shift belum ditetapkan')
-                            : (jamKerja ? `${jamKerja.masuk} — ${jamKerja.pulang}` : '—')}
+                            : (jamKerja ? `${jamKerja.masuk} — ${jamKerja.pulang}${jamKerja.pulangJumat ? ` · Jumat s.d. ${jamKerja.pulangJumat}` : ''}` : '—')}
                     </p>
                     <p className="text-xs text-white/70 mt-0.5">
                         {isShift ? (me.kantor || me.region) : `Hari kerja: ${hariKerjaLabel || '—'}`}

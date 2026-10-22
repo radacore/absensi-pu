@@ -7,7 +7,7 @@ const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agu
 export default function Rekap() {
     const { url, props } = usePage();
     const assigned = props.assigned ?? null;
-    const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', toleransi: 15, loveMax: 4, loveQuota: null };
+    const settings = props.settings ?? { jamMasuk: '07:30', jamPulang: '16:00', jamPulangJumat: '', toleransi: 15, loveMax: 4, loveQuota: null };
     const monthRows = props.monthRows ?? [];
     const jadwalBulan = props.jadwalBulan ?? [];
     const isShift = !!props.isShift;
@@ -195,7 +195,7 @@ export default function Rekap() {
                     <p className="text-xs text-[#64748B] mt-4">
                         {isShift
                             ? `Jam mengikuti jadwal shift • Kelonggaran ${settings.toleransi}m • Absen tercatat di titik yang ditugaskan • Di luar radius tetap dicatat dan ditandai`
-                            : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA • Kelonggaran ${settings.toleransi}m • Absen tercatat di titik yang ditugaskan • Di luar radius tetap dicatat dan ditandai`}
+                            : `Jam ${settings.jamMasuk}–${settings.jamPulang} WITA${settings.jamPulangJumat ? ` (Jumat s.d. ${settings.jamPulangJumat})` : ''} • Kelonggaran ${settings.toleransi}m • Absen tercatat di titik yang ditugaskan • Di luar radius tetap dicatat dan ditandai`}
                     </p>
                     {isShift && (
                         <p className="text-xs text-[#64748B] mt-1">

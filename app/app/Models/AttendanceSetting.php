@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class AttendanceSetting extends Model
 {
@@ -13,6 +14,7 @@ class AttendanceSetting extends Model
     protected $fillable = [
         'jam_masuk',
         'jam_pulang',
+        'jam_pulang_jumat',
         'toleransi_late_menit',
         'love_max',
         'cuti_tahunan_max',
@@ -67,6 +69,38 @@ class AttendanceSetting extends Model
         return is_array($list) && $list !== []
             ? array_map('strval', $list)
             : self::HARI_KERJA_DEFAULT;
+    }
+
+    /**
+     * Jam pulang yang berlaku pada satu tanggal.
+     *
+     * Jumat boleh punya jam pulang sendiri (mis. 30 menit lebih awal karena
+     * sholat Jumat). Kolom `jam_pulang_jumat` kosong berarti ikut jam pulang
+     * global, jadi perilaku lama tidak berubah sampai Super Admin mengisinya.
+     *
+     * Selalu panggil method ini — bukan `$settings->jam_pulang` langsung —
+     * supaya rekap, status pulang cepat, dan tampilan jadwal memakai jam yang
+     * sama untuk tanggal yang sama.
+     */
+    public function jamPulangPada(Carbon|string $tanggal): string
+    {
+        $date = $tanggal instanceof Carbon ? $tanggal : Carbon::parse($tanggal);
+
+        $khusus = (string) $this->jam_pulang_jumat;
+
+        if ($khusus !== '' && $date->isoWeekday() === Carbon::FRIDAY) {
+            return substr($khusus, 0, 5);
+        }
+
+        return substr((string) $this->jam_pulang, 0, 5);
+    }
+
+    /** Jam pulang pada satu tanggal dalam satuan menit sejak 00:00. */
+    public function jamPulangMenitPada(Carbon|string $tanggal): int
+    {
+        [$jam, $menit] = array_map('intval', explode(':', $this->jamPulangPada($tanggal)));
+
+        return $jam * 60 + $menit;
     }
 
     public function updatedBy(): BelongsTo

@@ -181,7 +181,16 @@ class LoveController extends Controller
             if (! $row->clock_out_at && $jam) {
                 $row->clock_out_at = $jam;
             }
-            $jamPulang = substr((string) (AttendanceSetting::first()?->jam_pulang ?? '16:00:00'), 0, 5);
+            // Jam pulang acuan: Jumat bisa lebih awal, tapi aturan itu hanya
+            // untuk karyawan non-shift — pekerja shift tetap memakai jam pulang
+            // global di sini (jadwal shift-nya dinilai di tempat lain).
+            $setelan = AttendanceSetting::first();
+            $jamPulang = '16:00';
+            if ($setelan) {
+                $jamPulang = $love->employee?->is_shift
+                    ? substr((string) $setelan->jam_pulang, 0, 5)
+                    : $setelan->jamPulangPada($love->claim_date);
+            }
             $keluar = substr((string) $row->clock_out_at, 0, 5);
             $row->status = ($keluar !== '' && $keluar < $jamPulang)
                 ? 'early_leave'
